@@ -134,9 +134,13 @@ struct swap_info_struct {
 	unsigned int highest_alloc;	
 	struct swap_extent *curr_swap_extent;
 	struct swap_extent first_swap_extent;
-	struct block_device *bdev;	
-	struct file *swap_file;		
-	unsigned int old_block_size;	
+	struct block_device *bdev;	/* swap device or bdev of swap file */
+	struct file *swap_file;		/* seldom referenced */
+	unsigned int old_block_size;	/* seldom referenced */
+#ifdef CONFIG_FRONTSWAP
+	unsigned long *frontswap_map;	/* frontswap in-use, one bit per page */
+	atomic_t frontswap_pages;	/* frontswap pages in-use counter */
+#endif
 };
 
 struct swap_list_t {
