@@ -529,6 +529,14 @@ static bool __need_more_worker(struct global_cwq *gcwq)
 		gcwq->flags & GCWQ_HIGHPRI_PENDING;
 }
 
+/*
+ * Need to wake up a worker?  Called from anything but currently
+ * running workers.
+ *
+ * Note that, because unbound workers never contribute to nr_running, this
+ * function will always return %true for unbound gcwq as long as the
+ * worklist isn't empty.
+ */
 static bool need_more_worker(struct global_cwq *gcwq)
 {
 	return !list_empty(&gcwq->worklist) && __need_more_worker(gcwq);
@@ -1331,6 +1339,12 @@ __acquires(&gcwq->lock)
 #ifdef CONFIG_TRACING_WORKQUEUE_HISTORY
 	store_workqueue(cwq->wq->name, (unsigned long)f);
 #endif
+	/*
+	 * Unbound gcwq isn't concurrency managed and work items should be
+	 * executed ASAP.  Wake up another worker if necessary.
+	 */
+	if ((worker->flags & WORKER_UNBOUND) && need_more_worker(gcwq))
+		wake_up_worker(gcwq);
 
 	spin_unlock_irq(&gcwq->lock);
 
@@ -2045,9 +2059,6 @@ struct workqueue_struct *__alloc_workqueue_key(const char *fmt,
 
 	if (flags & WQ_MEM_RECLAIM)
 		flags |= WQ_RESCUER;
-
-	if (flags & WQ_UNBOUND)
-		flags |= WQ_HIGHPRI;
 
 	max_active = max_active ?: WQ_DFL_ACTIVE;
 	max_active = wq_clamp_max_active(max_active, flags, wq->name);
