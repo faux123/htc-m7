@@ -468,4 +468,6 @@ obj-y += display/
 
 obj-$(CONFIG_IO_FOOTPRINT) += io_footprint.o
 
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
+
 obj-$(CONFIG_MSM_CPUFREQ_LIMITER) += cpufreq_limit.o
