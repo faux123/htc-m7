@@ -77,44 +77,46 @@ struct bio {
 #endif 
 
 enum rq_flag_bits {
-	
-	__REQ_WRITE,		
-	__REQ_FAILFAST_DEV,	
-	__REQ_FAILFAST_TRANSPORT, 
-	__REQ_FAILFAST_DRIVER,	
+	/* common flags */
+	__REQ_WRITE,		/* not set, read. set, write */
+	__REQ_FAILFAST_DEV,	/* no driver retries of device errors */
+	__REQ_FAILFAST_TRANSPORT, /* no driver retries of transport errors */
+	__REQ_FAILFAST_DRIVER,	/* no driver retries of driver errors */
 
-	__REQ_SYNC,		
-	__REQ_META,		
-	__REQ_PRIO,		
-	__REQ_DISCARD,		
-	__REQ_SECURE,		
+	__REQ_SYNC,		/* request is sync (sync write or read) */
+	__REQ_META,		/* metadata io request */
+	__REQ_PRIO,		/* boost priority in cfq */
+	__REQ_DISCARD,		/* request to discard sectors */
+	__REQ_SECURE,		/* secure discard (used with __REQ_DISCARD) */
 
-	__REQ_NOIDLE,		
-	__REQ_FUA,		
-	__REQ_FLUSH,		
+	__REQ_NOIDLE,		/* don't anticipate more IO after this one */
+	__REQ_FUA,		/* forced unit access */
+	__REQ_FLUSH,		/* request for cache flush */
 
-	
-	__REQ_RAHEAD,		
-	__REQ_THROTTLED,	
+	/* bio only flags */
+	__REQ_RAHEAD,		/* read ahead, can fail anytime */
+	__REQ_THROTTLED,	/* This bio has already been subjected to
+				 * throttling rules. Don't do it again. */
 
-	
-	__REQ_SORTED,		
-	__REQ_SOFTBARRIER,	
-	__REQ_NOMERGE,		
-	__REQ_STARTED,		
-	__REQ_DONTPREP,		
-	__REQ_QUEUED,		
-	__REQ_ELVPRIV,		
-	__REQ_FAILED,		
-	__REQ_QUIET,		
-	__REQ_PREEMPT,		
-	__REQ_ALLOCED,		
-	__REQ_COPY_USER,	
-	__REQ_FLUSH_SEQ,	
-	__REQ_IO_STAT,		
-	__REQ_MIXED_MERGE,	
-	__REQ_SANITIZE,		
-	__REQ_NR_BITS,		
+	/* request only flags */
+	__REQ_SORTED = __REQ_RAHEAD, /* elevator knows about this request */
+	__REQ_SOFTBARRIER,	/* may not be passed by ioscheduler */
+	__REQ_NOMERGE,		/* don't touch this for merging */
+	__REQ_STARTED,		/* drive already may have started this one */
+	__REQ_DONTPREP,		/* don't call prep for this one */
+	__REQ_QUEUED,		/* uses queueing */
+	__REQ_ELVPRIV,		/* elevator private data attached */
+	__REQ_FAILED,		/* set if the request failed */
+	__REQ_QUIET,		/* don't worry about errors */
+	__REQ_PREEMPT,		/* set for "ide_preempt" requests */
+	__REQ_ALLOCED,		/* request came from our alloc pool */
+	__REQ_COPY_USER,	/* contains copies of user pages */
+	__REQ_FLUSH_SEQ,	/* request for flush sequence */
+	__REQ_IO_STAT,		/* account I/O stat */
+	__REQ_MIXED_MERGE,	/* merge of different types, fail separately */
+	__REQ_SANITIZE,		/* sanitize */
+	__REQ_URGENT,		/* urgent request */
+	__REQ_NR_BITS,		/* stops here */
 };
 
 #define REQ_WRITE		(1 << __REQ_WRITE)
@@ -126,6 +128,7 @@ enum rq_flag_bits {
 #define REQ_PRIO		(1 << __REQ_PRIO)
 #define REQ_DISCARD		(1 << __REQ_DISCARD)
 #define REQ_SANITIZE		(1 << __REQ_SANITIZE)
+#define REQ_URGENT		(1 << __REQ_URGENT)
 #define REQ_NOIDLE		(1 << __REQ_NOIDLE)
 
 #define REQ_FAILFAST_MASK \
