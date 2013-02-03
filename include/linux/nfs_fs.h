@@ -389,8 +389,10 @@ extern int nfs3_removexattr (struct dentry *, const char *name);
 # define nfs3_removexattr NULL
 #endif
 
-extern ssize_t nfs_direct_IO(int, struct kiocb *, const struct iovec *, loff_t,
-			unsigned long);
+/*
+ * linux/fs/nfs/direct.c
+ */
+extern ssize_t nfs_direct_IO(int, struct kiocb *, struct iov_iter *, loff_t);
 extern ssize_t nfs_file_direct_read(struct kiocb *iocb,
 			const struct iovec *iov, unsigned long nr_segs,
 			loff_t pos);
