@@ -14,37 +14,21 @@
 #include <linux/compiler.h>
 #include <linux/rbtree.h>
 
-/*
- * See Documentation/block/deadline-iosched.txt
- */
-static const int read_expire = HZ / 2;  /* max time before a read is submitted. */
-static const int write_expire = 5 * HZ; /* ditto for writes, these limits are SOFT! */
-static const int writes_starved = 2;    /* max times reads can starve a write */
-static const int fifo_batch = 16;       /* # of sequential requests treated as one
-				     by the above parameters. For throughput. */
+static const int read_expire = HZ / 2;  
+static const int write_expire = 5 * HZ; 
+static const int writes_starved = 2;    
+static const int fifo_batch = 16;       
 
 struct deadline_data {
-	/*
-	 * run time data
-	 */
 
-	/*
-	 * requests (deadline_rq s) are present on both sort_list and fifo_list
-	 */
 	struct rb_root sort_list[2];	
 	struct list_head fifo_list[2];
 
-	/*
-	 * next in sort order. read, write or both are NULL
-	 */
 	struct request *next_rq[2];
-	unsigned int batching;		/* number of sequential requests made */
-	sector_t last_sector;		/* head position */
-	unsigned int starved;		/* times reads have starved writes */
+	unsigned int batching;		
+	sector_t last_sector;		
+	unsigned int starved;		
 
-	/*
-	 * settings that change how the i/o scheduler behaves
-	 */
 	int fifo_expire[2];
 	int fifo_batch;
 	int writes_starved;
@@ -59,9 +43,6 @@ deadline_rb_root(struct deadline_data *dd, struct request *rq)
 	return &dd->sort_list[rq_data_dir(rq)];
 }
 
-/*
- * get the request after `rq' in sector-sorted order
- */
 static inline struct request *
 deadline_latter_request(struct request *rq)
 {
@@ -92,9 +73,6 @@ deadline_del_rq_rb(struct deadline_data *dd, struct request *rq)
 	elv_rb_del(deadline_rb_root(dd, rq), rq);
 }
 
-/*
- * add rq to rbtree and fifo
- */
 static void
 deadline_add_request(struct request_queue *q, struct request *rq)
 {
@@ -103,16 +81,10 @@ deadline_add_request(struct request_queue *q, struct request *rq)
 
 	deadline_add_rq_rb(dd, rq);
 
-	/*
-	 * set expire time and add to fifo list
-	 */
 	rq_set_fifo_time(rq, jiffies + dd->fifo_expire[data_dir]);
 	list_add_tail(&rq->queuelist, &dd->fifo_list[data_dir]);
 }
 
-/*
- * remove rq from rbtree and fifo.
- */
 static void deadline_remove_request(struct request_queue *q, struct request *rq)
 {
 	struct deadline_data *dd = q->elevator->elevator_data;
@@ -128,9 +100,6 @@ deadline_merge(struct request_queue *q, struct request **req, struct bio *bio)
 	struct request *__rq;
 	int ret;
 
-	/*
-	 * check for front merge
-	 */
 	if (dd->front_merges) {
 		sector_t sector = bio->bi_sector + bio_sectors(bio);
 
@@ -156,9 +125,6 @@ static void deadline_merged_request(struct request_queue *q,
 {
 	struct deadline_data *dd = q->elevator->elevator_data;
 
-	/*
-	 * if the merge was a front merge, we need to reposition request
-	 */
 	if (type == ELEVATOR_FRONT_MERGE) {
 		elv_rb_del(deadline_rb_root(dd, req), req);
 		deadline_add_rq_rb(dd, req);
@@ -169,10 +135,6 @@ static void
 deadline_merged_requests(struct request_queue *q, struct request *req,
 			 struct request *next)
 {
-	/*
-	 * if next expires before rq, assign its expire time to rq
-	 * and move into next position (next will be deleted) in fifo
-	 */
 	if (!list_empty(&req->queuelist) && !list_empty(&next->queuelist)) {
 		if (time_before(rq_fifo_time(next), rq_fifo_time(req))) {
 			list_move(&req->queuelist, &next->queuelist);
@@ -180,15 +142,9 @@ deadline_merged_requests(struct request_queue *q, struct request *req,
 		}
 	}
 
-	/*
-	 * kill knowledge of next, this one is a goner
-	 */
 	deadline_remove_request(q, next);
 }
 
-/*
- * move request from sort list to dispatch queue.
- */
 static inline void
 deadline_move_to_dispatch(struct deadline_data *dd, struct request *rq)
 {
@@ -198,9 +154,6 @@ deadline_move_to_dispatch(struct deadline_data *dd, struct request *rq)
 	elv_dispatch_add_tail(q, rq);
 }
 
-/*
- * move an entry to dispatch queue
- */
 static void
 deadline_move_request(struct deadline_data *dd, struct request *rq)
 {
@@ -212,34 +165,19 @@ deadline_move_request(struct deadline_data *dd, struct request *rq)
 
 	dd->last_sector = rq_end_sector(rq);
 
-	/*
-	 * take it off the sort and fifo list, move
-	 * to dispatch queue
-	 */
 	deadline_move_to_dispatch(dd, rq);
 }
 
-/*
- * deadline_check_fifo returns 0 if there are no expired requests on the fifo,
- * 1 otherwise. Requires !list_empty(&dd->fifo_list[data_dir])
- */
 static inline int deadline_check_fifo(struct deadline_data *dd, int ddir)
 {
 	struct request *rq = rq_entry_fifo(dd->fifo_list[ddir].next);
 
-	/*
-	 * rq is expired!
-	 */
 	if (time_after(jiffies, rq_fifo_time(rq)))
 		return 1;
 
 	return 0;
 }
 
-/*
- * deadline_dispatch_requests selects the best request according to
- * read/write expire, fifo_batch, etc
- */
 static int deadline_dispatch_requests(struct request_queue *q, int force)
 {
 	struct deadline_data *dd = q->elevator->elevator_data;
@@ -248,22 +186,15 @@ static int deadline_dispatch_requests(struct request_queue *q, int force)
 	struct request *rq;
 	int data_dir;
 
-	/*
-	 * batches are currently reads XOR writes
-	 */
 	if (dd->next_rq[WRITE])
 		rq = dd->next_rq[WRITE];
 	else
 		rq = dd->next_rq[READ];
 
 	if (rq && dd->batching < dd->fifo_batch)
-		/* we have a next request are still entitled to batch */
+		
 		goto dispatch_request;
 
-	/*
-	 * at this point we are not running a batch. select the appropriate
-	 * data direction (read / write)
-	 */
 
 	if (reads) {
 		BUG_ON(RB_EMPTY_ROOT(&dd->sort_list[READ]));
@@ -276,9 +207,6 @@ static int deadline_dispatch_requests(struct request_queue *q, int force)
 		goto dispatch_find_request;
 	}
 
-	/*
-	 * there are either no reads or writes have been starved
-	 */
 
 	if (writes) {
 dispatch_writes:
@@ -294,30 +222,15 @@ dispatch_writes:
 	return 0;
 
 dispatch_find_request:
-	/*
-	 * we are not running a batch, find best request for selected data_dir
-	 */
 	if (deadline_check_fifo(dd, data_dir) || !dd->next_rq[data_dir]) {
-		/*
-		 * A deadline has expired, the last request was in the other
-		 * direction, or we have run out of higher-sectored requests.
-		 * Start again from the request with the earliest expiry time.
-		 */
 		rq = rq_entry_fifo(dd->fifo_list[data_dir].next);
 	} else {
-		/*
-		 * The last req was the same dir and we have a next request in
-		 * sort order. No expired requests so continue on from here.
-		 */
 		rq = dd->next_rq[data_dir];
 	}
 
 	dd->batching = 0;
 
 dispatch_request:
-	/*
-	 * rq is the selected appropriate request.
-	 */
 	dd->batching++;
 	deadline_move_request(dd, rq);
 
@@ -334,9 +247,6 @@ static void deadline_exit_queue(struct elevator_queue *e)
 	kfree(dd);
 }
 
-/*
- * initialize elevator private data (deadline_data).
- */
 static void *deadline_init_queue(struct request_queue *q)
 {
 	struct deadline_data *dd;
@@ -357,9 +267,6 @@ static void *deadline_init_queue(struct request_queue *q)
 	return dd;
 }
 
-/*
- * sysfs parts below
- */
 
 static ssize_t
 deadline_var_show(int var, char *page)

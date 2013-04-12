@@ -15,18 +15,15 @@
 
 #include <linux/jiffies.h>
 
-/* Runtime PM flag argument bits */
-#define RPM_ASYNC		0x01	/* Request is asynchronous */
-#define RPM_NOWAIT		0x02	/* Don't wait for concurrent
-					    state change */
-#define RPM_GET_PUT		0x04	/* Increment/decrement the
-					    usage_count */
-#define RPM_AUTO		0x08	/* Use autosuspend_delay */
+#define RPM_ASYNC		0x01	
+#define RPM_NOWAIT		0x02	
+#define RPM_GET_PUT		0x04	
+#define RPM_AUTO		0x08	
 
 #ifdef CONFIG_PM_RUNTIME
 
 extern struct workqueue_struct *pm_wq;
-
+extern struct workqueue_struct *pm_rt_wq;
 extern int __pm_runtime_idle(struct device *dev, int rpmflags);
 extern int __pm_runtime_suspend(struct device *dev, int rpmflags);
 extern int __pm_runtime_resume(struct device *dev, int rpmflags);
@@ -54,14 +51,46 @@ static inline bool pm_children_suspended(struct device *dev)
 		|| !atomic_read(&dev->power.child_count);
 }
 
+#if defined(CONFIG_USB_EHCI_MSM_HSIC)
+extern struct device *msm_hsic_host_dev;
+#endif	
+
 static inline void pm_runtime_get_noresume(struct device *dev)
 {
 	atomic_inc(&dev->power.usage_count);
+
+	
+	
+	#if defined(CONFIG_USB_EHCI_MSM_HSIC)
+	{
+		extern unsigned int get_radio_flag(void);
+		if (dev && msm_hsic_host_dev == dev && (get_radio_flag() & 0x0001)) {
+			dev_info(dev, "%s[%d] usage_count[%d]\n", __func__, __LINE__,
+				atomic_read(&dev->power.usage_count));
+		}
+	}
+	#endif	
+	
+	
 }
 
 static inline void pm_runtime_put_noidle(struct device *dev)
 {
 	atomic_add_unless(&dev->power.usage_count, -1, 0);
+
+	
+	
+	#if defined(CONFIG_USB_EHCI_MSM_HSIC)
+	{
+		extern unsigned int get_radio_flag(void);
+		if (dev && msm_hsic_host_dev == dev && (get_radio_flag() & 0x0001)) {
+			dev_info(dev, "%s[%d] usage_count[%d]\n", __func__, __LINE__,
+				atomic_read(&dev->power.usage_count));
+		}
+	}
+	#endif	
+	
+	
 }
 
 static inline bool device_run_wake(struct device *dev)
@@ -100,7 +129,24 @@ static inline void pm_runtime_mark_last_busy(struct device *dev)
 	ACCESS_ONCE(dev->power.last_busy) = jiffies;
 }
 
-#else /* !CONFIG_PM_RUNTIME */
+#if defined(CONFIG_USB_EHCI_MSM_HSIC)
+static inline void htc_pm_runtime_enable_hsic_dbg(struct device *dev, unsigned int enable)
+{
+	if (dev) {
+		dev->power.htc_hsic_dbg_enable = enable;
+		dev_info(dev, "%s:%d\n", __func__, enable);
+	}
+}
+
+static inline unsigned int is_htc_pm_runtime_hsic_dbg_enabled(struct device *dev)
+{
+	if (dev)
+		return dev->power.htc_hsic_dbg_enable;
+	else
+		return 0;
+}
+#endif	
+#else 
 
 static inline int __pm_runtime_idle(struct device *dev, int rpmflags)
 {
@@ -153,7 +199,7 @@ static inline unsigned long pm_runtime_autosuspend_expiration(
 static inline void pm_runtime_update_max_time_suspended(struct device *dev,
 							s64 delta_ns) {}
 
-#endif /* !CONFIG_PM_RUNTIME */
+#endif 
 
 static inline int pm_runtime_idle(struct device *dev)
 {

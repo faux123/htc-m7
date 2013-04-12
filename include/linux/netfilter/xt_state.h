@@ -9,4 +9,4 @@
 struct xt_state_info {
 	unsigned int statemask;
 };
-#endif /*_XT_STATE_H*/
+#endif 

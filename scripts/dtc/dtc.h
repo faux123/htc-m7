@@ -45,14 +45,11 @@
 
 #define DEFAULT_FDT_VERSION	17
 
-/*
- * Command line options
- */
-extern int quiet;		/* Level of quietness */
-extern int reservenum;		/* Number of memory reservation slots */
-extern int minsize;		/* Minimum blob size */
-extern int padsize;		/* Additional padding to blob */
-extern int phandle_format;	/* Use linux,phandle or phandle properties */
+extern int quiet;		
+extern int reservenum;		
+extern int minsize;		
+extern int padsize;		
+extern int phandle_format;	
 
 #define PHANDLE_LEGACY	0x1
 #define PHANDLE_EPAPR	0x2
@@ -67,7 +64,6 @@ typedef uint32_t cell_t;
 #define ALIGN(x, a)	(((x) + (a) - 1) & ~((a) - 1))
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
-/* Data blobs */
 enum markertype {
 	REF_PHANDLE,
 	REF_PATH,
@@ -88,7 +84,7 @@ struct data {
 };
 
 
-#define empty_data ((struct data){ /* all .members = 0 or NULL */ })
+#define empty_data ((struct data){  })
 
 #define for_each_marker(m) \
 	for (; (m); (m) = (m)->next)
@@ -119,12 +115,10 @@ struct data data_add_marker(struct data d, enum markertype type, char *ref);
 
 int data_is_one_string(struct data d);
 
-/* DT constraints */
 
 #define MAX_PROPNAME_LEN	31
 #define MAX_NODENAME_LEN	31
 
-/* Live trees */
 struct label {
 	char *label;
 	struct label *next;
@@ -195,7 +189,6 @@ cell_t get_node_phandle(struct node *root, struct node *node);
 
 uint32_t guess_boot_cpuid(struct node *tree);
 
-/* Boot info (tree plus memreserve information */
 
 struct reserve_info {
 	struct fdt_reserve_entry re;
@@ -214,7 +207,7 @@ struct reserve_info *add_reserve_entry(struct reserve_info *list,
 
 struct boot_info {
 	struct reserve_info *reservelist;
-	struct node *dt;		/* the device tree */
+	struct node *dt;		
 	uint32_t boot_cpuid_phys;
 };
 
@@ -222,24 +215,20 @@ struct boot_info *build_boot_info(struct reserve_info *reservelist,
 				  struct node *tree, uint32_t boot_cpuid_phys);
 void sort_tree(struct boot_info *bi);
 
-/* Checks */
 
 void process_checks(int force, struct boot_info *bi);
 
-/* Flattened trees */
 
 void dt_to_blob(FILE *f, struct boot_info *bi, int version);
 void dt_to_asm(FILE *f, struct boot_info *bi, int version);
 
 struct boot_info *dt_from_blob(const char *fname);
 
-/* Tree source */
 
 void dt_to_source(FILE *f, struct boot_info *bi);
 struct boot_info *dt_from_source(const char *f);
 
-/* FS trees */
 
 struct boot_info *dt_from_fs(const char *dirname);
 
-#endif /* _DTC_H */
+#endif 

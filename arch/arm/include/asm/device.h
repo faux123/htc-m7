@@ -11,7 +11,7 @@ struct dev_archdata {
 	struct dmabounce_device_info *dmabounce;
 #endif
 #ifdef CONFIG_IOMMU_API
-	void *iommu; /* private IOMMU data */
+	void *iommu; 
 #endif
 };
 

@@ -13,9 +13,6 @@ struct snd_soc_platform;
 struct snd_soc_card;
 struct snd_soc_dapm_widget;
 
-/*
- * Log register events
- */
 DECLARE_EVENT_CLASS(snd_soc_reg,
 
 	TP_PROTO(struct snd_soc_codec *codec, unsigned int reg,
@@ -324,7 +321,6 @@ TRACE_EVENT(snd_soc_cache_sync,
 		  (int)__entry->id, __get_str(type), __get_str(status))
 );
 
-#endif /* _TRACE_ASOC_H */
+#endif 
 
-/* This part must be outside protection */
 #include <trace/define_trace.h>

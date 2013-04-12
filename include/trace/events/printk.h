@@ -35,7 +35,6 @@ TRACE_EVENT_CONDITION(console,
 
 	TP_printk("%s", __get_str(msg))
 );
-#endif /* _TRACE_PRINTK_H */
+#endif 
 
-/* This part must be outside protection */
 #include <trace/define_trace.h>

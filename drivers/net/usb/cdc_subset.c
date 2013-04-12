@@ -64,7 +64,6 @@
  */
 
 #if defined(CONFIG_USB_EPSON2888) || defined(CONFIG_USB_ARMLINUX)
-/* PDA style devices are always connected if present */
 static int always_connected (struct usbnet *dev)
 {
 	return 0;
@@ -74,18 +73,6 @@ static int always_connected (struct usbnet *dev)
 #ifdef	CONFIG_USB_ALI_M5632
 #define	HAVE_HARDWARE
 
-/*-------------------------------------------------------------------------
- *
- * ALi M5632 driver ... does high speed
- *
- * NOTE that the MS-Windows drivers for this chip use some funky and
- * (naturally) undocumented 7-byte prefix to each packet, so this is a
- * case where we don't currently interoperate.  Also, once you unplug
- * one end of the cable, you need to replug the other end too ... since
- * chip docs are unavailable, there's no way to reset the relevant state
- * short of a power cycle.
- *
- *-------------------------------------------------------------------------*/
 
 static const struct driver_info	ali_m5632_info = {
 	.description =	"ALi M5632",
@@ -98,64 +85,35 @@ static const struct driver_info	ali_m5632_info = {
 #ifdef	CONFIG_USB_AN2720
 #define	HAVE_HARDWARE
 
-/*-------------------------------------------------------------------------
- *
- * AnchorChips 2720 driver ... http://www.cypress.com
- *
- * This doesn't seem to have a way to detect whether the peer is
- * connected, or need any reset handshaking.  It's got pretty big
- * internal buffers (handles most of a frame's worth of data).
- * Chip data sheets don't describe any vendor control messages.
- *
- *-------------------------------------------------------------------------*/
 
 static const struct driver_info	an2720_info = {
 	.description =	"AnchorChips/Cypress 2720",
 	.flags       = FLAG_POINTTOPOINT,
-	// no reset available!
-	// no check_connect available!
+	
+	
 
-	.in = 2, .out = 2,		// direction distinguishes these
+	.in = 2, .out = 2,		
 };
 
-#endif	/* CONFIG_USB_AN2720 */
+#endif	
 
 
 #ifdef	CONFIG_USB_BELKIN
 #define	HAVE_HARDWARE
 
-/*-------------------------------------------------------------------------
- *
- * Belkin F5U104 ... two NetChip 2280 devices + Atmel AVR microcontroller
- *
- * ... also two eTEK designs, including one sold as "Advance USBNET"
- *
- *-------------------------------------------------------------------------*/
 
 static const struct driver_info	belkin_info = {
 	.description =	"Belkin, eTEK, or compatible",
 	.flags       = FLAG_POINTTOPOINT,
 };
 
-#endif	/* CONFIG_USB_BELKIN */
+#endif	
 
 
 
 #ifdef	CONFIG_USB_EPSON2888
 #define	HAVE_HARDWARE
 
-/*-------------------------------------------------------------------------
- *
- * EPSON USB clients
- *
- * This is the same idea as Linux PDAs (below) except the firmware in the
- * device might not be Tux-powered.  Epson provides reference firmware that
- * implements this interface.  Product developers can reuse or modify that
- * code, such as by using their own product and vendor codes.
- *
- * Support was from Juro Bystricky <bystricky.juro@erd.epson.com>
- *
- *-------------------------------------------------------------------------*/
 
 static const struct driver_info	epson2888_info = {
 	.description =	"Epson USB Device",
@@ -165,42 +123,21 @@ static const struct driver_info	epson2888_info = {
 	.in = 4, .out = 3,
 };
 
-#endif	/* CONFIG_USB_EPSON2888 */
+#endif	
 
 
-/*-------------------------------------------------------------------------
- *
- * info from Jonathan McDowell <noodles@earth.li>
- *
- *-------------------------------------------------------------------------*/
 #ifdef CONFIG_USB_KC2190
 #define HAVE_HARDWARE
 static const struct driver_info kc2190_info = {
 	.description =  "KC Technology KC-190",
 	.flags = FLAG_POINTTOPOINT,
 };
-#endif /* CONFIG_USB_KC2190 */
+#endif 
 
 
 #ifdef	CONFIG_USB_ARMLINUX
 #define	HAVE_HARDWARE
 
-/*-------------------------------------------------------------------------
- *
- * Intel's SA-1100 chip integrates basic USB support, and is used
- * in PDAs like some iPaqs, the Yopy, some Zaurus models, and more.
- * When they run Linux, arch/arm/mach-sa1100/usb-eth.c may be used to
- * network using minimal USB framing data.
- *
- * This describes the driver currently in standard ARM Linux kernels.
- * The Zaurus uses a different driver (see later).
- *
- * PXA25x and PXA210 use XScale cores (ARM v5TE) with better USB support
- * and different USB endpoint numbering than the SA1100 devices.  The
- * mach-pxa/usb-eth.c driver re-uses the device ids from mach-sa1100
- * so we rely on the endpoint descriptors.
- *
- *-------------------------------------------------------------------------*/
 
 static const struct driver_info	linuxdev_info = {
 	.description =	"Linux Device",
@@ -220,114 +157,93 @@ static const struct driver_info	blob_info = {
 	.flags = FLAG_POINTTOPOINT,
 };
 
-#endif	/* CONFIG_USB_ARMLINUX */
+#endif	
 
 
-/*-------------------------------------------------------------------------*/
 
 #ifndef	HAVE_HARDWARE
 #warning You need to configure some hardware for this driver
 #endif
 
-/*
- * chip vendor names won't normally be on the cables, and
- * may not be on the device.
- */
 
 static const struct usb_device_id	products [] = {
 
 #ifdef	CONFIG_USB_ALI_M5632
 {
-	USB_DEVICE (0x0402, 0x5632),	// ALi defaults
+	USB_DEVICE (0x0402, 0x5632),	
 	.driver_info =	(unsigned long) &ali_m5632_info,
 },
 {
-	USB_DEVICE (0x182d,0x207c),	// SiteCom CN-124
+	USB_DEVICE (0x182d,0x207c),	
 	.driver_info =	(unsigned long) &ali_m5632_info,
 },
 #endif
 
 #ifdef	CONFIG_USB_AN2720
 {
-	USB_DEVICE (0x0547, 0x2720),	// AnchorChips defaults
+	USB_DEVICE (0x0547, 0x2720),	
 	.driver_info =	(unsigned long) &an2720_info,
 }, {
-	USB_DEVICE (0x0547, 0x2727),	// Xircom PGUNET
+	USB_DEVICE (0x0547, 0x2727),	
 	.driver_info =	(unsigned long) &an2720_info,
 },
 #endif
 
 #ifdef	CONFIG_USB_BELKIN
 {
-	USB_DEVICE (0x050d, 0x0004),	// Belkin
+	USB_DEVICE (0x050d, 0x0004),	
 	.driver_info =	(unsigned long) &belkin_info,
 }, {
-	USB_DEVICE (0x056c, 0x8100),	// eTEK
+	USB_DEVICE (0x056c, 0x8100),	
 	.driver_info =	(unsigned long) &belkin_info,
 }, {
-	USB_DEVICE (0x0525, 0x9901),	// Advance USBNET (eTEK)
+	USB_DEVICE (0x0525, 0x9901),	
 	.driver_info =	(unsigned long) &belkin_info,
 },
 #endif
 
 #ifdef	CONFIG_USB_EPSON2888
 {
-	USB_DEVICE (0x0525, 0x2888),	// EPSON USB client
+	USB_DEVICE (0x0525, 0x2888),	
 	.driver_info	= (unsigned long) &epson2888_info,
 },
 #endif
 
 #ifdef CONFIG_USB_KC2190
 {
-	USB_DEVICE (0x050f, 0x0190),	// KC-190
+	USB_DEVICE (0x050f, 0x0190),	
 	.driver_info =	(unsigned long) &kc2190_info,
 },
 #endif
 
 #ifdef	CONFIG_USB_ARMLINUX
-/*
- * SA-1100 using standard ARM Linux kernels, or compatible.
- * Often used when talking to Linux PDAs (iPaq, Yopy, etc).
- * The sa-1100 "usb-eth" driver handles the basic framing.
- *
- * PXA25x or PXA210 ...  these use a "usb-eth" driver much like
- * the sa1100 one, but hardware uses different endpoint numbers.
- *
- * Or the Linux "Ethernet" gadget on hardware that can't talk
- * CDC Ethernet (e.g., no altsettings), in either of two modes:
- *  - acting just like the old "usb-eth" firmware, though
- *    the implementation is different
- *  - supporting RNDIS as the first/default configuration for
- *    MS-Windows interop; Linux needs to use the other config
- */
 {
-	// 1183 = 0x049F, both used as hex values?
-	// Compaq "Itsy" vendor/product id
-	USB_DEVICE (0x049F, 0x505A),	// usb-eth, or compatible
+	
+	
+	USB_DEVICE (0x049F, 0x505A),	
 	.driver_info =	(unsigned long) &linuxdev_info,
 }, {
-	USB_DEVICE (0x0E7E, 0x1001),	// G.Mate "Yopy"
+	USB_DEVICE (0x0E7E, 0x1001),	
 	.driver_info =	(unsigned long) &yopy_info,
 }, {
-	USB_DEVICE (0x8086, 0x07d3),	// "blob" bootloader
+	USB_DEVICE (0x8086, 0x07d3),	
 	.driver_info =	(unsigned long) &blob_info,
 }, {
-	USB_DEVICE (0x1286, 0x8001),    // "blob" bootloader
+	USB_DEVICE (0x1286, 0x8001),    
 	.driver_info =  (unsigned long) &blob_info,
 }, {
-	// Linux Ethernet/RNDIS gadget, mostly on PXA, second config
-	// e.g. Gumstix, current OpenZaurus, ... or anything else
-	// that just enables this gadget option.
+	
+	
+	
 	USB_DEVICE (0x0525, 0xa4a2),
 	.driver_info =	(unsigned long) &linuxdev_info,
 },
 #endif
 
-	{ },		// END
+	{ },		
 };
 MODULE_DEVICE_TABLE(usb, products);
 
-/*-------------------------------------------------------------------------*/
 
 static struct usb_driver cdc_subset_driver = {
 	.name =		"cdc_subset",

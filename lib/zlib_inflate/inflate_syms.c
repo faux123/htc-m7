@@ -1,9 +1,3 @@
-/*
- * linux/lib/zlib_inflate/inflate_syms.c
- *
- * Exported symbols for the inflate functionality.
- *
- */
 
 #include <linux/module.h>
 #include <linux/init.h>

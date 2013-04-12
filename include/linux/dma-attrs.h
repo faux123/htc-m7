@@ -5,11 +5,6 @@
 #include <linux/bitops.h>
 #include <linux/bug.h>
 
-/**
- * an enum dma_attr represents an attribute associated with a DMA
- * mapping. The semantics of each attribute should be defined in
- * Documentation/DMA-attributes.txt.
- */
 enum dma_attr {
 	DMA_ATTR_WRITE_BARRIER,
 	DMA_ATTR_WEAK_ORDERING,
@@ -20,10 +15,6 @@ enum dma_attr {
 
 #define __DMA_ATTRS_LONGS BITS_TO_LONGS(DMA_ATTR_MAX)
 
-/**
- * struct dma_attrs - an opaque container for DMA attributes
- * @flags - bitmask representing a collection of enum dma_attr
- */
 struct dma_attrs {
 	unsigned long flags[__DMA_ATTRS_LONGS];
 };
@@ -39,11 +30,6 @@ static inline void init_dma_attrs(struct dma_attrs *attrs)
 }
 
 #ifdef CONFIG_HAVE_DMA_ATTRS
-/**
- * dma_set_attr - set a specific attribute
- * @attr: attribute to set
- * @attrs: struct dma_attrs (may be NULL)
- */
 static inline void dma_set_attr(enum dma_attr attr, struct dma_attrs *attrs)
 {
 	if (attrs == NULL)
@@ -52,11 +38,6 @@ static inline void dma_set_attr(enum dma_attr attr, struct dma_attrs *attrs)
 	__set_bit(attr, attrs->flags);
 }
 
-/**
- * dma_get_attr - check for a specific attribute
- * @attr: attribute to set
- * @attrs: struct dma_attrs (may be NULL)
- */
 static inline int dma_get_attr(enum dma_attr attr, struct dma_attrs *attrs)
 {
 	if (attrs == NULL)
@@ -64,7 +45,7 @@ static inline int dma_get_attr(enum dma_attr attr, struct dma_attrs *attrs)
 	BUG_ON(attr >= DMA_ATTR_MAX);
 	return test_bit(attr, attrs->flags);
 }
-#else /* !CONFIG_HAVE_DMA_ATTRS */
+#else 
 static inline void dma_set_attr(enum dma_attr attr, struct dma_attrs *attrs)
 {
 }
@@ -73,5 +54,5 @@ static inline int dma_get_attr(enum dma_attr attr, struct dma_attrs *attrs)
 {
 	return 0;
 }
-#endif /* CONFIG_HAVE_DMA_ATTRS */
-#endif /* _DMA_ATTR_H */
+#endif 
+#endif 

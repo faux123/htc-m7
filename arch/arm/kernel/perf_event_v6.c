@@ -59,11 +59,6 @@ enum armv6_counters {
 	ARMV6_COUNTER1,
 };
 
-/*
- * The hardware events that we support. We do support cache operations but
- * we have harvard caches and no way to combine instruction and data
- * accesses/misses in hardware.
- */
 static const unsigned armv6_perf_map[PERF_COUNT_HW_MAX] = {
 	[PERF_COUNT_HW_CPU_CYCLES]		= ARMV6_PERFCTR_CPU_CYCLES,
 	[PERF_COUNT_HW_INSTRUCTIONS]		= ARMV6_PERFCTR_INSTR_EXEC,
@@ -76,16 +71,10 @@ static const unsigned armv6_perf_map[PERF_COUNT_HW_MAX] = {
 	[PERF_COUNT_HW_STALLED_CYCLES_BACKEND]	= ARMV6_PERFCTR_LSU_FULL_STALL,
 };
 
-static const unsigned armv6_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+static unsigned armv6_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 					  [PERF_COUNT_HW_CACHE_OP_MAX]
 					  [PERF_COUNT_HW_CACHE_RESULT_MAX] = {
 	[C(L1D)] = {
-		/*
-		 * The performance counters don't differentiate between read
-		 * and write accesses/misses so this isn't strictly correct,
-		 * but it's the best we can do. Writes and reads get
-		 * combined.
-		 */
 		[C(OP_READ)] = {
 			[C(RESULT_ACCESS)]	= ARMV6_PERFCTR_DCACHE_ACCESS,
 			[C(RESULT_MISS)]	= ARMV6_PERFCTR_DCACHE_MISS,
@@ -128,12 +117,6 @@ static const unsigned armv6_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 		},
 	},
 	[C(DTLB)] = {
-		/*
-		 * The ARM performance counters can count micro DTLB misses,
-		 * micro ITLB misses and main TLB misses. There isn't an event
-		 * for TLB misses, so use the micro misses here and if users
-		 * want the main TLB misses they can use a raw counter.
-		 */
 		[C(OP_READ)] = {
 			[C(RESULT_ACCESS)]	= CACHE_OP_UNSUPPORTED,
 			[C(RESULT_MISS)]	= ARMV6_PERFCTR_DTLB_MISS,
@@ -214,11 +197,6 @@ enum armv6mpcore_perf_types {
 	ARMV6MPCORE_PERFCTR_CPU_CYCLES	    = 0xFF,
 };
 
-/*
- * The hardware events that we support. We do support cache operations but
- * we have harvard caches and no way to combine instruction and data
- * accesses/misses in hardware.
- */
 static const unsigned armv6mpcore_perf_map[PERF_COUNT_HW_MAX] = {
 	[PERF_COUNT_HW_CPU_CYCLES]		= ARMV6MPCORE_PERFCTR_CPU_CYCLES,
 	[PERF_COUNT_HW_INSTRUCTIONS]		= ARMV6MPCORE_PERFCTR_INSTR_EXEC,
@@ -231,7 +209,7 @@ static const unsigned armv6mpcore_perf_map[PERF_COUNT_HW_MAX] = {
 	[PERF_COUNT_HW_STALLED_CYCLES_BACKEND]	= ARMV6MPCORE_PERFCTR_LSU_FULL_STALL,
 };
 
-static const unsigned armv6mpcore_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
+static unsigned armv6mpcore_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 					[PERF_COUNT_HW_CACHE_OP_MAX]
 					[PERF_COUNT_HW_CACHE_RESULT_MAX] = {
 	[C(L1D)] = {
@@ -281,12 +259,6 @@ static const unsigned armv6mpcore_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]
 		},
 	},
 	[C(DTLB)] = {
-		/*
-		 * The ARM performance counters can count micro DTLB misses,
-		 * micro ITLB misses and main TLB misses. There isn't an event
-		 * for TLB misses, so use the micro misses here and if users
-		 * want the main TLB misses they can use a raw counter.
-		 */
 		[C(OP_READ)] = {
 			[C(RESULT_ACCESS)]  = CACHE_OP_UNSUPPORTED,
 			[C(RESULT_MISS)]    = ARMV6MPCORE_PERFCTR_DTLB_MISS,
@@ -455,10 +427,6 @@ armv6pmu_enable_event(struct hw_perf_event *hwc,
 		return;
 	}
 
-	/*
-	 * Mask out the current event and set the counter to count the event
-	 * that we're interested in.
-	 */
 	raw_spin_lock_irqsave(&events->pmu_lock, flags);
 	val = armv6_pmcr_read();
 	val &= ~mask;
@@ -496,14 +464,10 @@ armv6pmu_handle_irq(int irq_num,
 		struct perf_event *event = cpuc->events[idx];
 		struct hw_perf_event *hwc;
 
-		/* Ignore if we don't have an event. */
+		
 		if (!event)
 			continue;
 
-		/*
-		 * We have a single interrupt for all counters. Check that
-		 * each counter has overflowed before we process it.
-		 */
 		if (!armv6_pmcr_counter_has_overflowed(pmcr, idx))
 			continue;
 
@@ -517,13 +481,6 @@ armv6pmu_handle_irq(int irq_num,
 			cpu_pmu->disable(hwc, idx);
 	}
 
-	/*
-	 * Handle the pending perf events.
-	 *
-	 * Note: this call *must* be run with interrupts disabled. For
-	 * platforms that can have the PMU interrupts raised as an NMI, this
-	 * will not work.
-	 */
 	irq_work_run();
 
 	return IRQ_HANDLED;
@@ -559,24 +516,20 @@ static int
 armv6pmu_get_event_idx(struct pmu_hw_events *cpuc,
 		       struct hw_perf_event *event)
 {
-	/* Always place a cycle counter into the cycle counter. */
+	
 	if (ARMV6_PERFCTR_CPU_CYCLES == event->config_base) {
 		if (test_and_set_bit(ARMV6_CYCLE_COUNTER, cpuc->used_mask))
 			return -EAGAIN;
 
 		return ARMV6_CYCLE_COUNTER;
 	} else {
-		/*
-		 * For anything other than a cycle counter, try and use
-		 * counter0 and counter1.
-		 */
 		if (!test_and_set_bit(ARMV6_COUNTER1, cpuc->used_mask))
 			return ARMV6_COUNTER1;
 
 		if (!test_and_set_bit(ARMV6_COUNTER0, cpuc->used_mask))
 			return ARMV6_COUNTER0;
 
-		/* The counters are all in use. */
+		
 		return -EAGAIN;
 	}
 }
@@ -602,11 +555,6 @@ armv6pmu_disable_event(struct hw_perf_event *hwc,
 		return;
 	}
 
-	/*
-	 * Mask out the current event and set the counter to count the number
-	 * of ETM bus signal assertion cycles. The external reporting should
-	 * be disabled and so this should never increment.
-	 */
 	raw_spin_lock_irqsave(&events->pmu_lock, flags);
 	val = armv6_pmcr_read();
 	val &= ~mask;
@@ -633,10 +581,6 @@ armv6mpcore_pmu_disable_event(struct hw_perf_event *hwc,
 		return;
 	}
 
-	/*
-	 * Unlike UP ARMv6, we don't have a way of stopping the counters. We
-	 * simply disable the interrupt reporting.
-	 */
 	raw_spin_lock_irqsave(&events->pmu_lock, flags);
 	val = armv6_pmcr_read();
 	val &= ~mask;
@@ -655,6 +599,8 @@ static struct arm_pmu armv6pmu = {
 	.id			= ARM_PERF_PMU_ID_V6,
 	.name			= "v6",
 	.handle_irq		= armv6pmu_handle_irq,
+	.request_pmu_irq	= armpmu_generic_request_irq,
+	.free_pmu_irq		= armpmu_generic_free_irq,
 	.enable			= armv6pmu_enable_event,
 	.disable		= armv6pmu_disable_event,
 	.read_counter		= armv6pmu_read_counter,
@@ -672,13 +618,6 @@ static struct arm_pmu *__init armv6pmu_init(void)
 	return &armv6pmu;
 }
 
-/*
- * ARMv6mpcore is almost identical to single core ARMv6 with the exception
- * that some of the events have different enumerations and that there is no
- * *hack* to stop the programmable counters. To stop the counters we simply
- * disable the interrupt reporting and update the event. When unthrottling we
- * reset the period and enable the interrupt reporting.
- */
 
 static int armv6mpcore_map_event(struct perf_event *event)
 {
@@ -690,6 +629,8 @@ static struct arm_pmu armv6mpcore_pmu = {
 	.id			= ARM_PERF_PMU_ID_V6MP,
 	.name			= "v6mpcore",
 	.handle_irq		= armv6pmu_handle_irq,
+	.request_pmu_irq	= armpmu_generic_request_irq,
+	.free_pmu_irq		= armpmu_generic_free_irq,
 	.enable			= armv6pmu_enable_event,
 	.disable		= armv6mpcore_pmu_disable_event,
 	.read_counter		= armv6pmu_read_counter,
@@ -716,4 +657,4 @@ static struct arm_pmu *__init armv6mpcore_pmu_init(void)
 {
 	return NULL;
 }
-#endif	/* CONFIG_CPU_V6 || CONFIG_CPU_V6K */
+#endif	

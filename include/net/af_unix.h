@@ -27,11 +27,11 @@ struct unix_address {
 };
 
 struct unix_skb_parms {
-	struct pid		*pid;		/* Skb credentials	*/
+	struct pid		*pid;		
 	const struct cred	*cred;
-	struct scm_fp_list	*fp;		/* Passed files		*/
+	struct scm_fp_list	*fp;		
 #ifdef CONFIG_SECURITY_NETWORK
-	u32			secid;		/* Security ID		*/
+	u32			secid;		
 #endif
 };
 
@@ -44,9 +44,8 @@ struct unix_skb_parms {
 				spin_lock_nested(&unix_sk(s)->lock, \
 				SINGLE_DEPTH_NESTING)
 
-/* The AF_UNIX socket */
 struct unix_sock {
-	/* WARNING: sk has to be the first member */
+	
 	struct sock		sk;
 	struct unix_address     *addr;
 	struct path		path;

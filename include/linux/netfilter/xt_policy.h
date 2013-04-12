@@ -66,4 +66,4 @@ struct xt_policy_info {
 	__u16 len;
 };
 
-#endif /* _XT_POLICY_H */
+#endif 

@@ -27,14 +27,6 @@ struct esp_skb_cb {
 
 static u32 esp4_get_mtu(struct xfrm_state *x, int mtu);
 
-/*
- * Allocate an AEAD request structure with extra space for SG and IV.
- *
- * For alignment considerations the IV is placed at the front, followed
- * by the request and finally the SG list.
- *
- * TODO: Use spare space in skb for this where possible.
- */
 static void *esp_alloc_tmp(struct crypto_aead *aead, int nfrags, int seqhilen)
 {
 	unsigned int len;
@@ -137,7 +129,7 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
 	int seqhilen;
 	__be32 *seqhi;
 
-	/* skb is pure payload to encrypt */
+	
 
 	err = -ENOMEM;
 
@@ -185,7 +177,7 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
 	asg = esp_givreq_sg(aead, req);
 	sg = asg + sglists;
 
-	/* Fill padding... */
+	
 	tail = skb_tail_pointer(trailer);
 	if (tfclen) {
 		memset(tail, 0, tfclen);
@@ -204,7 +196,7 @@ static int esp_output(struct xfrm_state *x, struct sk_buff *skb)
 	esph = ip_esp_hdr(skb);
 	*skb_mac_header(skb) = IPPROTO_ESP;
 
-	/* this is non-NULL only with UDP Encapsulation */
+	
 	if (x->encap) {
 		struct xfrm_encap_tmpl *encap = x->encap;
 		struct udphdr *uh;
@@ -302,7 +294,7 @@ static int esp_input_done2(struct sk_buff *skb, int err)
 	if (padlen + 2 + alen >= elen)
 		goto out;
 
-	/* ... check padding bits here. Silly. :-) */
+	
 
 	iph = ip_hdr(skb);
 	ihl = iph->ihl * 4;
@@ -311,12 +303,6 @@ static int esp_input_done2(struct sk_buff *skb, int err)
 		struct xfrm_encap_tmpl *encap = x->encap;
 		struct udphdr *uh = (void *)(skb_network_header(skb) + ihl);
 
-		/*
-		 * 1) if the NAT-T peer's IP or port changed then
-		 *    advertize the change to the keying daemon.
-		 *    This is an inbound SA, so just compare
-		 *    SRC ports.
-		 */
 		if (iph->saddr != x->props.saddr.a4 ||
 		    uh->source != encap->encap_sport) {
 			xfrm_address_t ipaddr;
@@ -324,22 +310,8 @@ static int esp_input_done2(struct sk_buff *skb, int err)
 			ipaddr.a4 = iph->saddr;
 			km_new_mapping(x, &ipaddr, uh->source);
 
-			/* XXX: perhaps add an extra
-			 * policy check here, to see
-			 * if we should allow or
-			 * reject a packet from a
-			 * different source
-			 * address/port.
-			 */
 		}
 
-		/*
-		 * 2) ignore UDP/TCP checksums in case
-		 *    of NAT-T in Transport Mode, or
-		 *    perform other post-processing fixes
-		 *    as per draft-ietf-ipsec-udp-encaps-06,
-		 *    section 3.1.2
-		 */
 		if (x->props.mode == XFRM_MODE_TRANSPORT)
 			skb->ip_summed = CHECKSUM_UNNECESSARY;
 	}
@@ -350,7 +322,7 @@ static int esp_input_done2(struct sk_buff *skb, int err)
 
 	err = nexthdr[1];
 
-	/* RFC4303: Drop dummy packets without any error */
+	
 	if (err == IPPROTO_NONE)
 		err = -EINVAL;
 
@@ -365,11 +337,6 @@ static void esp_input_done(struct crypto_async_request *base, int err)
 	xfrm_input_resume(skb, esp_input_done2(skb, err));
 }
 
-/*
- * Note: detecting truncated vs. non-truncated authentication data is very
- * expensive, so we only support truncated data, which is the recommended
- * and common case.
- */
 static int esp_input(struct xfrm_state *x, struct sk_buff *skb)
 {
 	struct ip_esp_hdr *esph;
@@ -425,7 +392,7 @@ static int esp_input(struct xfrm_state *x, struct sk_buff *skb)
 
 	esph = (struct ip_esp_hdr *)skb->data;
 
-	/* Get ivec. This can be wrong, check against another impls. */
+	
 	iv = esph->enc_data;
 
 	sg_init_table(sg, nfrags);

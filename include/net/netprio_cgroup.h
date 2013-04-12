@@ -79,10 +79,10 @@ static inline u32 task_netprioidx(struct task_struct *p)
 	return 0;
 }
 
-#endif /* CONFIG_NETPRIO_CGROUP */
+#endif 
 
 #else
 #define sock_update_netprioidx(sk)
 #endif
 
-#endif  /* _NET_CLS_CGROUP_H */
+#endif  

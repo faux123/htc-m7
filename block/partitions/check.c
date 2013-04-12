@@ -34,13 +34,9 @@
 #include "karma.h"
 #include "sysv68.h"
 
-int warn_no_part = 1; /*This is ugly: should make genhd removable media aware*/
+int warn_no_part = 1; 
 
 static int (*check_part[])(struct parsed_partitions *) = {
-	/*
-	 * Probe partition formats with tables at disk address 0
-	 * that also have an ADFS boot block at 0xdc0.
-	 */
 #ifdef CONFIG_ACORN_PARTITION_ICS
 	adfspart_check_ICS,
 #endif
@@ -51,12 +47,6 @@ static int (*check_part[])(struct parsed_partitions *) = {
 	adfspart_check_EESOX,
 #endif
 
-	/*
-	 * Now move on to formats that only have partition info at
-	 * disk address 0xdc0.  Since these may also have stale
-	 * PC/BIOS partition tables, they need to come before
-	 * the msdos entry.
-	 */
 #ifdef CONFIG_ACORN_PARTITION_CUMANA
 	adfspart_check_CUMANA,
 #endif
@@ -65,13 +55,13 @@ static int (*check_part[])(struct parsed_partitions *) = {
 #endif
 
 #ifdef CONFIG_EFI_PARTITION
-	efi_partition,		/* this must come before msdos */
+	efi_partition,		
 #endif
 #ifdef CONFIG_SGI_PARTITION
 	sgi_partition,
 #endif
 #ifdef CONFIG_LDM_PARTITION
-	ldm_partition,		/* this must come before msdos */
+	ldm_partition,		
 #endif
 #ifdef CONFIG_MSDOS_PARTITION
 	msdos_partition,
@@ -134,9 +124,6 @@ check_partition(struct gendisk *hd, struct block_device *bdev)
 		memset(&state->parts, 0, sizeof(state->parts));
 		res = check_part[i++](state);
 		if (res < 0) {
-			/* We have hit an I/O error which we don't report now.
-		 	* But record it, and let the others do their job.
-		 	*/
 			err = res;
 			res = 0;
 		}
@@ -151,7 +138,7 @@ check_partition(struct gendisk *hd, struct block_device *bdev)
 	if (state->access_beyond_eod)
 		err = -ENOSPC;
 	if (err)
-	/* The partition is unrecognized. So report I/O errors if there were any */
+	
 		res = err;
 	if (!res)
 		strlcat(state->pp_buf, " unknown partition table\n", PAGE_SIZE);

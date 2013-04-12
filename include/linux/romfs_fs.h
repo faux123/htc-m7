@@ -4,7 +4,6 @@
 #include <linux/types.h>
 #include <linux/fs.h>
 
-/* The basic structures of the romfs filesystem */
 
 #define ROMBSIZE BLOCK_SIZE
 #define ROMBSBITS BLOCK_SIZE_BITS
@@ -19,20 +18,18 @@
 #define ROMSB_WORD0 __mk4('-','r','o','m')
 #define ROMSB_WORD1 __mk4('1','f','s','-')
 
-/* On-disk "super block" */
 
 struct romfs_super_block {
 	__be32 word0;
 	__be32 word1;
 	__be32 size;
 	__be32 checksum;
-	char name[0];		/* volume name */
+	char name[0];		
 };
 
-/* On disk inode */
 
 struct romfs_inode {
-	__be32 next;		/* low 4 bits see ROMFH_ */
+	__be32 next;		
 	__be32 spec;
 	__be32 size;
 	__be32 checksum;
@@ -50,7 +47,6 @@ struct romfs_inode {
 #define ROMFH_FIF 7
 #define ROMFH_EXEC 8
 
-/* Alignment */
 
 #define ROMFH_SIZE 16
 #define ROMFH_PAD (ROMFH_SIZE-1)

@@ -13,10 +13,6 @@
 #define irq_canonicalize(i)	(i)
 #endif
 
-/*
- * Use this value to indicate lack of interrupt
- * capability
- */
 #ifndef NO_IRQ
 #define NO_IRQ	((unsigned int)(-1))
 #endif
@@ -29,6 +25,9 @@ extern void migrate_irqs(void);
 extern void asm_do_IRQ(unsigned int, struct pt_regs *);
 void handle_IRQ(unsigned int, struct pt_regs *);
 void init_IRQ(void);
+
+void arch_trigger_all_cpu_backtrace(void);
+#define arch_trigger_all_cpu_backtrace arch_trigger_all_cpu_backtrace
 
 #endif
 

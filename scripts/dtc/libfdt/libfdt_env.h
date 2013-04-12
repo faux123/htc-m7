@@ -20,4 +20,4 @@ static inline uint64_t fdt64_to_cpu(uint64_t x)
 #define cpu_to_fdt64(x) fdt64_to_cpu(x)
 #undef _B
 
-#endif /* _LIBFDT_ENV_H */
+#endif 

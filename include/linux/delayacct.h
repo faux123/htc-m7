@@ -20,17 +20,12 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 
-/*
- * Per-task flags relevant to delay accounting
- * maintained privately to avoid exhausting similar flags in sched.h:PF_*
- * Used to set current->delays->flags
- */
-#define DELAYACCT_PF_SWAPIN	0x00000001	/* I am doing a swapin */
-#define DELAYACCT_PF_BLKIO	0x00000002	/* I am waiting on IO */
+#define DELAYACCT_PF_SWAPIN	0x00000001	
+#define DELAYACCT_PF_BLKIO	0x00000002	
 
 #ifdef CONFIG_TASK_DELAY_ACCT
 
-extern int delayacct_on;	/* Delay accounting turned on/off */
+extern int delayacct_on;	
 extern struct kmem_cache *delayacct_cache;
 extern void delayacct_init(void);
 extern void __delayacct_tsk_init(struct task_struct *);
@@ -64,15 +59,12 @@ static inline void delayacct_clear_flag(int flag)
 
 static inline void delayacct_tsk_init(struct task_struct *tsk)
 {
-	/* reinitialize in case parent's non-null pointer was dup'ed*/
+	
 	tsk->delays = NULL;
 	if (delayacct_on)
 		__delayacct_tsk_init(tsk);
 }
 
-/* Free tsk->delays. Called from bad fork and __put_task_struct
- * where there's no risk of tsk->delays being accessed elsewhere
- */
 static inline void delayacct_tsk_free(struct task_struct *tsk)
 {
 	if (tsk->delays)
@@ -148,6 +140,6 @@ static inline void delayacct_freepages_start(void)
 static inline void delayacct_freepages_end(void)
 {}
 
-#endif /* CONFIG_TASK_DELAY_ACCT */
+#endif 
 
 #endif

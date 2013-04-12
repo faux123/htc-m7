@@ -135,9 +135,6 @@ static struct attribute_group cpuidle_attr_group = {
 	.name = "cpuidle",
 };
 
-/**
- * cpuidle_add_interface - add CPU global sysfs attributes
- */
 int cpuidle_add_interface(struct device *dev)
 {
 	if (sysfs_switch)
@@ -146,9 +143,6 @@ int cpuidle_add_interface(struct device *dev)
 	return sysfs_create_group(&dev->kobj, &cpuidle_attr_group);
 }
 
-/**
- * cpuidle_remove_interface - remove CPU global sysfs attributes
- */
 void cpuidle_remove_interface(struct device *dev)
 {
 	sysfs_remove_group(&dev->kobj, &cpuidle_attr_group);
@@ -352,17 +346,13 @@ static inline void cpuidle_free_state_kobj(struct cpuidle_device *device, int i)
 	device->kobjs[i] = NULL;
 }
 
-/**
- * cpuidle_add_driver_sysfs - adds driver-specific sysfs attributes
- * @device: the target device
- */
 int cpuidle_add_state_sysfs(struct cpuidle_device *device)
 {
 	int i, ret = -ENOMEM;
 	struct cpuidle_state_kobj *kobj;
 	struct cpuidle_driver *drv = cpuidle_get_driver();
 
-	/* state statistics */
+	
 	for (i = 0; i < device->state_count; i++) {
 		kobj = kzalloc(sizeof(struct cpuidle_state_kobj), GFP_KERNEL);
 		if (!kobj)
@@ -389,10 +379,6 @@ error_state:
 	return ret;
 }
 
-/**
- * cpuidle_remove_driver_sysfs - removes driver-specific sysfs attributes
- * @device: the target device
- */
 void cpuidle_remove_state_sysfs(struct cpuidle_device *device)
 {
 	int i;
@@ -401,10 +387,6 @@ void cpuidle_remove_state_sysfs(struct cpuidle_device *device)
 		cpuidle_free_state_kobj(device, i);
 }
 
-/**
- * cpuidle_add_sysfs - creates a sysfs instance for the target device
- * @dev: the target device
- */
 int cpuidle_add_sysfs(struct device *cpu_dev)
 {
 	int cpu = cpu_dev->id;
@@ -419,10 +401,6 @@ int cpuidle_add_sysfs(struct device *cpu_dev)
 	return error;
 }
 
-/**
- * cpuidle_remove_sysfs - deletes a sysfs instance on the target device
- * @dev: the target device
- */
 void cpuidle_remove_sysfs(struct device *cpu_dev)
 {
 	int cpu = cpu_dev->id;

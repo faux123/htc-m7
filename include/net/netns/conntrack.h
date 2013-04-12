@@ -25,7 +25,7 @@ struct netns_ct {
 	int			sysctl_acct;
 	int			sysctl_tstamp;
 	int			sysctl_checksum;
-	unsigned int		sysctl_log_invalid; /* Log invalid packets */
+	unsigned int		sysctl_log_invalid; 
 #ifdef CONFIG_SYSCTL
 	struct ctl_table_header	*sysctl_header;
 	struct ctl_table_header	*acct_sysctl_header;

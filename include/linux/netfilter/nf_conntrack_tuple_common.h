@@ -7,11 +7,8 @@ enum ip_conntrack_dir {
 	IP_CT_DIR_MAX
 };
 
-/* The protocol-specific manipulable parts of the tuple: always in
- * network order
- */
 union nf_conntrack_man_proto {
-	/* Add other protocols here. */
+	
 	__be16 all;
 
 	struct {
@@ -30,10 +27,10 @@ union nf_conntrack_man_proto {
 		__be16 port;
 	} sctp;
 	struct {
-		__be16 key;	/* GRE key is 32bit, PPtP only uses 16bit */
+		__be16 key;	
 	} gre;
 };
 
 #define CTINFO2DIR(ctinfo) ((ctinfo) >= IP_CT_IS_REPLY ? IP_CT_DIR_REPLY : IP_CT_DIR_ORIGINAL)
 
-#endif /* _NF_CONNTRACK_TUPLE_COMMON_H */
+#endif 
