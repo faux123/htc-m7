@@ -18,6 +18,7 @@
 #include <trace/events/mmcio.h>
 #ifdef CONFIG_DYNAMIC_FSYNC
 extern bool early_suspend_active;
+extern bool dyn_fsync_active;
 #endif
 
 #define VALID_FLAGS (SYNC_FILE_RANGE_WAIT_BEFORE|SYNC_FILE_RANGE_WRITE| \
@@ -149,8 +150,7 @@ int vfs_fsync_range(struct file *file, loff_t start, loff_t end, int datasync)
 {
 	int err;
 #ifdef CONFIG_DYNAMIC_FSYNC
-
-	if (!early_suspend_active)
+	if (dyn_fsync_active && !early_suspend_active)
 		return 0;
 	else {
 #endif
@@ -286,7 +286,7 @@ no_async:
 SYSCALL_DEFINE1(fsync, unsigned int, fd)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (!early_suspend_active)
+	if (dyn_fsync_active && !early_suspend_active)
 		return 0;
 	else
 #endif
@@ -296,7 +296,7 @@ SYSCALL_DEFINE1(fsync, unsigned int, fd)
 SYSCALL_DEFINE1(fdatasync, unsigned int, fd)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (!early_suspend_active)
+	if (dyn_fsync_active && !early_suspend_active)
 		return 0;
 	else
 #endif
@@ -316,7 +316,7 @@ SYSCALL_DEFINE(sync_file_range)(int fd, loff_t offset, loff_t nbytes,
 				unsigned int flags)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (!early_suspend_active)
+	if (dyn_fsync_active && !early_suspend_active)
 		return 0;
 	else {
 #endif
@@ -411,7 +411,7 @@ SYSCALL_DEFINE(sync_file_range2)(int fd, unsigned int flags,
 				 loff_t offset, loff_t nbytes)
 {
 #ifdef CONFIG_DYNAMIC_FSYNC
-	if (!early_suspend_active)
+	if (dyn_fsync_active && !early_suspend_active)
 		return 0;
 	else
 #endif
