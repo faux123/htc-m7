@@ -136,7 +136,7 @@ static void power_key_state_disable_work_func(struct work_struct *dummy)
 }
 static DECLARE_DELAYED_WORK(power_key_state_disable_work, power_key_state_disable_work_func);
 
-static void handle_power_key_state(unsigned int code, int value)
+void handle_power_key_state(unsigned int code, int value)
 {
 	int ret = 0;
 	if (code == KEY_POWER && value == 1) {
