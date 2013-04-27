@@ -163,6 +163,8 @@ int s2w_temp = 1;
 int l2m_switch = 1; // 0 -> No menu map, 1 Menu map
 int l2m_temp = 1;
 
+int logo_delay_switch = 1; // if 1 -> Logo2Sleep will wait for long tap, if 0, it won't wait for no jiffies.
+
 bool scr_suspended = false, exec_count = true, s2w_switch_changed = false;;
 bool scr_on_touch = false, led_exec_count = false, barrier[2] = {false, false};
 static struct input_dev * sweep2wake_pwrdev;
@@ -1630,141 +1632,36 @@ static ssize_t synaptics_logo2menu_dump(struct device *dev,
 static DEVICE_ATTR(logo2menu, (S_IWUSR|S_IRUGO),
 	synaptics_logo2menu_show, synaptics_logo2menu_dump);
 
-/*
-static ssize_t synaptics_sweep2wake_about_show(struct device *dev,
+
+static ssize_t synaptics_logo_delay_show(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	size_t count = 0;
 
-	count += sprintf(buf, "Sweep2wake with /sys entries allows you to program your start /end button for your sweep2wake needs\n");
-
-	return count;
-}
-static DEVICE_ATTR(sweep2wake_about, S_IRUGO,
-	synaptics_sweep2wake_about_show, NULL);
-
-static ssize_t synaptics_sweep2wake_buttons_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	int i = 0;
-	size_t count = 0;
-
-	for (i = 0; i < sizeof(buttons)/sizeof(button); i++)
-	{
-		count += sprintf(&buf[count], "%s ",buttons[i].name);
-	}
-
-	count += sprintf(&buf[count], "\n");
-
-	return count;
-}
-static DEVICE_ATTR(sweep2wake_buttons, S_IRUGO,
-	synaptics_sweep2wake_buttons_show, NULL);
-
-
-static ssize_t synaptics_sweep2wake_startbutton_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	int i = 0;
-	size_t count = 0;
-	bool found = false;
-
-	for (i = 0; i < sizeof(buttons)/sizeof(button); i++)
-	{
-		if (s2w_startbutton == buttons[i].x) {				
-			count += sprintf(buf, "%s\n",buttons[i].name);
-			found = true;
-		}
-	}
-	
-	if (!found) 
-		count += sprintf(buf, "%s\n","UNKNOWN");
+	count += sprintf(buf, "%d\n", logo_delay_switch);
 
 	return count;
 }
 
-static ssize_t synaptics_sweep2wake_startbutton_dump(struct device *dev,
+static ssize_t synaptics_logo_delay_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	int s2w_tempbutton = 0;
-
-	s2w_tempbutton = sweep2wake_buttonset(buf);
-	if (s2w_tempbutton == -1)
-		return -EINVAL;;
-
-	if ( s2w_tempbutton == s2w_endbutton )
-		return count;
-
-	if ( s2w_tempbutton > s2w_endbutton ) {
-		s2w_startbutton = s2w_endbutton;	
-		s2w_endbutton = s2w_tempbutton;
-	} else 
-		s2w_startbutton = s2w_tempbutton;
-
-	barrier1 = s2w_startbutton - 100; //0;
-	barrier2 = ((s2w_endbutton - s2w_startbutton) / 4) + s2w_startbutton; //333;
-	barrier3 = (((s2w_endbutton - s2w_startbutton) / 4) * 3) + s2w_startbutton; //667;
-	barrier4 = s2w_endbutton + 100; //1000;
-
-	return count;
-}
-
-static DEVICE_ATTR(sweep2wake_startbutton, (S_IWUSR|S_IRUGO),
-	synaptics_sweep2wake_startbutton_show, synaptics_sweep2wake_startbutton_dump);
-
-//end button
-static ssize_t synaptics_sweep2wake_endbutton_show(struct device *dev,
-		struct device_attribute *attr, char *buf)
-{
-	int i = 0;
-	size_t count = 0;
-	bool found = false;
-
-	for (i = 0; i < sizeof(buttons)/sizeof(button); i++)
-	{
-		if (s2w_endbutton == buttons[i].x) {				
-			count += sprintf(buf, "%s\n",buttons[i].name);
-			found = true;
+	if (buf[0] >= '0' && buf[0] <= '1' && buf[1] == '\n')
+		if (logo_delay_switch != buf[0] - '0') {
+			logo_delay_switch = buf[0] - '0';
 		}
-	}
-	
-	if (!found) 
-		count += sprintf(buf, "%s\n","UNKNOWN");
+
+	if (logo_delay_switch == 0) 
+		printk(KERN_INFO "[LOGO_DELAY]: Disabled.\n");
+	else if (logo_delay_switch == 1)
+		printk(KERN_INFO "[LOGO_DELAY]: Enabled.\n");
 
 	return count;
 }
 
-static ssize_t synaptics_sweep2wake_endbutton_dump(struct device *dev,
-		struct device_attribute *attr, const char *buf, size_t count)
-{
-	int s2w_tempbutton = 0;
+static DEVICE_ATTR(logo_delay, (S_IWUSR|S_IRUGO),
+	synaptics_logo_delay_show, synaptics_logo_delay_dump);
 
-	s2w_tempbutton = sweep2wake_buttonset(buf);
-	if (s2w_tempbutton == -1)
-		return -EINVAL;;
-
-	if ( s2w_tempbutton == s2w_startbutton )
-		return count;
-
-	if ( s2w_tempbutton < s2w_startbutton ) {
-		s2w_endbutton = s2w_startbutton;	
-		s2w_startbutton = s2w_tempbutton;
-	} else 
-		s2w_endbutton = s2w_tempbutton;
-
-	barrier1 = s2w_startbutton - 100; //0;
-	barrier2 = ((s2w_endbutton - s2w_startbutton) / 4) + s2w_startbutton; //333;
-	barrier3 = (((s2w_endbutton - s2w_startbutton) / 4) * 3) + s2w_startbutton; //667;
-	barrier4 = s2w_endbutton + 100; //1000;
-
-	return count;
-}
-
-static DEVICE_ATTR(sweep2wake_endbutton, (S_IWUSR|S_IRUGO),
-	synaptics_sweep2wake_endbutton_show, synaptics_sweep2wake_endbutton_dump);
-
-//end of end button
-*/
 
 #endif
 
@@ -1816,26 +1713,11 @@ static int synaptics_touch_sysfs_init(void)
 		printk(KERN_ERR "%s: sysfs_create_file failed\n", __func__);
 		return ret;
 	}
-/*	ret = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2wake_startbutton.attr);
+		ret = sysfs_create_file(android_touch_kobj, &dev_attr_logo_delay.attr);
 	if (ret) {
 		printk(KERN_ERR "%s: sysfs_create_file failed\n", __func__);
 		return ret;
 	}
-	ret = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2wake_endbutton.attr);
-	if (ret) {
-		printk(KERN_ERR "%s: sysfs_create_file failed\n", __func__);
-		return ret;
-	}
-	ret = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2wake_about.attr);
-	if (ret) {
-		printk(KERN_ERR "%s: sysfs_create_file failed\n", __func__);
-		return ret;
-	}
-	ret = sysfs_create_file(android_touch_kobj, &dev_attr_sweep2wake_buttons.attr);
-	if (ret) {
-		printk(KERN_ERR "%s: sysfs_create_file failed\n", __func__);
-		return ret;
-	}*/
 	
 #endif
 
@@ -1888,10 +1770,7 @@ static void synaptics_touch_sysfs_remove(void)
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 	sysfs_remove_file(android_touch_kobj, &dev_attr_home2wake.attr);
 	sysfs_remove_file(android_touch_kobj, &dev_attr_logo2menu.attr);
-/*	sysfs_remove_file(android_touch_kobj, &dev_attr_sweep2wake_startbutton.attr);
-	sysfs_remove_file(android_touch_kobj, &dev_attr_sweep2wake_endbutton.attr);	
-	sysfs_remove_file(android_touch_kobj, &dev_attr_sweep2wake_about.attr);
-	sysfs_remove_file(android_touch_kobj, &dev_attr_sweep2wake_buttons.attr);*/
+	sysfs_remove_file(android_touch_kobj, &dev_attr_logo_delay.attr);
 #endif
 #ifdef SYN_WIRELESS_DEBUG
 	sysfs_remove_file(android_touch_kobj, &dev_attr_enabled.attr);
@@ -2002,7 +1881,8 @@ static int last_touch_position_y = 0;
 
 static int logo_press_state = 0;
 static unsigned long logo_last_pressed_time;
-static unsigned long BETWEEN_PRESS_MIN_DIFF = 50;
+static unsigned long BETWEEN_SLEEP_OR_WAKE_PRESS_MIN_DIFF = 15;
+static unsigned long BETWEEN_LONG_PRESS_MIN_DIFF = 50;
 
 static int report_htc_logo_area(int x, int y)
 {
@@ -2010,7 +1890,14 @@ static int report_htc_logo_area(int x, int y)
 
     if (last_touch_position_x>600 && last_touch_position_x<1200)
     {
-	if (last_touch_position_y>2835)
+	int below_y = 2835;
+	if (scr_suspended == true)
+	{
+	    // if screen is suspended we can use a bigger area for Logo tapping (easier wake)
+	    below_y = 2750;
+	}
+
+	if (last_touch_position_y > below_y)
 	{
 	    if (logo_press_state == 0)
 	    {
@@ -2020,9 +1907,14 @@ static int report_htc_logo_area(int x, int y)
 	    printk("[L2W]\n");
 	    if (logo_press_state == 1)
 	    {
-		if (jiffies - logo_last_pressed_time > BETWEEN_PRESS_MIN_DIFF)
+		if (jiffies - logo_last_pressed_time > BETWEEN_LONG_PRESS_MIN_DIFF)
 		{
 			printk("[L2W] - LONG PRESS ON LOGO POSSIBLE\n");
+			return 3;
+		} else
+		if (jiffies - logo_last_pressed_time > BETWEEN_SLEEP_OR_WAKE_PRESS_MIN_DIFF)
+		{
+			printk("[L2W] - SLEEP OR WAKE PRESS ON LOGO POSSIBLE\n");
 			return 2;
 		}
 	    }
@@ -2190,33 +2082,43 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 				    logo_press_state = 0;
 				    if (report_ret) //htc_logo_area(last_touch_position_x,last_touch_position_x))
 				    {
-//                                                printk(KERN_INFO "[sweep2wake]: POWER ON/OFF.\n");
-                                                if (scr_suspended == false)
-                                                {
-                                            		if (l2m_switch > 0)
-                                            		{
-                                            			if (report_ret == 2)
-                                            			{
-                                            				// long press logo, power off
-    	                                        			sweep2wake_pwrtrigger();
-                                            			} else
-                                            			{
-                                                			sweep2wake_menutrigger();
-                                                		}
-                                                	} else
-                                                	{
-                                                		if (s2w_switch >= 2)
-	                                        		{ // logo to sleep enabled. screen is on, switch it off
-    	                                        			sweep2wake_pwrtrigger();
-        	                                		}
-                                                	}
-                                            	} else
-                                            	{
-                                            		if (s2w_switch == 3)
-                                            		{ // logo to sleep enabled. screen is on, switch it off
-                                            		    sweep2wake_pwrtrigger();
-                                            		}
-                                            	}
+						// printk(KERN_INFO "[sweep2wake]: POWER ON/OFF.\n");
+						if (scr_suspended == false)
+						{
+							if (l2m_switch > 0)
+							{
+								if (report_ret == 3)
+								{
+									// long press logo, power off
+									// OFF
+									sweep2wake_pwrtrigger();
+								} else
+								{
+									// MENU
+									sweep2wake_menutrigger();
+								}
+							} else
+							{
+								if (s2w_switch >= 2)
+								{ // logo to sleep or logo to wake enabled. screen is on, switch it off
+									if (report_ret == 3 || logo_delay_switch == 0) // 3 = enough time passed for long tap, or logo delay is off
+									{
+										// OFF
+										sweep2wake_pwrtrigger();
+									}
+								}
+							}
+						} else
+						{
+							if (s2w_switch == 3)
+							{ // logo to wake enabled. screen is off, switch it on
+								if (report_ret >= 2) // 2 or 3 = enough time passed for non-accidental tap, power on
+								{
+									// ON
+									sweep2wake_pwrtrigger();
+								}
+							}
+						}
 				    }
 				}
 			}
@@ -2548,7 +2450,7 @@ static void synaptics_ts_report_func(struct synaptics_ts_data *ts)
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 static int home_key_pressed = 0;
 static unsigned int home_key_first_touch_time = 0;
-static unsigned int MIN_HOME_KEY_TOUCH_TIME_TO_WAKE = 10;
+static unsigned int MIN_HOME_KEY_TOUCH_TIME_TO_WAKE = 15;
 #endif
 
 static void synaptics_ts_button_func(struct synaptics_ts_data *ts)
