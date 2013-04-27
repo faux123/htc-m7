@@ -38,6 +38,7 @@
 
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 #include <linux/ctype.h>
+#include <linux/mfd/pm8xxx/vibrator.h>
 #endif
 #define SYN_I2C_RETRY_TIMES 10
 #define SHIFT_BITS 10
@@ -156,10 +157,10 @@ static irqreturn_t synaptics_irq_thread(int irq, void *ptr);
 #define HOME_BUTTON		818
 #define MENU_BUTTON		1335
 
-int s2w_switch = 1;
+int s2w_switch = 1; // 0 -> No wake 1 -> Home2Wake, 2 -> Home2Wake/Logo2Sleep if l2m_switch = 0,  3 -> Logo2wake/Logo2sleep if l2m_switch = 0
 int s2w_temp = 1;
 
-int l2m_switch = 1;
+int l2m_switch = 1; // 0 -> No menu map, 1 Menu map
 int l2m_temp = 1;
 
 bool scr_suspended = false, exec_count = true, s2w_switch_changed = false;;
@@ -276,6 +277,7 @@ static void sweep2wake_presspwr(struct work_struct * sweep2wake_presspwr_work) {
 	if (!mutex_trylock(&pwrlock))
 	    return;
 	printk("sending event KEY_POWER 1\n");
+	vibrate(20);
 	input_event(sweep2wake_pwrdev, EV_KEY, KEY_POWER, 1);
 	input_sync(sweep2wake_pwrdev);
 	msleep(100);
@@ -1566,7 +1568,7 @@ static ssize_t synaptics_sweep2wake_show(struct device *dev,
 static ssize_t synaptics_sweep2wake_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	if (buf[0] >= '0' && buf[0] <= '2' && buf[1] == '\n')
+	if (buf[0] >= '0' && buf[0] <= '3' && buf[1] == '\n')
 		if (s2w_switch != buf[0] - '0') {
 			s2w_temp = buf[0] - '0';
 			if (scr_suspended == false)
@@ -1582,6 +1584,8 @@ static ssize_t synaptics_sweep2wake_dump(struct device *dev,
 		printk(KERN_INFO "[HOME2WAKE]: Enabled.\n");
 	else if (s2w_temp == 2)
 		printk(KERN_INFO "[HOME2WAKE]: Enabled with LOGO2SLEEP!\n");
+	else if (s2w_temp == 3)
+		printk(KERN_INFO "[HOME2WAKE]: Enabled with LOGO2WAKE & LOGO2SLEEP!\n");
 
 	return count;
 }
@@ -1996,6 +2000,10 @@ static int synaptics_init_panel(struct synaptics_ts_data *ts)
 static int last_touch_position_x = 0;
 static int last_touch_position_y = 0;
 
+static int logo_press_state = 0;
+static unsigned long logo_last_pressed_time;
+static unsigned long BETWEEN_PRESS_MIN_DIFF = 50;
+
 static int report_htc_logo_area(int x, int y)
 {
     if (s2w_switch < 2 && l2m_switch == 0) return 0; // logo2sleep and logo2menu is both off, so don't report logo area!
@@ -2004,10 +2012,24 @@ static int report_htc_logo_area(int x, int y)
     {
 	if (last_touch_position_y>2835)
 	{
+	    if (logo_press_state == 0)
+	    {
+		logo_press_state = 1;
+		logo_last_pressed_time = jiffies;
+	    }
 	    printk("[L2W]\n");
+	    if (logo_press_state == 1)
+	    {
+		if (jiffies - logo_last_pressed_time > BETWEEN_PRESS_MIN_DIFF)
+		{
+			printk("[L2W] - LONG PRESS ON LOGO POSSIBLE\n");
+			return 2;
+		}
+	    }
 	    return 1;
 	}
     }
+    logo_press_state = 0;
     return 0;
 }
 #endif
@@ -2163,28 +2185,37 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 				scr_on_touch = false;
 				printk(KERN_INFO "[home2wake]: Finger released, reseting vars. Last post %d %d\n",last_touch_position_x, last_touch_position_y);
 				{
-				    if (report_htc_logo_area(last_touch_position_x,last_touch_position_x))
+				    int report_ret = report_htc_logo_area(last_touch_position_x,last_touch_position_x);
+				    // reseting logo_press_state, so long press count in report_htc_logo_area start again 
+				    logo_press_state = 0;
+				    if (report_ret) //htc_logo_area(last_touch_position_x,last_touch_position_x))
 				    {
 //                                                printk(KERN_INFO "[sweep2wake]: POWER ON/OFF.\n");
                                                 if (scr_suspended == false)
                                                 {
                                             		if (l2m_switch > 0)
                                             		{
-                                                		sweep2wake_menutrigger();
+                                            			if (report_ret == 2)
+                                            			{
+                                            				// long press logo, power off
+    	                                        			sweep2wake_pwrtrigger();
+                                            			} else
+                                            			{
+                                                			sweep2wake_menutrigger();
+                                                		}
                                                 	} else
                                                 	{
-                                                		if (s2w_switch == 2)
+                                                		if (s2w_switch >= 2)
 	                                        		{ // logo to sleep enabled. screen is on, switch it off
-    	                                        		    sweep2wake_pwrtrigger();
+    	                                        			sweep2wake_pwrtrigger();
         	                                		}
                                                 	}
                                             	} else
                                             	{
-                                            	// dont do anything, home button is the wake button always.
-/*                                            		if (s2w_switch == 2)
+                                            		if (s2w_switch == 3)
                                             		{ // logo to sleep enabled. screen is on, switch it off
                                             		    sweep2wake_pwrtrigger();
-                                            		}*/
+                                            		}
                                             	}
 				    }
 				}
@@ -2516,6 +2547,8 @@ static void synaptics_ts_report_func(struct synaptics_ts_data *ts)
 
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 static int home_key_pressed = 0;
+static unsigned int home_key_first_touch_time = 0;
+static unsigned int MIN_HOME_KEY_TOUCH_TIME_TO_WAKE = 10;
 #endif
 
 static void synaptics_ts_button_func(struct synaptics_ts_data *ts)
@@ -2587,6 +2620,7 @@ static void synaptics_ts_button_func(struct synaptics_ts_data *ts)
 			vk_press = 1;
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 			home_key_pressed = 1;
+			home_key_first_touch_time = jiffies;
 			last_touch_position_x = 0;
 			last_touch_position_y = 0;
 #endif
@@ -2641,12 +2675,15 @@ static void synaptics_ts_button_func(struct synaptics_ts_data *ts)
 		printk("[TP] virtual key released\n");
 		vk_press = 0;
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
-		if (home_key_pressed && s2w_switch > 0)
+		if (home_key_pressed && s2w_switch > 0 && s2w_switch != 3) // if H2w not off (0) , or not Logo2Wake (3), Home should trigger screen on
 		{
 			if (scr_suspended == true)
 			{
-//				printk("sweep2wake_pwrtrigger call\n");
-				sweep2wake_pwrtrigger();
+				if (jiffies - home_key_first_touch_time > MIN_HOME_KEY_TOUCH_TIME_TO_WAKE)
+				{
+					printk("sweep2wake_pwrtrigger call\n");
+					sweep2wake_pwrtrigger();
+				}
 			}
 		}
 		home_key_pressed = 0;
