@@ -222,7 +222,11 @@ __tagtable(ATAG_LAST_BLDR_LOG, parse_tag_last_bldr_log);
 
 #endif
 
+#ifdef CONFIG_ANDROID_RAM_CONSOLE_EARLY_INIT
 static void __init
+#else
+static void
+#endif
 ram_console_save_old(struct ram_console_buffer *buffer, const char *bootinfo,
 	char *dest)
 {
@@ -326,7 +330,11 @@ ram_console_save_old(struct ram_console_buffer *buffer, const char *bootinfo,
 #endif
 }
 
+#ifdef CONFIG_ANDROID_RAM_CONSOLE_EARLY_INIT
 static int __init ram_console_init(struct ram_console_buffer *buffer,
+#else
+static int ram_console_init(struct ram_console_buffer *buffer,
+#endif
 				   size_t buffer_size, const char *bootinfo,
 				   char *old_buf)
 {
