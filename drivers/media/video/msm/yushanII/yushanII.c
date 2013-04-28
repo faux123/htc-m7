@@ -422,21 +422,26 @@ void YushanII_set_backcam_outputformat(struct msm_sensor_ctrl_t *sensor,int res,
 		output_format->ActiveFrameLengthLines -
 		output_format->StatusNbLines);
 	output_format->AutomaticFrameParamsUpdate = TRUE;
-	if(sensor->sensordata->hdr_mode){
+
+	if(sensor->sensordata->hdr_mode)
 		output_format->HDRMode = STAGGERED;
-		output_format->Hoffset = 368;
-		output_format->Voffset = 216;
-	}
-	else{
+	else
 		output_format->HDRMode = HDR_NONE;
-		output_format->Hoffset = 0;
-		output_format->Voffset = 0;
-	}
+
+	output_format->Hoffset =
+			sensor->msm_sensor_reg->output_settings[res].x_addr_start;
+	output_format->Voffset =
+			sensor->msm_sensor_reg->output_settings[res].y_addr_start;
 
 	
 	output_format->HScaling = 1;
 	output_format->VScaling = 1;
-	output_format->Binning = 0x11;
+
+	if(sensor->msm_sensor_reg->output_settings[res].binning_factor == 2){
+		output_format->Binning = 0x22;
+	}else{
+		output_format->Binning = 0x11;
+	}
 	#ifdef YUSHANII_CONFIG_DUMP
 	pr_info("[CAM]%s Hoffset:%d", __func__, output_format->Hoffset);
 	pr_info("[CAM]%s Voffset:%d", __func__,output_format->Voffset);
@@ -530,18 +535,20 @@ void YushanII_set_frontcam_outputformat(struct msm_sensor_ctrl_t *sensor,int res
 
 
 void YushanII_init_backcam(struct msm_sensor_ctrl_t *sensor,int res){
-	Ilp0100_structInitFirmware YushanII_InitFirmware;
+	Ilp0100_structInitFirmware YushanII_InitFirmware, YushanII_emptyFirmware;
 	Ilp0100_structInit YushanII_init;
 	Ilp0100_structSensorParams YushanII_sensor;
 	uint8_t pMajorNumber,pMinorNumber;
 	uint8_t pMajorAPINum,pMinorAPINum;
 	Ilp0100_structFrameFormat output_format;
+	static uint32_t Previous_MIPIclock = 0, reinit = false;
 
 	pr_info("[CAM]%s,res=%d,is_hdr=%d",
 		__func__, res,sensor->msm_sensor_reg->output_settings[res].is_hdr);
 
 	YushanII_login_start();
 
+	
 	if(sensor->msm_sensor_reg->output_settings[res].is_hdr)
 		sensor->sensordata->hdr_mode = 1;
 	else
@@ -556,6 +563,22 @@ void YushanII_init_backcam(struct msm_sensor_ctrl_t *sensor,int res){
 		Ilp0100_getApiVersionNumber(&pMajorAPINum, &pMinorAPINum);
 		pr_info("[CAM]%s, API version major:%d minor:%d", __func__, pMajorAPINum,pMinorAPINum);
 		reload_firmware = 0;
+		Previous_MIPIclock =
+			sensor->msm_sensor_reg->output_settings[res].op_pixel_clk;
+	}
+
+	
+	if(sensor->msm_sensor_reg->output_settings[res].op_pixel_clk != Previous_MIPIclock){
+		reinit = true;
+		Previous_MIPIclock =
+			sensor->msm_sensor_reg->output_settings[res].op_pixel_clk;
+	}
+	if(reinit) {
+		memset(&YushanII_emptyFirmware, 0x00, sizeof(Ilp0100_structInitFirmware));
+		pr_info("[CAM]%s, change MIPI clock rate , reinit YushanII",__func__);
+		reinit = false;
+		Ilp0100_stop();
+		Ilp0100_init(YushanII_init, YushanII_emptyFirmware, YushanII_sensor);
 	}
 
 	YushanII_set_backcam_outputformat(sensor,res,&output_format);
@@ -583,7 +606,6 @@ void YushanII_init_backcam(struct msm_sensor_ctrl_t *sensor,int res){
 		Ilp0100_stop();
 		pr_info(" [CAM]%s, YushanII NON HDR mode", __func__);
 		Ilp0100_defineMode(output_format);
-		pr_info(" [CAM]%s, Ilp0100_startTestMode TEST_NO_TEST_MODE", __func__);
 		#ifdef HDR_COLOR_BAR
 		Ilp0100_startTestMode(BYPASS_NO_BYPASS, TEST_COLORBAR);
 		#endif
@@ -606,6 +628,7 @@ void YushanII_init_frontcam(struct msm_sensor_ctrl_t *sensor,int res){
 
 	pr_info("[CAM]%s,res=%d,is_hdr=%d",
 		__func__, res,sensor->msm_sensor_reg->output_settings[res].is_hdr);
+
 	YushanII_login_start();
 
 	sensor->sensordata->hdr_mode = 0;
@@ -796,11 +819,10 @@ int YushanII_match_id(void)
 void YushanII_release(void)
 {
 	struct msm_camera_rawchip_info *pdata = YushanIICtrl->pdata;
-
+	YushanII_login_stop();
 	pr_info("[CAM]%s\n", __func__);
 	Ilp0100_interruptDisable(0xFFFFFFFF, INTR_PIN_0);
 	Ilp0100_interruptDisable(0xFFFFFFFF, INTR_PIN_0);
-	YushanII_login_stop();
 	CDBG("[CAM]%s: YushanII free irq", __func__);
 
 	free_irq(pdata->rawchip_intr0, 0);

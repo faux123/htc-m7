@@ -146,7 +146,7 @@ enum binder_stat_types {
 };
 
 struct binder_stats {
-	int br[_IOC_NR(BR_FAILED_REPLY) + 1];
+	int br[_IOC_NR(BR_FAILED_ALLOC) + 1];
 	int bc[_IOC_NR(BC_DEAD_BINDER_DONE) + 1];
 	int obj_created[BINDER_STAT_COUNT];
 	int obj_deleted[BINDER_STAT_COUNT];
@@ -722,8 +722,7 @@ static struct binder_buffer *binder_alloc_buf(struct binder_proc *proc,
 
 	if (is_async &&
 	    proc->free_async_space < size + sizeof(struct binder_buffer)) {
-		binder_debug(BINDER_DEBUG_BUFFER_ALLOC,
-			     "binder: %d: binder_alloc_buf size %zd"
+		printk(KERN_INFO "binder: %d: binder_alloc_buf size %zd"
 			     "failed, no async space left\n", proc->pid, size);
 		return NULL;
 	}
@@ -1381,6 +1380,7 @@ static void binder_transaction(struct binder_proc *proc,
 	struct binder_transaction *in_reply_to = NULL;
 	struct binder_transaction_log_entry *e;
 	uint32_t return_error;
+	char brdr_fp = 0;
 
 	e = binder_transaction_log_add(&binder_transaction_log);
 	e->call_type = reply ? 2 : !!(tr->flags & TF_ONE_WAY);
@@ -1417,6 +1417,7 @@ static void binder_transaction(struct binder_proc *proc,
 		target_thread = in_reply_to->from;
 		if (target_thread == NULL) {
 			return_error = BR_DEAD_REPLY;
+			brdr_fp=0x11;
 			goto err_dead_binder;
 		}
 		if (target_thread->transaction_stack != in_reply_to) {
@@ -1449,6 +1450,7 @@ static void binder_transaction(struct binder_proc *proc,
 			target_node = binder_context_mgr_node;
 			if (target_node == NULL) {
 				return_error = BR_DEAD_REPLY;
+				brdr_fp=0x22;
 				goto err_no_context_mgr_node;
 			}
 		}
@@ -1456,6 +1458,7 @@ static void binder_transaction(struct binder_proc *proc,
 		target_proc = target_node->proc;
 		if (target_proc == NULL) {
 			return_error = BR_DEAD_REPLY;
+			brdr_fp=0x33;
 			goto err_dead_binder;
 		}
 		if (!(tr->flags & TF_ONE_WAY) && thread->transaction_stack) {
@@ -1539,7 +1542,7 @@ static void binder_transaction(struct binder_proc *proc,
 	t->buffer = binder_alloc_buf(target_proc, tr->data_size,
 		tr->offsets_size, !reply && (t->flags & TF_ONE_WAY));
 	if (t->buffer == NULL) {
-		return_error = BR_FAILED_REPLY;
+		return_error = BR_FAILED_ALLOC;
 		printk(KERN_INFO "binder: t->buffer binder_alloc_buf fail\n");
 		goto err_binder_alloc_buf_failed;
 	}
@@ -1763,9 +1766,9 @@ err_dead_binder:
 err_invalid_target_handle:
 err_no_context_mgr_node:
 	binder_debug(BINDER_DEBUG_FAILED_TRANSACTION,
-		     "binder: %d:%d transaction failed %d, size %zd-%zd\n",
+		     "binder: %d:%d transaction failed %d, size %zd-%zd, brdr_fp %X\n",
 		     proc->pid, thread->pid, return_error,
-		     tr->data_size, tr->offsets_size);
+		     tr->data_size, tr->offsets_size, brdr_fp);
 
 	{
 		struct binder_transaction_log_entry *fe;
@@ -3313,7 +3316,8 @@ static const char *binder_return_strings[] = {
 	"BR_FINISHED",
 	"BR_DEAD_BINDER",
 	"BR_CLEAR_DEATH_NOTIFICATION_DONE",
-	"BR_FAILED_REPLY"
+	"BR_FAILED_REPLY",
+	"BR_FAILED_ALLOC"
 };
 
 static const char *binder_command_strings[] = {

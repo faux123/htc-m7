@@ -161,6 +161,8 @@ enum BinderDriverReturnProtocol {
 	BR_CLEAR_DEATH_NOTIFICATION_DONE = _IOR('r', 16, void *),
 
 	BR_FAILED_REPLY = _IO('r', 17),
+
+	BR_FAILED_ALLOC = _IO('r', 18),
 };
 
 enum BinderDriverCommandProtocol {
