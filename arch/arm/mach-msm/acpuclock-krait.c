@@ -569,7 +569,7 @@ static struct acpuclk_data acpuclk_krait_data = {
 	.get_rate = acpuclk_krait_get_rate,
 };
 
-static void __init hfpll_init(struct scalable *sc,
+static void __cpuinit hfpll_init(struct scalable *sc,
 			      const struct core_speed *tgt_s)
 {
 	dev_dbg(drv.dev, "Initializing HFPLL%d\n", sc - drv.scalable);
