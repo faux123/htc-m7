@@ -84,3 +84,8 @@ GTAGS
 *.orig
 *~
 \#*#
+
+#user defines:
+out/
+mkzip.sh
+smkzip.sh
