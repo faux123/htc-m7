@@ -1964,10 +1964,14 @@ void m7_set_cabc (struct msm_fb_data_type *mfd, int mode)
 		PR_DISP_INFO("set_cabc mode = %d\n", mode);
        } else if (panel_type == PANEL_ID_M7_JDI_SAMSUNG_C2_1 ||
 			panel_type == PANEL_ID_M7_JDI_SAMSUNG_C2_2) {
-               if (mode == 2 || mode == 3) {
+               if (mode == 2) {
                        samsung_MIE_ctrl1[1] = 0x40;
                        BCSAVE[2] = 0xB3;
                        TMF[1] = 0x33;
+               } else if (mode == 3) {
+                       samsung_MIE_ctrl1[1] = 0x80;
+                       BCSAVE[2] = 0x99;
+                       TMF[1] = 0x2C;
                } else
                        return;
 
