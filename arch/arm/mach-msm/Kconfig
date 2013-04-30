@@ -2661,6 +2661,12 @@ config MACH_M7_UL
         help
           Support for the HTC APQ8064 M7_UL.
 
+config MACH_M7_WLS
+        depends on ARCH_APQ8064
+        bool "APQ8064 M7_WLS"
+        help
+          Support for the HTC APQ8064 M7_WLS.
+
 config QSC_MODEM
         default n
         bool "QMC QSC MODEM"

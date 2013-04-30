@@ -1198,3 +1198,4 @@ msm8625_ffa		MACH_MSM8625_FFA	MSM8625_FFA		4166
 msm8625_evt		MACH_MSM8625_EVT	MSM8625_EVT		4193
 monarudo		MACH_MONARUDO		MONARUDO		4060
 m7_ul           MACH_M7_UL          M7_UL           4308
+m7_wls          MACH_M7_WLS         M7_WLS           4355
