@@ -212,6 +212,8 @@ struct r3gd20_data {
 	int cali_data_x;
 	int cali_data_y;
 	int cali_data_z;
+
+	int is_suspended;
 };
 
 #ifdef HTC_WQ
@@ -633,12 +635,14 @@ static void polling_do_work(struct work_struct *w)
 
 	mutex_unlock(&gyro->lock);
 
-	DIF("interval = %d\n", gyro->input_poll_dev->
-					 poll_interval);
+	DIF("interval = %d, gyro->is_suspended = %d\n", gyro->input_poll_dev->
+					 poll_interval, gyro->is_suspended);
 
-	queue_delayed_work(gyro->gyro_wq, &polling_work,
-		msecs_to_jiffies(gyro->input_poll_dev->
-					 poll_interval));
+	if (gyro->is_suspended != 1) {
+		queue_delayed_work(gyro->gyro_wq, &polling_work,
+			msecs_to_jiffies(gyro->input_poll_dev->
+						 poll_interval));
+	}
 }
 #endif 
 
@@ -1597,6 +1601,7 @@ static int r3gd20_probe(struct i2c_client *client,
 	gyro->resume_state[RES_FIFO_CTRL_REG] = ALL_ZEROES;
 
 	gyro->polling_enabled = true;
+	gyro->is_suspended = 0;
 
 	err = r3gd20_device_power_on(gyro);
 	if (err < 0) {
@@ -1743,14 +1748,14 @@ static int r3gd20_suspend(struct i2c_client *client, pm_message_t mesg)
 	u8 buf[2];
 	int err = -1;
 
-	DIF("%s: ++\n", __func__);
+	data->is_suspended = 1;
+	I("%s++: data->is_suspended = %d\n", __func__, data->is_suspended);
 
 #if DEBUG
 	I("r3gd20_suspend\n");
 #endif 
 
 	
-		mutex_lock(&data->lock);
 		if (data->polling_enabled) {
 			D("polling disabled\n");
 #ifdef HTC_WQ
@@ -1761,6 +1766,7 @@ static int r3gd20_suspend(struct i2c_client *client, pm_message_t mesg)
 			
 		}
 
+		mutex_lock(&data->lock);
 #ifdef SLEEP
 		err = r3gd20_register_update(data, buf, CTRL_REG1,
 				0x0F, (ENABLE_NO_AXES | PM_NORMAL));
@@ -1774,7 +1780,8 @@ static int r3gd20_suspend(struct i2c_client *client, pm_message_t mesg)
 #endif 
 	if (data && (data->pdata->power_LPM))
 		data->pdata->power_LPM(1);
-	D("%s:--\n", __func__);
+
+	I("%s:--\n", __func__);
 	return err;
 }
 
@@ -1785,7 +1792,7 @@ static int r3gd20_resume(struct i2c_client *client)
 	u8 buf[2];
 	int err = -1;
 
-	D("%s:++\n", __func__);
+	I("%s:++\n", __func__);
 #if DEBUG
 	I("r3gd20_resume\n");
 #endif 
@@ -1817,7 +1824,8 @@ static int r3gd20_resume(struct i2c_client *client)
 	}
 
 #endif 
-	D("%s:--\n", __func__);
+	data->is_suspended = 0;
+	I("%s--: data->is_suspended = %d\n", __func__, data->is_suspended);
 	return 0;
 }
 

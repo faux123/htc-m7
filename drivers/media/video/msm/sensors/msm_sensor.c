@@ -1007,6 +1007,8 @@ static int oem_sensor_init_ov(void *arg)
 	struct timespec ts_start, ts_end;
 #endif
 
+	pr_info("%s: E", __func__);
+
 	v4l2_subdev_notify(&s_ctrl->sensor_v4l2_subdev,
 		NOTIFY_ISPIF_STREAM, (void *)ISPIF_STREAM(
 		PIX_0, ISPIF_OFF_IMMEDIATELY));
@@ -1076,6 +1078,9 @@ static int oem_sensor_init_ov(void *arg)
 		}
 #endif
 
+	pr_info("%s: X", __func__);
+	mutex_unlock(s_ctrl->sensor_first_mutex);  
+
 	return rc;
 }
 
@@ -1104,11 +1109,12 @@ int32_t msm_sensor_setting_parallel_ov(struct msm_sensor_ctrl_t *s_ctrl,
 			pr_err("%s: kthread_create failed", __func__);
 			rc = PTR_ERR(tsk_sensor_init);
 			tsk_sensor_init = NULL;
+			mutex_unlock(s_ctrl->sensor_first_mutex);  
 		} else
 			wake_up_process(tsk_sensor_init);
+			 
 
 		first_init = 1;
-		mutex_unlock(s_ctrl->sensor_first_mutex);  
 		
 	} else if (update_type == MSM_SENSOR_UPDATE_PERIODIC) {
 	

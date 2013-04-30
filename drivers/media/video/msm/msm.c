@@ -358,6 +358,13 @@ wait_event:
 			goto wait_event;
 		}
 		else if (rc < 0) {
+			
+			struct msm_cam_media_controller *pmctl = NULL;
+			struct msm_sensor_ctrl_t *s_ctrl = NULL;
+			pmctl = msm_camera_get_mctl(pcam->mctl_handle);
+			if (pmctl)
+				s_ctrl = get_sctrl(pmctl->sensor_sdev);
+			
 			if (++server_dev->server_evt_id == 0)
 				server_dev->server_evt_id++;
 			pr_err("%s: wait_event error %d\n", __func__, rc);
@@ -369,7 +376,17 @@ wait_event:
 						((struct msm_ctrl_cmd *)out->value)->type);
 			}
 			
+			
+			if(s_ctrl && s_ctrl->sensor_first_mutex)  {
+				mutex_lock(s_ctrl->sensor_first_mutex);
+			}
+			
 			msm_cam_stop_hardware(pcam);
+			
+			if(s_ctrl && s_ctrl->sensor_first_mutex)  {
+				mutex_unlock(s_ctrl->sensor_first_mutex);
+			}
+			
 
 			return rc;
 		}
@@ -1961,7 +1978,7 @@ static int msm_open(struct file *f)
 
 	if (pcam->use_count == 1) {
 		rc = msm_send_open_server(pcam);
-		if (rc < 0 && rc != -ERESTARTSYS) {
+		if (rc < 0) {	
 			pr_err("%s: msm_send_open_server failed %d\n",
 				__func__, rc);
 			goto msm_send_open_server_failed;
@@ -1972,6 +1989,12 @@ static int msm_open(struct file *f)
 	return rc;
 	
 msm_send_open_server_failed:
+	
+	pr_info("%s: rc = %d", __func__, rc);
+	if (rc == -ERESTARTSYS) {
+		msm_send_close_server(pcam);
+	}
+	
 	v4l2_fh_del(&pcam_inst->eventHandle);
 	v4l2_fh_exit(&pcam_inst->eventHandle);
 mctl_event_q_setup_failed:
@@ -2784,12 +2807,13 @@ static long msm_ioctl_config(struct file *fp, unsigned int cmd,
 	case MSM_CAM_IOCTL_V4L2_EVT_NOTIFY:
 		rc = msm_v4l2_evt_notify(config_cam->p_mctl, cmd, arg);
 		break;
-
+#if 0
 	case MSM_CAM_IOCTL_SET_MEM_MAP_INFO:
 		if (copy_from_user(&config_cam->mem_map, (void __user *)arg,
 				sizeof(struct msm_mem_map_info)))
 			rc = -EINVAL;
 		break;
+#endif
 
 	default:{
 		

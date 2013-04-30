@@ -1222,6 +1222,15 @@ static int32_t rumbas_act_init_focus(struct msm_actuator_ctrl_t *a_ctrl)
 		if (rc < 0) {
 			pr_err("%s 0x27 cmd  i2c write failed (%d)\n", __func__, rc);
 		}
+
+		if(!board_mfg_mode()) {
+			load_cmd_prevalue(0x10, &byte_data[0]);
+			byte_data[6] = (byte_data[6] & 0xFD) |(0x01 << 1); 
+			rc = msm_camera_i2c_write_seq(&(rumbas_act_t.i2c_client), 0x10, &byte_data[0], 8);
+			if (rc < 0) {
+				pr_err("[RUMBA_S] %s  set fast reset mode , i2c write failed (%d)\n", __func__, rc);
+			}
+		}
 	}
 	
 

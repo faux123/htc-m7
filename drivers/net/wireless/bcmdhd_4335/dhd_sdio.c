@@ -5972,17 +5972,6 @@ dhdsdio_dpc(dhd_bus_t *bus)
 	
 	intstatus = bus->intstatus;
 
-	
-	if (multi_core_locked) {
-		if ((current->on_cpu > 0) && !(dhd_dpc_prio < MAX_RT_PRIO)) {
-			struct sched_param param;
-			param.sched_priority = dhd_dpc_prio = (MAX_RT_PRIO-1);
-			setScheduler(current, SCHED_FIFO, &param);
-			printf("change dhd_dpc to RT priority: %d", dhd_dpc_prio);
-		}
-	}
-	
-
 	dhd_os_sdlock(bus->dhd);
 
 	if ((bus->dhd->busstate == DHD_BUS_DOWN) || bus->dhd->hang_was_sent || module_remove) {

@@ -528,6 +528,7 @@ pm8921_chg_pdata __devinitdata = {
 	.cold_thr = PM_SMBC_BATT_TEMP_COLD_THR__HIGH,
 	.hot_thr = PM_SMBC_BATT_TEMP_HOT_THR__LOW,
 	.ext_usb = &smb_ext_chg,
+	.rconn_mohm		= 10, 
 };
 
 static struct pm8xxx_ccadc_platform_data

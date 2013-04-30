@@ -297,9 +297,15 @@ void msm_restart(char mode, const char *cmd)
 	flush_cache_all();
 
 	__raw_writel(0, msm_tmr0_base + WDT0_EN);
-#ifdef CONFIG_ARCH_APQ8064
-	mb();
 
+#ifdef CONFIG_ARCH_APQ8064
+	pr_info("%s: PS_HOLD to restart\r\n", __func__);
+
+	mb();
+	__raw_writel(0, PSHOLD_CTL_SU); 
+	mdelay(5000);
+
+	pr_info("%s: PS_HOLD didn't work, falling back to watchdog\r\n", __func__);
 	pr_info("%s: Restarting by watchdog\r\n", __func__);
 
 	__raw_writel(1, msm_tmr0_base + WDT0_RST);
@@ -308,10 +314,6 @@ void msm_restart(char mode, const char *cmd)
 	__raw_writel(1, msm_tmr0_base + WDT0_EN);
 
 	mdelay(10000);
-
-	pr_info("%s: Watchdog didn't work, falling back to PS_HOLD\r\n", __func__);
-	__raw_writel(0, PSHOLD_CTL_SU); 
-	mdelay(5000);
 #else
 	if (!(machine_is_msm8x60_fusion() || machine_is_msm8x60_fusn_ffa())) {
 		mb();
