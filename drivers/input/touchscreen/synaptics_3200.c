@@ -302,8 +302,6 @@ static void sweep2wake_longtap_count(struct work_struct * sweep2wake_longtap_cou
 	}
 	if (!break_longtap_count)
 	{
-		// dont allow another longtap count work, till finger is released!
-		allow_longtap_count = 0;
 		printk("LONGTAP sending event KEY_POWER 1\n");
 		vibrate(30);
 		input_event(sweep2wake_pwrdev, EV_KEY, KEY_POWER, 1);
@@ -324,6 +322,8 @@ void sweep2wake_longtap_count_trigger(void) {
 	break_longtap_count = 0;
 	if (allow_longtap_count)
 	{
+		// dont allow another longtap count work, till finger is released!
+		allow_longtap_count = 0;
 		printk("[LTC] starting longtap count work\n");
 		schedule_work(&sweep2wake_longtap_count_work);
 	} else
