@@ -87,5 +87,6 @@ GTAGS
 
 #user defines:
 out/
+out_s/
 mkzip.sh
 smkzip.sh
