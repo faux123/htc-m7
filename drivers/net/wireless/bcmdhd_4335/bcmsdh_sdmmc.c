@@ -1253,8 +1253,7 @@ txglomfail:
 				 void *q;
 				 if (probe_kernel_address(buf, p) || probe_kernel_address(buf+pkt_len, q)) { 
 					printk("[WLAN] PIO ERROR!! incorrect buf at 0x%x in %s, \n",(unsigned int)buf, __FUNCTION__);
-                    err_ret = -SDIOH_API_RC_FAIL;
-                    break;
+					return (SDIOH_API_RC_FAIL);
 				 }
 			 }
 			 
