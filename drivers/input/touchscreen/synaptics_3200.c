@@ -149,6 +149,17 @@ static int synaptics_init_panel(struct synaptics_ts_data *ts);
 static irqreturn_t synaptics_irq_thread(int irq, void *ptr);
 extern unsigned int get_tamper_sf(void);
 
+bool scr_suspended = false;
+
+extern uint8_t touchscreen_is_on(void)
+{
+	if (scr_suspended == false)
+	{
+		return 1;
+	}
+	return 0;
+}
+
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 #define BACK_BUTTON		250
 #define HOME_BUTTON		818
@@ -165,7 +176,7 @@ int l2m_temp = 1;
 
 int logo_delay_switch = 1; // if 1 -> Logo2Sleep will wait for long tap, if 0, it won't wait for no jiffies.
 
-bool scr_suspended = false, exec_count = true, h2w_switch_changed = false, s2w_switch_changed = false;
+bool exec_count = true, h2w_switch_changed = false, s2w_switch_changed = false;
 bool scr_on_touch = false, led_exec_count = false, barrier[2] = {false, false};
 static struct input_dev * sweep2wake_pwrdev;
 static struct led_classdev * sweep2wake_leddev;
@@ -216,7 +227,6 @@ int sweep2wake_buttonset(const char * button_name) {
 
 	return future_button;
 }
-
 
 extern void sweep2wake_setdev(struct input_dev * input_device) {
         sweep2wake_pwrdev = input_device;
@@ -2430,7 +2440,6 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 							} else
 							{
 								printk("[L2M] till in area %d %d",last_touch_position_x,last_touch_position_y);
-//								sweep2wake_longtap_count_trigger();
 								if (scr_suspended == false)
 								{
 									if (h2w_switch >= 2)
@@ -2444,6 +2453,11 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 											// long tap needed, start counting
 											sweep2wake_longtap_count_trigger();
 										}
+									} else
+									// logo2menu enabled and some wake option too - longtap count for power off can start
+									if (l2m_switch > 0 && (s2w_switch > 0 || h2w_switch > 0))
+									{
+											sweep2wake_longtap_count_trigger();
 									}
 								} else
 								{
@@ -2499,6 +2513,11 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 											// long tap needed, start counting
 											sweep2wake_longtap_count_trigger();
 										}
+									} else
+									// logo2menu enabled and some wake option too - longtap count for power off can start
+									if (l2m_switch > 0 && (s2w_switch > 0 || h2w_switch > 0))
+									{
+											sweep2wake_longtap_count_trigger();
 									}
 								} else
 								{
@@ -2540,6 +2559,11 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 											// long tap needed, start counting
 											sweep2wake_longtap_count_trigger();
 										}
+									} else
+									// logo2menu enabled and some wake option too - longtap count for power off can start
+									if (l2m_switch > 0 && (s2w_switch > 0 || h2w_switch > 0))
+									{
+											sweep2wake_longtap_count_trigger();
 									}
 								} else
 								{
@@ -3736,8 +3760,8 @@ static int synaptics_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 	int ret;
 	struct synaptics_ts_data *ts = i2c_get_clientdata(client);
 	
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
         scr_suspended = true;
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 	if (h2w_switch > 0 || s2w_switch > 0) {
 		enable_irq_wake(client->irq);
 		printk(KERN_INFO "[sweep2wake]: suspend but keep interupt wake going.\n");
@@ -3917,8 +3941,8 @@ static int synaptics_ts_resume(struct i2c_client *client)
 {
 	int ret;
 	struct synaptics_ts_data *ts = i2c_get_clientdata(client);
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
         scr_suspended = false;
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
         if (h2w_switch > 0 || s2w_switch > 0) {
                 //screen on, disable_irq_wake
                 disable_irq_wake(client->irq);
