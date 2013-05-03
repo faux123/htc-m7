@@ -473,23 +473,21 @@ static void wl_cfg80211_bt_handler(struct work_struct *work)
 			if ((btcx_inf->dhcp_done)||(++bt_coex_retry_cnt > 7)) {
 				WL_TRACE(("%s DHCP Done before T2 expiration\n",
 					__FUNCTION__));
-                
-                if (btcx_inf->dev)
-                    wl_cfg80211_bt_setflag(btcx_inf->dev, FALSE);
 				goto btc_coex_idle;
 			} else {
 				
 				WL_TRACE(("%s DHCP wait interval T2:%d"
 					  "msec expired\n", __FUNCTION__,
 					  BT_DHCP_FLAG_FORCE_TIME));
-                
-                if (btcx_inf->dev)
-                    wl_cfg80211_bt_setflag(btcx_inf->dev, FALSE);
 				btcx_inf->bt_state = BT_DHCP_OPPR_WIN;
 				mod_timer(&btcx_inf->timer,
 					jiffies + msecs_to_jiffies(BT_DHCP_OPPR_WIN_TIME));
 				btcx_inf->timer_on = 1;
 			}
+
+			
+			if (btcx_inf->dev)
+				wl_cfg80211_bt_setflag(btcx_inf->dev, FALSE);
 
 			if (!(btcx_inf->dhcp_done)) {
 				break;
