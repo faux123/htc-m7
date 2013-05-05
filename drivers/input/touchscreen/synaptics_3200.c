@@ -168,13 +168,13 @@ extern uint8_t touchscreen_is_on(void)
 int s2w_switch = 0;
 int s2w_temp = 0;
 
-int h2w_switch = 1; // 0 -> No wake 1 -> Home2Wake, 2 -> Home2Wake/Logo2Sleep if l2m_switch = 0,  3 -> Logo2wake/Logo2sleep if l2m_switch = 0
+int h2w_switch = 0; // 0 -> No wake 1 -> Home2Wake, 2 -> Home2Wake/Logo2Sleep if l2m_switch = 0,  3 -> Logo2wake/Logo2sleep if l2m_switch = 0
 int h2w_temp = 1;
 
-int l2m_switch = 1; // 0 -> No menu map, 1 Menu map
+int l2m_switch = 0; // 0 -> No menu map, 1 Menu map
 int l2m_temp = 1;
 
-int logo_delay_switch = 1; // if 1 -> Logo2Sleep will wait for long tap, if 0, it won't wait for no jiffies.
+int logo_delay_switch = 0; // if 1 -> Logo2Sleep will wait for long tap, if 0, it won't wait for no jiffies.
 
 bool exec_count = true, h2w_switch_changed = false, s2w_switch_changed = false;
 bool scr_on_touch = false, led_exec_count = false, barrier[2] = {false, false};
