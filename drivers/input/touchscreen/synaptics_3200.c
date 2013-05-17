@@ -2099,7 +2099,7 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 {
 	int ret;
 	int report_ret = 0;
-	uint8_t buf[ts->finger_support * 8];
+	uint8_t buf[((ts->finger_support * 21 + 3) / 4)];
 	memset(buf, 0x0, sizeof(buf));
 	if (ts->package_id < 3400)
 		ret = i2c_syn_read(ts->client,
