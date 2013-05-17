@@ -41,10 +41,16 @@
 #define CPU_FOOT_PRINT_MAGIC				0xACBDFE00
 #define CPU_FOOT_PRINT_BASE_CPU0_VIRT		(MSM_KERNEL_FOOTPRINT_BASE + 0x0)
 
-#ifdef CONFIG_LOW_CPUCLOCKS
-#define FREQ_TABLE_SIZE		39
+#ifdef CONFIG_CPU_OVERCLOCK
+#define	OVERCLOCK_EXTRA_FREQS	7
 #else
-#define FREQ_TABLE_SIZE		35
+#define OVERCLOCK_EXTRA_FREQS	0
+#endif
+
+#ifdef CONFIG_LOW_CPUCLOCKS
+#define FREQ_TABLE_SIZE		(39 + OVERCLOCK_EXTRA_FREQS)
+#else
+#define FREQ_TABLE_SIZE		(35 + OVERCLOCK_EXTRA_FREQS)
 #endif
 
 static void set_acpuclk_foot_print(unsigned cpu, unsigned state)
