@@ -54,12 +54,12 @@
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 #define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
-#define DEFAULT_FREQ_BOOST_TIME			(2500000)
+#define DEFAULT_FREQ_BOOST_TIME			(3500000)
 #define DEF_SAMPLING_RATE			(50000)
 #define BOOSTED_SAMPLING_RATE			(15000)
 #define DBS_INPUT_EVENT_MIN_FREQ		(1026000)
 #define DBS_SYNC_FREQ				(702000)
-#define DBS_OPTIMAL_FREQ			(1296000)
+#define DBS_OPTIMAL_FREQ			(1566000)
 
 static u64 freq_boosted_time;
 /*
@@ -90,7 +90,7 @@ static unsigned long stored_sampling_rate;
 #define TIMER_RATE_BOOST_TIME 2500000
 static int sampling_rate_boosted;
 static u64 sampling_rate_boosted_time;
-static unsigned int current_sampling_rate;
+static unsigned int current_sampling_rate = DEF_SAMPLING_RATE;
 
 #ifdef CONFIG_CPUFREQ_ID_PERFLOCK
 static unsigned int saved_policy_min;
