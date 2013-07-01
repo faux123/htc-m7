@@ -109,12 +109,6 @@ enum fullness_group {
  */
 static const int fullness_threshold_frac = 4;
 
-struct mapping_area {
-	char *vm_buf; /* copy buffer for objects that span pages */
-	char *vm_addr; /* address of kmap_atomic()'ed pages */
-	enum zs_mapmode vm_mm; /* mapping mode */
-};
-
 struct size_class {
 	/*
 	 * Size of objects stored in this class. Must be multiple
@@ -124,7 +118,7 @@ struct size_class {
 	unsigned int index;
 
 	/* Number of PAGE_SIZE sized pages to combine to form a 'zspage' */
-	int zspage_order;
+	int pages_per_zspage;
 
 	spinlock_t lock;
 
