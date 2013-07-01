@@ -37,6 +37,19 @@
 #include <linux/sched.h>
 #include <linux/rcupdate.h>
 #include <linux/notifier.h>
+#include <linux/memory.h>
+#include <linux/memory_hotplug.h>
+
+#define ENHANCED_LMK_ROUTINE
+#define LMK_COUNT_READ
+
+#ifdef ENHANCED_LMK_ROUTINE
+#define LOWMEM_DEATHPENDING_DEPTH 3
+#endif
+
+#ifdef LMK_COUNT_READ
+static uint32_t lmk_count = 0;
+#endif
 
 extern void show_meminfo(void);
 static uint32_t lowmem_debug_level = 2;
@@ -107,6 +120,7 @@ task_fork_notify_func(struct notifier_block *self, unsigned long val, void *data
 	return NOTIFY_OK;
 }
 
+#ifndef ENHANCED_LMK_ROUTINE 
 static void dump_tasks(void)
 {
 	struct task_struct *p;
@@ -126,18 +140,30 @@ static void dump_tasks(void)
 		task_unlock(task);
 	}
 }
+#endif
 
 static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 {
 	struct task_struct *tsk;
+#ifdef ENHANCED_LMK_ROUTINE
+	struct task_struct *selected[LOWMEM_DEATHPENDING_DEPTH] = {NULL,};
+#else
 	struct task_struct *selected = NULL;
+#endif
 	int rem = 0;
 	int tasksize;
 	int i;
 	int min_score_adj = OOM_SCORE_ADJ_MAX + 1;
+#ifdef ENHANCED_LMK_ROUTINE
+	int selected_tasksize[LOWMEM_DEATHPENDING_DEPTH] = {0,};
+	int selected_oom_score_adj[LOWMEM_DEATHPENDING_DEPTH] = {OOM_ADJUST_MAX,};
+	int all_selected_oom = 0;
+	int max_selected_oom_idx = 0;
+#else
 	int selected_tasksize = 0;
 	int selected_oom_score_adj;
 	int selected_oom_adj = 0;
+#endif
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free = global_page_state(NR_FREE_PAGES);
 	int other_file = global_page_state(NR_FILE_PAGES) -
@@ -181,12 +207,21 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 			     sc->nr_to_scan, sc->gfp_mask, rem);
 		return rem;
 	}
-	selected_oom_score_adj = min_score_adj;
 
-	rcu_read_lock();
+#ifdef ENHANCED_LMK_ROUTINE
+	for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++)
+		selected_oom_score_adj[i] = min_score_adj;
+#else
+	selected_oom_score_adj = min_score_adj;
+#endif
+
+	read_lock(&tasklist_lock);
 	for_each_process(tsk) {
 		struct task_struct *p;
 		int oom_score_adj;
+#ifdef ENHANCED_LMK_ROUTINE
+		int is_exist_oom_task = 0;
+#endif
 
 		if (tsk->flags & PF_KTHREAD)
 			continue;
@@ -211,6 +246,45 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		task_unlock(p);
 		if (tasksize <= 0)
 			continue;
+
+#ifdef ENHANCED_LMK_ROUTINE
+		if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH) {
+			for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
+				if (!selected[i]) {
+					is_exist_oom_task = 1;
+					max_selected_oom_idx = i;
+					break;
+				}
+			}
+		} else if (selected_oom_score_adj[max_selected_oom_idx] < oom_score_adj ||
+			(selected_oom_score_adj[max_selected_oom_idx] == oom_score_adj &&
+			selected_tasksize[max_selected_oom_idx] < tasksize)) {
+			is_exist_oom_task = 1;
+		}
+
+		if (is_exist_oom_task) {
+			selected[max_selected_oom_idx] = p;
+			selected_tasksize[max_selected_oom_idx] = tasksize;
+			selected_oom_score_adj[max_selected_oom_idx] = oom_score_adj;
+
+			if (all_selected_oom < LOWMEM_DEATHPENDING_DEPTH)
+				all_selected_oom++;
+
+			if (all_selected_oom == LOWMEM_DEATHPENDING_DEPTH) {
+				for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
+					if (selected_oom_score_adj[i] < selected_oom_score_adj[max_selected_oom_idx])
+						max_selected_oom_idx = i;
+					else if (selected_oom_score_adj[i] == selected_oom_score_adj[max_selected_oom_idx] &&
+						selected_tasksize[i] < selected_tasksize[max_selected_oom_idx])
+						max_selected_oom_idx = i;
+				}
+			}
+
+			lowmem_print(2, "select %d (%s), adj %d, \
+					size %d, to kill\n",
+				p->pid, p->comm, oom_score_adj, tasksize);
+		}
+#else
 		if (selected) {
 			if (oom_score_adj < selected_oom_score_adj)
 				continue;
@@ -224,7 +298,27 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		selected_oom_adj = p->signal->oom_adj;
 		lowmem_print(2, "select %d (%s), oom_adj %d score_adj %d, size %d, to kill\n",
 			     p->pid, p->comm, selected_oom_adj, oom_score_adj, tasksize);
+#endif
 	}
+
+#ifdef ENHANCED_LMK_ROUTINE
+	for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
+		if (selected[i]) {
+			lowmem_print(1, "send sigkill to %d (%s), adj %d,\
+				     size %d\n",
+				     selected[i]->pid, selected[i]->comm,
+				     selected_oom_score_adj[i],
+				     selected_tasksize[i]);
+			lowmem_deathpending_timeout = jiffies + HZ;
+			send_sig(SIGKILL, selected[i], 0);
+			set_tsk_thread_flag(selected[i], TIF_MEMDIE);
+			rem -= selected_tasksize[i];
+#ifdef LMK_COUNT_READ
+			lmk_count++;
+#endif
+		}
+	}
+#else
 	if (selected) {
 		lowmem_print(1, "[%s] send sigkill to %d (%s), oom_adj %d, score_adj %d,"
 			" min_score_adj %d, size %dK, free %dK, file %dK, fork_boost %dK\n",
@@ -241,10 +335,14 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
+#ifdef LMK_COUNT_READ
+		lmk_count++;
+#endif
 	}
+#endif
 	lowmem_print(4, "lowmem_shrink %lu, %x, return %d\n",
 		     sc->nr_to_scan, sc->gfp_mask, rem);
-	rcu_read_unlock();
+	read_unlock(&tasklist_lock);
 	return rem;
 }
 
@@ -360,6 +458,10 @@ module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 module_param_named(fork_boost, lowmem_fork_boost, uint, S_IRUGO | S_IWUSR);
 module_param_array_named(fork_boost_minfree, lowmem_fork_boost_minfree, uint,
 			 &lowmem_fork_boost_minfree_size, S_IRUGO | S_IWUSR);
+
+#ifdef LMK_COUNT_READ
+module_param_named(lmkcount, lmk_count, uint, S_IRUGO);
+#endif
 
 module_init(lowmem_init);
 module_exit(lowmem_exit);
