@@ -2572,8 +2572,9 @@ static unsigned long DOUBLETAP_WAKE_MIN_DIFF = 10;
 static unsigned long DOUBLETAP_WAKE_MAX_DIFF = 100;
 
 
-static void check_doubletapwake(int y)
+static void check_doubletapwake(int x, int y)
 {
+	if (x <300 || x > 1500) return;
 	if (y > 2300) {
 		unsigned long diff = jiffies - doubletap_area_last_pressed_time;
 		if (diff > DOUBLETAP_WAKE_MIN_DIFF && diff < DOUBLETAP_WAKE_MAX_DIFF) {
@@ -2684,6 +2685,8 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 	int report_ret = 0;
 	int ts_is_on = 0;
 	ts_is_on = touchscreen_is_on() ? 1:0;
+	if (!is_wake_option_set()) ts_is_on = 1; // this line is to avoid setting -10/-10 for coordinates, when wake option is not set, so we shouldn't modify coordinates
+	// should help with ScreenStandby root app
 #endif
 
 	memset(buf, 0x0, sizeof(buf));
@@ -2863,7 +2866,7 @@ static void synaptics_ts_finger_func(struct synaptics_ts_data *ts)
 				    } else
 				    if (!between_screen_off_from_longtap_and_touch_release && dt2w_switch > 0 && scr_suspended == true) {
 					// not a release after screen switching off, doubletap2wake is on, and screen is off, check dt2wake
-					check_doubletapwake(last_touch_position_y);
+					check_doubletapwake(last_touch_position_x,last_touch_position_y);
 				    } else
 				    {
 				    between_screen_off_from_longtap_and_touch_release = 0; // touch released after screen off from long tap, set variable to 0 (false)
@@ -3445,6 +3448,8 @@ static void synaptics_ts_button_func(struct synaptics_ts_data *ts)
 	uint16_t x_position = 0, y_position = 0;
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 	int ts_is_on = touchscreen_is_on() ? 1:0;
+	if (!is_wake_option_set()) ts_is_on = 1; // this line is to avoid setting -10/-10 for coordinates, when wake option is not set, so we shouldn't modify coordinates
+	// should help with ScreenStandby root app
 #endif
 
 	ret = i2c_syn_read(ts->client,
