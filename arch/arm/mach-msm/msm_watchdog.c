@@ -166,7 +166,7 @@ uint32_t mpm_get_timetick(void)
 static int pet_check_counter = PET_CHECK_THRESHOLD;
 static unsigned long long last_pet_check;
 
-extern void show_pending_work_on_gcwq(void);
+//extern void show_pending_work_on_gcwq(void);
 
 void msm_watchdog_check_pet(unsigned long long timestamp)
 {
@@ -183,7 +183,7 @@ void msm_watchdog_check_pet(unsigned long long timestamp)
 			dump_stack();
 			pr_info("%s: Prepare to dump pending works on global workqueue...\n",
 				__func__);
-			show_pending_work_on_gcwq();
+//			show_pending_work_on_gcwq();
 			pr_info("\n ### Show Blocked State ###\n");
 			show_state_filter(TASK_UNINTERRUPTIBLE);
 		}
