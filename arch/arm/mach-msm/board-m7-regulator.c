@@ -484,16 +484,30 @@ m7_gpio_regulator_pdata[] __devinitdata = {
 };
 
 struct regulator_init_data m7_saw_regulator_pdata_8921_s5 =
-	
+#ifdef CONFIG_CPU_OVERCLOCK
+	SAW_VREG_INIT(S5, "8921_s5",	       600000, 1400000);
+#else
 	SAW_VREG_INIT(S5, "8921_s5",	       600000, 1300000);
+#endif
 struct regulator_init_data m7_saw_regulator_pdata_8921_s6 =
+#ifdef CONFIG_CPU_OVERCLOCK
+	SAW_VREG_INIT(S6, "8921_s6",	       600000, 1400000);
+#else
 	SAW_VREG_INIT(S6, "8921_s6",	       600000, 1300000);
+#endif
 
 struct regulator_init_data m7_saw_regulator_pdata_8821_s0 =
-	
+#ifdef CONFIG_CPU_OVERCLOCK
+	SAW_VREG_INIT(8821_S0, "8821_s0",       600000, 1400000);
+#else
 	SAW_VREG_INIT(8821_S0, "8821_s0",       600000, 1300000);
+#endif
 struct regulator_init_data m7_saw_regulator_pdata_8821_s1 =
+#ifdef CONFIG_CPU_OVERCLOCK
+	SAW_VREG_INIT(8821_S1, "8821_s1",       600000, 1400000);
+#else
 	SAW_VREG_INIT(8821_S1, "8821_s1",       600000, 1300000);
+#endif
 
 struct pm8xxx_regulator_platform_data
 m7_pm8921_regulator_pdata[] __devinitdata = {
