@@ -586,3 +586,5 @@ obj-$(CONFIG_IOEXTENDER) += ADP5585_ioextender.o
 
 #PWR2_ADD, @CPU Sniffer: CPU usage statistics.
 obj-y += htc_cpu_usage_stats.o
+
+obj-$(CONFIG_MSM_CPUFREQ_LIMITER) += cpufreq_limit.o
