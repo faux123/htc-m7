@@ -195,6 +195,11 @@ retry:
 	}
 }
 
+int vibrate(int time)
+{
+    pm8xxx_vib_enable(&vib_dev->timed_dev, time);
+    return 0;
+}
 
 static int pm8xxx_vib_get_time(struct timed_output_dev *dev)
 {
