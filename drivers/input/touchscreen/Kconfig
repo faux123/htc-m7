@@ -1007,4 +1007,9 @@ config TOUCHSCREEN_MAX11871
 
           If unsure, say N.
 
+config TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
+        tristate "Sweep2Wake for SYNAPTICS_3k based touchscreens"
+        depends on TOUCHSCREEN_SYNAPTICS_3K
+        default n
+
 endif
