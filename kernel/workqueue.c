@@ -2861,6 +2861,7 @@ unsigned long get_work_func_of_task_struct(struct task_struct *tsk)
 	return 0;
 }
 
+#if 0
 void show_pending_work_on_gcwq(void)
 {
 	struct work_struct *work;
@@ -2875,6 +2876,7 @@ void show_pending_work_on_gcwq(void)
 	}
 }
 EXPORT_SYMBOL(show_pending_work_on_gcwq);
+#endif
 
 static int __init init_workqueues(void)
 {
