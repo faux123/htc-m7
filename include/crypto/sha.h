@@ -1,6 +1,3 @@
-/*
- * Common values for SHA algorithms
- */
 
 #ifndef _CRYPTO_SHA_H
 #define _CRYPTO_SHA_H

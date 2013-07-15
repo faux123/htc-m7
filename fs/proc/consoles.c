@@ -10,9 +10,6 @@
 #include <linux/seq_file.h>
 #include <linux/tty_driver.h>
 
-/*
- * This is handler for /proc/consoles
- */
 static int show_console_dev(struct seq_file *m, void *v)
 {
 	static const struct {

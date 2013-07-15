@@ -62,7 +62,6 @@ TRACE_EVENT(sock_exceed_buf_limit,
 		__entry->rmem_alloc)
 );
 
-#endif /* _TRACE_SOCK_H */
+#endif 
 
-/* This part must be outside protection */
 #include <trace/define_trace.h>

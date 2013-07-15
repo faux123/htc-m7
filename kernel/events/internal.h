@@ -3,7 +3,6 @@
 
 #include <linux/hardirq.h>
 
-/* Buffer handling */
 
 #define RING_BUFFER_WRITABLE		0x01
 
@@ -12,21 +11,21 @@ struct ring_buffer {
 	struct rcu_head			rcu_head;
 #ifdef CONFIG_PERF_USE_VMALLOC
 	struct work_struct		work;
-	int				page_order;	/* allocation order  */
+	int				page_order;	
 #endif
-	int				nr_pages;	/* nr of data pages  */
-	int				writable;	/* are we writable   */
+	int				nr_pages;	
+	int				writable;	
 
-	atomic_t			poll;		/* POLL_ for wakeups */
+	atomic_t			poll;		
 
-	local_t				head;		/* write position    */
-	local_t				nest;		/* nested writers    */
-	local_t				events;		/* event limit       */
-	local_t				wakeup;		/* wakeup stamp      */
-	local_t				lost;		/* nr records lost   */
+	local_t				head;		
+	local_t				nest;		
+	local_t				events;		
+	local_t				wakeup;		
+	local_t				lost;		
 
-	long				watermark;	/* wakeup watermark  */
-	/* poll crap */
+	long				watermark;	
+	
 	spinlock_t			event_lock;
 	struct list_head		event_list;
 
@@ -52,11 +51,6 @@ extern struct page *
 perf_mmap_to_page(struct ring_buffer *rb, unsigned long pgoff);
 
 #ifdef CONFIG_PERF_USE_VMALLOC
-/*
- * Back perf_mmap() with vmalloc memory.
- *
- * Required for architectures that have d-cache aliasing issues.
- */
 
 static inline int page_order(struct ring_buffer *rb)
 {
@@ -100,7 +94,6 @@ __output_copy(struct perf_output_handle *handle,
 	} while (len);
 }
 
-/* Callchain handling */
 extern struct perf_callchain_entry *perf_callchain(struct pt_regs *regs);
 extern int get_callchain_buffers(void);
 extern void put_callchain_buffers(void);
@@ -133,4 +126,4 @@ static inline void put_recursion_context(int *recursion, int rctx)
 	recursion[rctx]--;
 }
 
-#endif /* _KERNEL_EVENTS_INTERNAL_H */
+#endif 

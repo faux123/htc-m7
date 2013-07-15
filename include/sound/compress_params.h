@@ -51,14 +51,10 @@
 #ifndef __SND_COMPRESS_PARAMS_H
 #define __SND_COMPRESS_PARAMS_H
 
-#include <linux/types.h>
-
-/* AUDIO CODECS SUPPORTED */
 #define MAX_NUM_CODECS 32
 #define MAX_NUM_CODEC_DESCRIPTORS 32
 #define MAX_NUM_BITRATES 32
 
-/* Codecs are listed linearly to allow for extensibility */
 #define SND_AUDIOCODEC_PCM                   ((__u32) 0x00000001)
 #define SND_AUDIOCODEC_MP3                   ((__u32) 0x00000002)
 #define SND_AUDIOCODEC_AMR                   ((__u32) 0x00000003)
@@ -72,16 +68,17 @@
 #define SND_AUDIOCODEC_IEC61937              ((__u32) 0x0000000B)
 #define SND_AUDIOCODEC_G723_1                ((__u32) 0x0000000C)
 #define SND_AUDIOCODEC_G729                  ((__u32) 0x0000000D)
+#define SND_AUDIOCODEC_AC3                   ((__u32) 0x0000000E)
+#define SND_AUDIOCODEC_DTS                   ((__u32) 0x0000000F)
+#define SND_AUDIOCODEC_AC3_PASS_THROUGH      ((__u32) 0x00000010)
+#define SND_AUDIOCODEC_WMA_PRO               ((__u32) 0x00000011)
+#define SND_AUDIOCODEC_DTS_PASS_THROUGH      ((__u32) 0x00000012)
+#define SND_AUDIOCODEC_DTS_LBR               ((__u32) 0x00000013)
+#define SND_AUDIOCODEC_DTS_TRANSCODE_LOOPBACK ((__u32) 0x00000014)
 
-/*
- * Profile and modes are listed with bit masks. This allows for a
- * more compact representation of fields that will not evolve
- * (in contrast to the list of codecs)
- */
 
 #define SND_AUDIOPROFILE_PCM                 ((__u32) 0x00000001)
 
-/* MP3 modes are only useful for encoders */
 #define SND_AUDIOCHANMODE_MP3_MONO           ((__u32) 0x00000001)
 #define SND_AUDIOCHANMODE_MP3_STEREO         ((__u32) 0x00000002)
 #define SND_AUDIOCHANMODE_MP3_JOINTSTEREO    ((__u32) 0x00000004)
@@ -89,7 +86,6 @@
 
 #define SND_AUDIOPROFILE_AMR                 ((__u32) 0x00000001)
 
-/* AMR modes are only useful for encoders */
 #define SND_AUDIOMODE_AMR_DTX_OFF            ((__u32) 0x00000001)
 #define SND_AUDIOMODE_AMR_VAD1               ((__u32) 0x00000002)
 #define SND_AUDIOMODE_AMR_VAD2               ((__u32) 0x00000004)
@@ -104,7 +100,6 @@
 
 #define SND_AUDIOPROFILE_AMRWB               ((__u32) 0x00000001)
 
-/* AMRWB modes are only useful for encoders */
 #define SND_AUDIOMODE_AMRWB_DTX_OFF          ((__u32) 0x00000001)
 #define SND_AUDIOMODE_AMRWB_VAD1             ((__u32) 0x00000002)
 #define SND_AUDIOMODE_AMRWB_VAD2             ((__u32) 0x00000004)
@@ -113,7 +108,6 @@
 
 #define SND_AUDIOPROFILE_AAC                 ((__u32) 0x00000001)
 
-/* AAC modes are required for encoders and decoders */
 #define SND_AUDIOMODE_AAC_MAIN               ((__u32) 0x00000001)
 #define SND_AUDIOMODE_AAC_LC                 ((__u32) 0x00000002)
 #define SND_AUDIOMODE_AAC_SSR                ((__u32) 0x00000004)
@@ -125,7 +119,6 @@
 #define SND_AUDIOMODE_AAC_HE_PS              ((__u32) 0x00000100)
 #define SND_AUDIOMODE_AAC_HE_MPS             ((__u32) 0x00000200)
 
-/* AAC formats are required for encoders and decoders */
 #define SND_AUDIOSTREAMFORMAT_MP2ADTS        ((__u32) 0x00000001)
 #define SND_AUDIOSTREAMFORMAT_MP4ADTS        ((__u32) 0x00000002)
 #define SND_AUDIOSTREAMFORMAT_MP4LOAS        ((__u32) 0x00000004)
@@ -149,10 +142,6 @@
 #define SND_AUDIOMODE_WMAPRO_LEVELM3         ((__u32) 0x00000080)
 
 #define SND_AUDIOSTREAMFORMAT_WMA_ASF        ((__u32) 0x00000001)
-/*
- * Some implementations strip the ASF header and only send ASF packets
- * to the DSP
- */
 #define SND_AUDIOSTREAMFORMAT_WMA_NOASF_HDR  ((__u32) 0x00000002)
 
 #define SND_AUDIOPROFILE_REALAUDIO           ((__u32) 0x00000001)
@@ -168,10 +157,6 @@
 
 #define SND_AUDIOPROFILE_FLAC                ((__u32) 0x00000001)
 
-/*
- * Define quality levels for FLAC encoders, from LEVEL0 (fast)
- * to LEVEL8 (best)
- */
 #define SND_AUDIOMODE_FLAC_LEVEL0            ((__u32) 0x00000001)
 #define SND_AUDIOMODE_FLAC_LEVEL1            ((__u32) 0x00000002)
 #define SND_AUDIOMODE_FLAC_LEVEL2            ((__u32) 0x00000004)
@@ -185,16 +170,9 @@
 #define SND_AUDIOSTREAMFORMAT_FLAC           ((__u32) 0x00000001)
 #define SND_AUDIOSTREAMFORMAT_FLAC_OGG       ((__u32) 0x00000002)
 
-/* IEC61937 payloads without CUVP and preambles */
 #define SND_AUDIOPROFILE_IEC61937            ((__u32) 0x00000001)
-/* IEC61937 with S/PDIF preambles+CUVP bits in 32-bit containers */
 #define SND_AUDIOPROFILE_IEC61937_SPDIF      ((__u32) 0x00000002)
 
-/*
- * IEC modes are mandatory for decoders. Format autodetection
- * will only happen on the DSP side with mode 0. The PCM mode should
- * not be used, the PCM codec should be used instead.
- */
 #define SND_AUDIOMODE_IEC_REF_STREAM_HEADER  ((__u32) 0x00000000)
 #define SND_AUDIOMODE_IEC_LPCM		     ((__u32) 0x00000001)
 #define SND_AUDIOMODE_IEC_AC3		     ((__u32) 0x00000002)
@@ -226,39 +204,21 @@
 #define SND_AUDIOMODE_G729_ANNEX_A           ((__u32) 0x00000001)
 #define SND_AUDIOMODE_G729_ANNEX_B           ((__u32) 0x00000002)
 
-/* <FIXME: multichannel encoders aren't supported for now. Would need
-   an additional definition of channel arrangement> */
 
-/* VBR/CBR definitions */
 #define SND_RATECONTROLMODE_CONSTANTBITRATE  ((__u32) 0x00000001)
 #define SND_RATECONTROLMODE_VARIABLEBITRATE  ((__u32) 0x00000002)
 
-/* Encoder options */
 
 struct snd_enc_wma {
-	__u32 super_block_align; /* WMA Type-specific data */
+	__u32 super_block_align; 
+	__u32 bits_per_sample;
+	__u32 channelmask;
+	__u32 encodeopt;
+	__u32 encodeopt1;
+	__u32 encodeopt2;
 };
 
 
-/**
- * struct snd_enc_vorbis
- * @quality: Sets encoding quality to n, between -1 (low) and 10 (high).
- * In the default mode of operation, the quality level is 3.
- * Normal quality range is 0 - 10.
- * @managed: Boolean. Set  bitrate  management  mode. This turns off the
- * normal VBR encoding, but allows hard or soft bitrate constraints to be
- * enforced by the encoder. This mode can be slower, and may also be
- * lower quality. It is primarily useful for streaming.
- * @max_bit_rate: Enabled only if managed is TRUE
- * @min_bit_rate: Enabled only if managed is TRUE
- * @downmix: Boolean. Downmix input from stereo to mono (has no effect on
- * non-stereo streams). Useful for lower-bitrate encoding.
- *
- * These options were extracted from the OpenMAX IL spec and Gstreamer vorbisenc
- * properties
- *
- * For best quality users should specify VBR mode and set quality levels.
- */
 
 struct snd_enc_vorbis {
 	__s32 quality;
@@ -269,14 +229,6 @@ struct snd_enc_vorbis {
 };
 
 
-/**
- * struct snd_enc_real
- * @quant_bits: number of coupling quantization bits in the stream
- * @start_region: coupling start region in the stream
- * @num_regions: number of regions value
- *
- * These options were extracted from the OpenMAX IL spec
- */
 
 struct snd_enc_real {
 	__u32 quant_bits;
@@ -284,24 +236,6 @@ struct snd_enc_real {
 	__u32 num_regions;
 };
 
-/**
- * struct snd_enc_flac
- * @num: serial number, valid only for OGG formats
- *	needs to be set by application
- * @gain: Add replay gain tags
- *
- * These options were extracted from the FLAC online documentation
- * at http://flac.sourceforge.net/documentation_tools_flac.html
- *
- * To make the API simpler, it is assumed that the user will select quality
- * profiles. Additional options that affect encoding quality and speed can
- * be added at a later stage if needed.
- *
- * By default the Subset format is used by encoders.
- *
- * TAGS such as pictures, etc, cannot be handled by an offloaded encoder and are
- * not supported in this API.
- */
 
 struct snd_enc_flac {
 	__u32 num;
@@ -309,7 +243,7 @@ struct snd_enc_flac {
 };
 
 struct snd_enc_generic {
-	__u32 bw;	/* encoder bandwidth */
+	__u32 bw;	
 	__s32 reserved[15];
 };
 
@@ -321,27 +255,6 @@ union snd_codec_options {
 	struct snd_enc_generic generic;
 };
 
-/** struct snd_codec_desc - description of codec capabilities
- * @max_ch: Maximum number of audio channels
- * @sample_rates: Sampling rates in Hz, use SNDRV_PCM_RATE_xxx for this
- * @bit_rate: Indexed array containing supported bit rates
- * @num_bitrates: Number of valid values in bit_rate array
- * @rate_control: value is specified by SND_RATECONTROLMODE defines.
- * @profiles: Supported profiles. See SND_AUDIOPROFILE defines.
- * @modes: Supported modes. See SND_AUDIOMODE defines
- * @formats: Supported formats. See SND_AUDIOSTREAMFORMAT defines
- * @min_buffer: Minimum buffer size handled by codec implementation
- * @reserved: reserved for future use
- *
- * This structure provides a scalar value for profiles, modes and stream
- * format fields.
- * If an implementation supports multiple combinations, they will be listed as
- * codecs with different descriptors, for example there would be 2 descriptors
- * for AAC-RAW and AAC-ADTS.
- * This entails some redundancy but makes it easier to avoid invalid
- * configurations.
- *
- */
 
 struct snd_codec_desc {
 	__u32 max_ch;
@@ -356,29 +269,6 @@ struct snd_codec_desc {
 	__u32 reserved[15];
 };
 
-/** struct snd_codec
- * @id: Identifies the supported audio encoder/decoder.
- *		See SND_AUDIOCODEC macros.
- * @ch_in: Number of input audio channels
- * @ch_out: Number of output channels. In case of contradiction between
- *		this field and the channelMode field, the channelMode field
- *		overrides.
- * @sample_rate: Audio sample rate of input data
- * @bit_rate: Bitrate of encoded data. May be ignored by decoders
- * @rate_control: Encoding rate control. See SND_RATECONTROLMODE defines.
- *               Encoders may rely on profiles for quality levels.
- *		 May be ignored by decoders.
- * @profile: Mandatory for encoders, can be mandatory for specific
- *		decoders as well. See SND_AUDIOPROFILE defines.
- * @level: Supported level (Only used by WMA at the moment)
- * @ch_mode: Channel mode for encoder. See SND_AUDIOCHANMODE defines
- * @format: Format of encoded bistream. Mandatory when defined.
- *		See SND_AUDIOSTREAMFORMAT defines.
- * @align: Block alignment in bytes of an audio sample.
- *		Only required for PCM or IEC formats.
- * @options: encoder-specific settings
- * @reserved: reserved for future use
- */
 
 struct snd_codec {
 	__u32 id;

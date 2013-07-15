@@ -22,14 +22,6 @@
 
 #define LIRCBUF_SIZE 256
 
-/**
- * ir_lirc_decode() - Send raw IR data to lirc_dev to be relayed to the
- *		      lircd userspace daemon for decoding.
- * @input_dev:	the struct rc_dev descriptor of the device
- * @duration:	the struct ir_raw_event descriptor of the pulse/space
- *
- * This function returns -EINVAL if the lirc interfaces aren't wired up.
- */
 static int ir_lirc_decode(struct rc_dev *dev, struct ir_raw_event ev)
 {
 	struct lirc_codec *lirc = &dev->raw->lirc;
@@ -41,16 +33,16 @@ static int ir_lirc_decode(struct rc_dev *dev, struct ir_raw_event ev)
 	if (!dev->raw->lirc.drv || !dev->raw->lirc.drv->rbuf)
 		return -EINVAL;
 
-	/* Packet start */
+	
 	if (ev.reset)
 		return 0;
 
-	/* Carrier reports */
+	
 	if (ev.carrier_report) {
 		sample = LIRC_FREQUENCY(ev.carrier);
 		IR_dprintk(2, "carrier report (freq: %d)\n", sample);
 
-	/* Packet end */
+	
 	} else if (ev.timeout) {
 
 		if (lirc->gap)
@@ -66,7 +58,7 @@ static int ir_lirc_decode(struct rc_dev *dev, struct ir_raw_event ev)
 		sample = LIRC_TIMEOUT(ev.duration / 1000);
 		IR_dprintk(2, "timeout report (duration: %d)\n", sample);
 
-	/* Normal sample */
+	
 	} else {
 
 		if (lirc->gap) {
@@ -75,7 +67,7 @@ static int ir_lirc_decode(struct rc_dev *dev, struct ir_raw_event ev)
 			lirc->gap_duration += ktime_to_ns(ktime_sub(ktime_get(),
 				lirc->gap_start));
 
-			/* Convert to ms and cap by LIRC_VALUE_MASK */
+			
 			do_div(lirc->gap_duration, 1000);
 			lirc->gap_duration = min(lirc->gap_duration,
 							(u64)LIRC_VALUE_MASK);
@@ -104,7 +96,7 @@ static ssize_t ir_lirc_transmit_ir(struct file *file, const char __user *buf,
 {
 	struct lirc_codec *lirc;
 	struct rc_dev *dev;
-	unsigned int *txbuf; /* buffer with values to transmit */
+	unsigned int *txbuf; 
 	ssize_t ret = 0;
 	size_t count;
 
@@ -165,7 +157,7 @@ static long ir_lirc_ioctl(struct file *filep, unsigned int cmd,
 
 	switch (cmd) {
 
-	/* legacy support */
+	
 	case LIRC_GET_SEND_MODE:
 		val = LIRC_CAN_SEND_PULSE & LIRC_CAN_SEND_MASK;
 		break;
@@ -175,7 +167,7 @@ static long ir_lirc_ioctl(struct file *filep, unsigned int cmd,
 			return -EINVAL;
 		return 0;
 
-	/* TX settings */
+	
 	case LIRC_SET_TRANSMITTER_MASK:
 		if (!dev->s_tx_mask)
 			return -EINVAL;
@@ -197,7 +189,7 @@ static long ir_lirc_ioctl(struct file *filep, unsigned int cmd,
 
 		return dev->s_tx_duty_cycle(dev, val);
 
-	/* RX settings */
+	
 	case LIRC_SET_REC_CARRIER:
 		if (!dev->s_rx_carrier_range)
 			return -ENOSYS;
@@ -232,7 +224,7 @@ static long ir_lirc_ioctl(struct file *filep, unsigned int cmd,
 
 		return dev->s_carrier_report(dev, !!val);
 
-	/* Generic timeout support */
+	
 	case LIRC_GET_MIN_TIMEOUT:
 		if (!dev->max_timeout)
 			return -ENOSYS;

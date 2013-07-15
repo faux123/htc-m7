@@ -36,7 +36,7 @@ static int blkpg_ioctl(struct block_device *bdev, struct blkpg_ioctl_arg __user 
 		case BLKPG_ADD_PARTITION:
 			start = p.start >> 9;
 			length = p.length >> 9;
-			/* check for fit in a hd_struct */ 
+			 
 			if (sizeof(sector_t) == sizeof(long) && 
 			    sizeof(long long) > sizeof(long)) {
 				long pstart = start, plength = length;
@@ -47,7 +47,7 @@ static int blkpg_ioctl(struct block_device *bdev, struct blkpg_ioctl_arg __user 
 
 			mutex_lock(&bdev->bd_mutex);
 
-			/* overlap? */
+			
 			disk_part_iter_init(&piter, disk,
 					    DISK_PITER_INCL_EMPTY);
 			while ((part = disk_part_iter_next(&piter))) {
@@ -60,7 +60,7 @@ static int blkpg_ioctl(struct block_device *bdev, struct blkpg_ioctl_arg __user 
 			}
 			disk_part_iter_exit(&piter);
 
-			/* all seems OK */
+			
 			part = add_partition(disk, partno, start, length,
 					     ADDPART_FLAG_NONE, NULL);
 			mutex_unlock(&bdev->bd_mutex);
@@ -81,7 +81,7 @@ static int blkpg_ioctl(struct block_device *bdev, struct blkpg_ioctl_arg __user 
 				bdput(bdevp);
 				return -EBUSY;
 			}
-			/* all seems OK */
+			
 			fsync_bdev(bdevp);
 			invalidate_bdev(bdevp);
 
@@ -132,6 +132,11 @@ static int blk_ioctl_discard(struct block_device *bdev, uint64_t start,
 	return blkdev_issue_discard(bdev, start, len, GFP_KERNEL, flags);
 }
 
+static int blk_ioctl_sanitize(struct block_device *bdev)
+{
+	return blkdev_issue_sanitize(bdev, GFP_KERNEL);
+}
+
 static int put_ushort(unsigned long arg, unsigned short val)
 {
 	return put_user(val, (unsigned short __user *)arg);
@@ -179,19 +184,6 @@ int __blkdev_driver_ioctl(struct block_device *bdev, fmode_t mode,
  */
 EXPORT_SYMBOL_GPL(__blkdev_driver_ioctl);
 
-/*
- * Is it an unrecognized ioctl? The correct returns are either
- * ENOTTY (final) or ENOIOCTLCMD ("I don't know this one, try a
- * fallback"). ENOIOCTLCMD gets turned into ENOTTY by the ioctl
- * code before returning.
- *
- * Confused drivers sometimes return EINVAL, which is wrong. It
- * means "I understood the ioctl command, but the parameters to
- * it were wrong".
- *
- * We should aim to just fix the broken drivers, the EINVAL case
- * should go away.
- */
 static inline int is_unrecognized_ioctl(int ret)
 {
 	return	ret == -EINVAL ||
@@ -199,9 +191,6 @@ static inline int is_unrecognized_ioctl(int ret)
 		ret == -ENOIOCTLCMD;
 }
 
-/*
- * always keep this in sync with compat_blkdev_ioctl()
- */
 int blkdev_ioctl(struct block_device *bdev, fmode_t mode, unsigned cmd,
 			unsigned long arg)
 {
@@ -234,6 +223,10 @@ int blkdev_ioctl(struct block_device *bdev, fmode_t mode, unsigned cmd,
 		set_device_ro(bdev, n);
 		return 0;
 
+	case BLKSANITIZE:
+		ret = blk_ioctl_sanitize(bdev);
+		break;
+
 	case BLKDISCARD:
 	case BLKSECDISCARD: {
 		uint64_t range[2];
@@ -256,10 +249,6 @@ int blkdev_ioctl(struct block_device *bdev, fmode_t mode, unsigned cmd,
 		if (!disk->fops->getgeo)
 			return -ENOTTY;
 
-		/*
-		 * We need to set the startsect first, the driver may
-		 * want to override it.
-		 */
 		memset(&geo, 0, sizeof(geo));
 		geo.start = get_start_sect(bdev);
 		ret = disk->fops->getgeo(bdev, &geo);
@@ -280,11 +269,11 @@ int blkdev_ioctl(struct block_device *bdev, fmode_t mode, unsigned cmd,
 		return put_long(arg, (bdi->ra_pages * PAGE_CACHE_SIZE) / 512);
 	case BLKROGET:
 		return put_int(arg, bdev_read_only(bdev) != 0);
-	case BLKBSZGET: /* get block device soft block size (cf. BLKSSZGET) */
+	case BLKBSZGET: 
 		return put_int(arg, block_size(bdev));
-	case BLKSSZGET: /* get block device logical block size */
+	case BLKSSZGET: 
 		return put_int(arg, bdev_logical_block_size(bdev));
-	case BLKPBSZGET: /* get block device physical block size */
+	case BLKPBSZGET: 
 		return put_uint(arg, bdev_physical_block_size(bdev));
 	case BLKIOMIN:
 		return put_uint(arg, bdev_io_min(bdev));
@@ -308,7 +297,7 @@ int blkdev_ioctl(struct block_device *bdev, fmode_t mode, unsigned cmd,
 		bdi->ra_pages = (arg * 512) / PAGE_CACHE_SIZE;
 		return 0;
 	case BLKBSZSET:
-		/* set the logical block size */
+		
 		if (!capable(CAP_SYS_ADMIN))
 			return -EACCES;
 		if (!arg)

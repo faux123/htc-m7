@@ -24,9 +24,9 @@ enum {
 	TCP_CLOSE_WAIT,
 	TCP_LAST_ACK,
 	TCP_LISTEN,
-	TCP_CLOSING,	/* Now a valid state */
+	TCP_CLOSING,	
 
-	TCP_MAX_STATES	/* Leave at the end! */
+	TCP_MAX_STATES	
 };
 
 #define TCP_STATE_MASK	0xF
@@ -47,4 +47,4 @@ enum {
 	TCPF_CLOSING	 = (1 << 11) 
 };
 
-#endif	/* _LINUX_TCP_STATES_H */
+#endif	

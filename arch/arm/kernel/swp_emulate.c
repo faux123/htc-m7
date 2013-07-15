@@ -29,9 +29,6 @@
 #include <asm/traps.h>
 #include <asm/uaccess.h>
 
-/*
- * Error-checking SWP macros implemented using ldrex{b}/strex{b}
- */
 #define __user_swpX_asm(data, addr, res, temp, B)		\
 	__asm__ __volatile__(					\
 	"	mov		%2, %1\n"			\
@@ -59,18 +56,11 @@
 #define __user_swpb_asm(data, addr, res, temp) \
 	__user_swpX_asm(data, addr, res, temp, "b")
 
-/*
- * Macros/defines for extracting register numbers from instruction.
- */
 #define EXTRACT_REG_NUM(instruction, offset) \
 	(((instruction) & (0xf << (offset))) >> (offset))
 #define RN_OFFSET  16
 #define RT_OFFSET  12
 #define RT2_OFFSET  0
-/*
- * Bit 22 of the instruction encoding distinguishes between
- * the SWP and SWPB variants (bit set means SWPB).
- */
 #define TYPE_SWPB (1 << 22)
 
 static unsigned long swpcounter;
@@ -102,9 +92,6 @@ static int proc_read_status(char *page, char **start, off_t off, int count,
 }
 #endif
 
-/*
- * Set up process info to signal segmentation fault - called on access error.
- */
 static void set_segfault(struct pt_regs *regs, unsigned long addr)
 {
 	siginfo_t info;
@@ -130,7 +117,7 @@ static int emulate_swpX(unsigned int address, unsigned int *data,
 	unsigned int res = 0;
 
 	if ((type != TYPE_SWPB) && (address & 0x3)) {
-		/* SWP to unaligned address not permitted */
+		
 		pr_debug("SWP instruction on unaligned pointer!\n");
 		return -EFAULT;
 	}
@@ -138,12 +125,6 @@ static int emulate_swpX(unsigned int address, unsigned int *data,
 	while (1) {
 		unsigned long temp;
 
-		/*
-		 * Barrier required between accessing protected resource and
-		 * releasing a lock for it. Legacy code might not have done
-		 * this, and we cannot determine that this is not the case
-		 * being emulated, so insert always.
-		 */
 		smp_mb();
 
 		if (type == TYPE_SWPB)
@@ -158,11 +139,6 @@ static int emulate_swpX(unsigned int address, unsigned int *data,
 	}
 
 	if (res == 0) {
-		/*
-		 * Barrier also required between acquiring a lock for a
-		 * protected resource and accessing the resource. Inserted for
-		 * same reason as above.
-		 */
 		smp_mb();
 
 		if (type == TYPE_SWPB)
@@ -174,11 +150,57 @@ static int emulate_swpX(unsigned int address, unsigned int *data,
 	return res;
 }
 
-/*
- * swp_handler logs the id of calling process, dissects the instruction, sanity
- * checks the memory location, calls emulate_swpX for the actual operation and
- * deals with fixup/error handling before returning
- */
+static int check_condition(struct pt_regs *regs, unsigned int insn)
+{
+	unsigned int base_cond, neg, cond = 0;
+	unsigned int cpsr_z, cpsr_c, cpsr_n, cpsr_v;
+
+	cpsr_n = (regs->ARM_cpsr & PSR_N_BIT) ? 1 : 0;
+	cpsr_z = (regs->ARM_cpsr & PSR_Z_BIT) ? 1 : 0;
+	cpsr_c = (regs->ARM_cpsr & PSR_C_BIT) ? 1 : 0;
+	cpsr_v = (regs->ARM_cpsr & PSR_V_BIT) ? 1 : 0;
+
+	
+	base_cond = insn >> 29;
+	neg = insn & BIT(28) ? 1 : 0;
+
+	switch (base_cond) {
+	case 0x0:	
+		cond = cpsr_z;
+		break;
+
+	case 0x1:	
+		cond = cpsr_c;
+		break;
+
+	case 0x2:	
+		cond = cpsr_n;
+		break;
+
+	case 0x3:	
+		cond = cpsr_v;
+		break;
+
+	case 0x4:	
+		cond = (cpsr_c == 1) && (cpsr_z == 0);
+		break;
+
+	case 0x5:	
+		cond = (cpsr_n == cpsr_v);
+		break;
+
+	case 0x6:	
+		cond = (cpsr_z == 0) && (cpsr_n == cpsr_v);
+		break;
+
+	case 0x7:	
+		cond = 1;
+		break;
+	};
+
+	return cond && !neg;
+}
+
 static int swp_handler(struct pt_regs *regs, unsigned int instr)
 {
 	unsigned int address, destreg, data, type;
@@ -191,11 +213,11 @@ static int swp_handler(struct pt_regs *regs, unsigned int instr)
 	case ARM_OPCODE_CONDTEST_PASS:
 		break;
 	case ARM_OPCODE_CONDTEST_FAIL:
-		/* Condition failed - return to next instruction */
+		
 		regs->ARM_pc += 4;
 		return 0;
 	case ARM_OPCODE_CONDTEST_UNCOND:
-		/* If unconditional encoding - not a SWP, undef */
+		
 		return -EFAULT;
 	default:
 		return -EINVAL;
@@ -205,6 +227,12 @@ static int swp_handler(struct pt_regs *regs, unsigned int instr)
 		pr_debug("\"%s\" (%ld) uses deprecated SWP{B} instruction\n",
 			 current->comm, (unsigned long)current->pid);
 		previous_pid = current->pid;
+	}
+
+	
+	if (!check_condition(regs, instr)) {
+		regs->ARM_pc += 4;
+		return 0;
 	}
 
 	address = regs->uregs[EXTRACT_REG_NUM(instr, RN_OFFSET)];
@@ -217,7 +245,7 @@ static int swp_handler(struct pt_regs *regs, unsigned int instr)
 		 EXTRACT_REG_NUM(instr, RN_OFFSET), address,
 		 destreg, EXTRACT_REG_NUM(instr, RT2_OFFSET), data);
 
-	/* Check access in reasonable access range for both SWP and SWPB */
+	
 	if (!access_ok(VERIFY_WRITE, (address & ~3), 4)) {
 		pr_debug("SWP{B} emulation: access to %p not allowed!\n",
 			 (void *)address);
@@ -227,28 +255,15 @@ static int swp_handler(struct pt_regs *regs, unsigned int instr)
 	}
 
 	if (res == 0) {
-		/*
-		 * On successful emulation, revert the adjustment to the PC
-		 * made in kernel/traps.c in order to resume execution at the
-		 * instruction following the SWP{B}.
-		 */
 		regs->ARM_pc += 4;
 		regs->uregs[destreg] = data;
 	} else if (res == -EFAULT) {
-		/*
-		 * Memory errors do not mean emulation failed.
-		 * Set up signal info to return SEGV, then return OK
-		 */
 		set_segfault(regs, address);
 	}
 
 	return 0;
 }
 
-/*
- * Only emulate SWP/SWPB executed in ARM state/User mode.
- * The kernel must be SWP free and SWP{B} does not exist in Thumb/ThumbEE.
- */
 static struct undef_hook swp_hook = {
 	.instr_mask = 0x0fb00ff0,
 	.instr_val  = 0x01000090,
@@ -257,10 +272,6 @@ static struct undef_hook swp_hook = {
 	.fn	    = swp_handler
 };
 
-/*
- * Register handler and create status file in /proc/cpu
- * Invoked as late_initcall, since not needed before init spawned.
- */
 static int __init swp_emulation_init(void)
 {
 #ifdef CONFIG_PROC_FS
@@ -272,7 +283,7 @@ static int __init swp_emulation_init(void)
 		return -ENOMEM;
 
 	res->read_proc = proc_read_status;
-#endif /* CONFIG_PROC_FS */
+#endif 
 
 	printk(KERN_NOTICE "Registering SWP/SWPB emulation handler\n");
 	register_undef_hook(&swp_hook);

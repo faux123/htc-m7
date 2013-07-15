@@ -1,6 +1,3 @@
-/*
- * drivers/base/power/sysfs.c - sysfs entries for device PM
- */
 
 #include <linux/device.h>
 #include <linux/string.h>
@@ -243,7 +240,7 @@ static ssize_t pm_qos_latency_store(struct device *dev,
 
 static DEVICE_ATTR(pm_qos_resume_latency_us, 0644,
 		   pm_qos_latency_show, pm_qos_latency_store);
-#endif /* CONFIG_PM_RUNTIME */
+#endif 
 
 #ifdef CONFIG_PM_SLEEP
 static ssize_t
@@ -398,7 +395,7 @@ static ssize_t wakeup_last_time_show(struct device *dev,
 }
 
 static DEVICE_ATTR(wakeup_last_time_ms, 0444, wakeup_last_time_show, NULL);
-#endif /* CONFIG_PM_SLEEP */
+#endif 
 
 #ifdef CONFIG_PM_ADVANCED_DEBUG
 #ifdef CONFIG_PM_RUNTIME
@@ -460,7 +457,7 @@ static ssize_t async_store(struct device *dev, struct device_attribute *attr,
 }
 
 static DEVICE_ATTR(async, 0644, async_show, async_store);
-#endif /* CONFIG_PM_ADVANCED_DEBUG */
+#endif 
 
 static struct attribute *power_attrs[] = {
 #ifdef CONFIG_PM_ADVANCED_DEBUG
@@ -473,7 +470,7 @@ static struct attribute *power_attrs[] = {
 	&dev_attr_runtime_active_kids.attr,
 	&dev_attr_runtime_enabled.attr,
 #endif
-#endif /* CONFIG_PM_ADVANCED_DEBUG */
+#endif 
 	NULL,
 };
 static struct attribute_group pm_attr_group = {
@@ -508,7 +505,7 @@ static struct attribute *runtime_attrs[] = {
 	&dev_attr_runtime_suspended_time.attr,
 	&dev_attr_runtime_active_time.attr,
 	&dev_attr_autosuspend_delay_ms.attr,
-#endif /* CONFIG_PM_RUNTIME */
+#endif 
 	NULL,
 };
 static struct attribute_group pm_runtime_attr_group = {
@@ -519,7 +516,7 @@ static struct attribute_group pm_runtime_attr_group = {
 static struct attribute *pm_qos_attrs[] = {
 #ifdef CONFIG_PM_RUNTIME
 	&dev_attr_pm_qos_resume_latency_us.attr,
-#endif /* CONFIG_PM_RUNTIME */
+#endif 
 	NULL,
 };
 static struct attribute_group pm_qos_attr_group = {

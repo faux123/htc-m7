@@ -24,7 +24,10 @@
 #include "sdio_cis.h"
 #include "sdio_bus.h"
 
-/* show configuration fields */
+#ifdef CONFIG_MMC_EMBEDDED_SDIO
+#include <linux/mmc/host.h>
+#endif
+
 #define sdio_config_attr(field, format_string)				\
 static ssize_t								\
 field##_show(struct device *dev, struct device_attribute *attr, char *buf)				\
@@ -128,20 +131,12 @@ static int sdio_bus_probe(struct device *dev)
 	if (!id)
 		return -ENODEV;
 
-	/* Unbound SDIO functions are always suspended.
-	 * During probe, the function is set active and the usage count
-	 * is incremented.  If the driver supports runtime PM,
-	 * it should call pm_runtime_put_noidle() in its probe routine and
-	 * pm_runtime_get_noresume() in its remove routine.
-	 */
 	if (func->card->host->caps & MMC_CAP_POWER_OFF_CARD) {
 		ret = pm_runtime_get_sync(dev);
 		if (ret < 0)
 			goto out;
 	}
 
-	/* Set the default block size so the driver is sure it's something
-	 * sensible. */
 	sdio_claim_host(func);
 	ret = sdio_set_block_size(func, 0);
 	sdio_release_host(func);
@@ -167,7 +162,7 @@ static int sdio_bus_remove(struct device *dev)
 	struct sdio_func *func = dev_to_sdio_func(dev);
 	int ret = 0;
 
-	/* Make sure card is powered before invoking ->remove() */
+	
 	if (func->card->host->caps & MMC_CAP_POWER_OFF_CARD)
 		pm_runtime_get_sync(dev);
 
@@ -181,11 +176,11 @@ static int sdio_bus_remove(struct device *dev)
 		sdio_release_host(func);
 	}
 
-	/* First, undo the increment made directly above */
+	
 	if (func->card->host->caps & MMC_CAP_POWER_OFF_CARD)
 		pm_runtime_put_noidle(dev);
 
-	/* Then undo the runtime PM settings in sdio_bus_probe() */
+	
 	if (func->card->host->caps & MMC_CAP_POWER_OFF_CARD)
 		pm_runtime_put_sync(dev);
 
@@ -210,11 +205,11 @@ static const struct dev_pm_ops sdio_bus_pm_ops = {
 
 #define SDIO_PM_OPS_PTR	(&sdio_bus_pm_ops)
 
-#else /* !CONFIG_PM */
+#else 
 
 #define SDIO_PM_OPS_PTR	NULL
 
-#endif /* !CONFIG_PM */
+#endif 
 
 static struct bus_type sdio_bus_type = {
 	.name		= "sdio",
@@ -236,10 +231,6 @@ void sdio_unregister_bus(void)
 	bus_unregister(&sdio_bus_type);
 }
 
-/**
- *	sdio_register_driver - register a function driver
- *	@drv: SDIO function driver
- */
 int sdio_register_driver(struct sdio_driver *drv)
 {
 	drv->drv.name = drv->name;
@@ -248,10 +239,6 @@ int sdio_register_driver(struct sdio_driver *drv)
 }
 EXPORT_SYMBOL_GPL(sdio_register_driver);
 
-/**
- *	sdio_unregister_driver - unregister a function driver
- *	@drv: SDIO function driver
- */
 void sdio_unregister_driver(struct sdio_driver *drv)
 {
 	drv->drv.bus = &sdio_bus_type;
@@ -263,7 +250,10 @@ static void sdio_release_func(struct device *dev)
 {
 	struct sdio_func *func = dev_to_sdio_func(dev);
 
-	sdio_free_func_cis(func);
+#ifdef CONFIG_MMC_EMBEDDED_SDIO
+	if (!func->card->host->embedded_sdio_data.funcs)
+#endif
+		sdio_free_func_cis(func);
 
 	if (func->info)
 		kfree(func->info);
@@ -271,9 +261,6 @@ static void sdio_release_func(struct device *dev)
 	kfree(func);
 }
 
-/*
- * Allocate and initialise a new SDIO function structure.
- */
 struct sdio_func *sdio_alloc_func(struct mmc_card *card)
 {
 	struct sdio_func *func;
@@ -293,9 +280,6 @@ struct sdio_func *sdio_alloc_func(struct mmc_card *card)
 	return func;
 }
 
-/*
- * Register a new SDIO function with the driver model.
- */
 int sdio_add_func(struct sdio_func *func)
 {
 	int ret;
@@ -309,12 +293,6 @@ int sdio_add_func(struct sdio_func *func)
 	return ret;
 }
 
-/*
- * Unregister a SDIO function with the driver model, and
- * (eventually) free it.
- * This function can be called through error paths where sdio_add_func() was
- * never executed (because a failure occurred at an earlier point).
- */
 void sdio_remove_func(struct sdio_func *func)
 {
 	if (!sdio_func_present(func))

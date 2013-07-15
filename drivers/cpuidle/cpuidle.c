@@ -25,6 +25,7 @@
 DEFINE_PER_CPU(struct cpuidle_device *, cpuidle_devices);
 
 DEFINE_MUTEX(cpuidle_lock);
+DEFINE_MUTEX(latency_notify_lock);
 LIST_HEAD(cpuidle_detected_devices);
 
 static int enabled_devices;
@@ -47,7 +48,7 @@ static void cpuidle_kick_cpus(void)
 }
 #elif defined(CONFIG_SMP)
 # error "Arch needs cpu_idle_wait() equivalent here"
-#else /* !CONFIG_ARCH_HAS_CPU_IDLE_WAIT && !CONFIG_SMP */
+#else 
 static void cpuidle_kick_cpus(void) {}
 #endif
 
@@ -71,11 +72,6 @@ typedef int (*cpuidle_enter_t)(struct cpuidle_device *dev,
 
 static cpuidle_enter_t cpuidle_enter_ops;
 
-/**
- * cpuidle_play_dead - cpu off-lining
- *
- * Returns in case of an error or no driver
- */
 int cpuidle_play_dead(void)
 {
 	struct cpuidle_device *dev = __this_cpu_read(cpuidle_devices);
@@ -86,7 +82,7 @@ int cpuidle_play_dead(void)
 	if (!drv)
 		return -ENODEV;
 
-	/* Find lowest-power state that supports long-term idle */
+	
 	for (i = CPUIDLE_DRIVER_STATE_START; i < drv->state_count; i++) {
 		struct cpuidle_state *s = &drv->states[i];
 
@@ -102,12 +98,6 @@ int cpuidle_play_dead(void)
 	return -ENODEV;
 }
 
-/**
- * cpuidle_idle_call - the main idle loop
- *
- * NOTE: no locks or semaphores should be used here
- * return non-zero on failure
- */
 int cpuidle_idle_call(void)
 {
 	struct cpuidle_device *dev = __this_cpu_read(cpuidle_devices);
@@ -120,39 +110,36 @@ int cpuidle_idle_call(void)
 	if (!initialized)
 		return -ENODEV;
 
-	/* check if the device is ready */
+	
 	if (!dev || !dev->enabled)
 		return -EBUSY;
 
 #if 0
-	/* shows regressions, re-enable for 2.6.29 */
-	/*
-	 * run any timers that can be run now, at this point
-	 * before calculating the idle duration etc.
-	 */
+	
 	hrtimer_peek_ahead_timers();
 #endif
 
-	/* ask the governor for the next state */
+	
 	next_state = cpuidle_curr_governor->select(drv, dev);
 	if (need_resched()) {
 		local_irq_enable();
 		return 0;
 	}
 
+	
+#ifndef CONFIG_ARCH_MSM
 	trace_power_start_rcuidle(POWER_CSTATE, next_state, dev->cpu);
 	trace_cpu_idle_rcuidle(next_state, dev->cpu);
-
+#endif
 	entered_state = cpuidle_enter_ops(dev, drv, next_state);
 
+#ifndef CONFIG_ARCH_MSM
 	trace_power_end_rcuidle(dev->cpu);
 	trace_cpu_idle_rcuidle(PWR_EVENT_EXIT, dev->cpu);
+#endif
 
 	if (entered_state >= 0) {
-		/* Update cpuidle counters */
-		/* This can be moved to within driver enter routine
-		 * but that results in multiple copies of same code.
-		 */
+		
 		dev->states_usage[entered_state].time +=
 				(unsigned long long)dev->last_residency;
 		dev->states_usage[entered_state].usage++;
@@ -160,28 +147,22 @@ int cpuidle_idle_call(void)
 		dev->last_residency = 0;
 	}
 
-	/* give the governor an opportunity to reflect on the outcome */
+	
 	if (cpuidle_curr_governor->reflect)
 		cpuidle_curr_governor->reflect(dev, entered_state);
 
 	return 0;
 }
 
-/**
- * cpuidle_install_idle_handler - installs the cpuidle idle loop handler
- */
 void cpuidle_install_idle_handler(void)
 {
 	if (enabled_devices) {
-		/* Make sure all changes finished before we switch to new idle */
+		
 		smp_wmb();
 		initialized = 1;
 	}
 }
 
-/**
- * cpuidle_uninstall_idle_handler - uninstalls the cpuidle idle loop handler
- */
 void cpuidle_uninstall_idle_handler(void)
 {
 	if (enabled_devices) {
@@ -190,9 +171,6 @@ void cpuidle_uninstall_idle_handler(void)
 	}
 }
 
-/**
- * cpuidle_pause_and_lock - temporarily disables CPUIDLE
- */
 void cpuidle_pause_and_lock(void)
 {
 	mutex_lock(&cpuidle_lock);
@@ -201,9 +179,6 @@ void cpuidle_pause_and_lock(void)
 
 EXPORT_SYMBOL_GPL(cpuidle_pause_and_lock);
 
-/**
- * cpuidle_resume_and_unlock - resumes CPUIDLE operation
- */
 void cpuidle_resume_and_unlock(void)
 {
 	cpuidle_install_idle_handler();
@@ -212,12 +187,6 @@ void cpuidle_resume_and_unlock(void)
 
 EXPORT_SYMBOL_GPL(cpuidle_resume_and_unlock);
 
-/**
- * cpuidle_wrap_enter - performs timekeeping and irqen around enter function
- * @dev: pointer to a valid cpuidle_device object
- * @drv: pointer to a valid cpuidle_driver object
- * @index: index of the target cpuidle state.
- */
 int cpuidle_wrap_enter(struct cpuidle_device *dev,
 				struct cpuidle_driver *drv, int index,
 				int (*enter)(struct cpuidle_device *dev,
@@ -280,15 +249,8 @@ static void poll_idle_init(struct cpuidle_driver *drv)
 }
 #else
 static void poll_idle_init(struct cpuidle_driver *drv) {}
-#endif /* CONFIG_ARCH_HAS_CPU_RELAX */
+#endif 
 
-/**
- * cpuidle_enable_device - enables idle PM for a CPU
- * @dev: the CPU
- *
- * This function must be called between cpuidle_pause_and_lock and
- * cpuidle_resume_and_unlock when used externally.
- */
 int cpuidle_enable_device(struct cpuidle_device *dev)
 {
 	int ret, i;
@@ -340,13 +302,6 @@ fail_sysfs:
 
 EXPORT_SYMBOL_GPL(cpuidle_enable_device);
 
-/**
- * cpuidle_disable_device - disables idle PM for a CPU
- * @dev: the CPU
- *
- * This function must be called between cpuidle_pause_and_lock and
- * cpuidle_resume_and_unlock when used externally.
- */
 void cpuidle_disable_device(struct cpuidle_device *dev)
 {
 	if (!dev->enabled)
@@ -365,21 +320,16 @@ void cpuidle_disable_device(struct cpuidle_device *dev)
 
 EXPORT_SYMBOL_GPL(cpuidle_disable_device);
 
-/**
- * __cpuidle_register_device - internal register function called before register
- * and enable routines
- * @dev: the cpu
- *
- * cpuidle_lock mutex must be held before this is called
- */
 static int __cpuidle_register_device(struct cpuidle_device *dev)
 {
 	int ret;
-	struct device *cpu_dev = get_cpu_device((unsigned long)dev->cpu);
+	struct device *cpu_dev;
 	struct cpuidle_driver *cpuidle_driver = cpuidle_get_driver();
 
 	if (!dev)
 		return -EINVAL;
+	cpu_dev = get_cpu_device((unsigned long)dev->cpu);
+
 	if (!try_module_get(cpuidle_driver->owner))
 		return -EINVAL;
 
@@ -396,10 +346,6 @@ static int __cpuidle_register_device(struct cpuidle_device *dev)
 	return 0;
 }
 
-/**
- * cpuidle_register_device - registers a CPU's idle PM feature
- * @dev: the cpu
- */
 int cpuidle_register_device(struct cpuidle_device *dev)
 {
 	int ret;
@@ -422,10 +368,6 @@ int cpuidle_register_device(struct cpuidle_device *dev)
 
 EXPORT_SYMBOL_GPL(cpuidle_register_device);
 
-/**
- * cpuidle_unregister_device - unregisters a CPU's idle PM feature
- * @dev: the cpu
- */
 void cpuidle_unregister_device(struct cpuidle_device *dev)
 {
 	struct device *cpu_dev = get_cpu_device((unsigned long)dev->cpu);
@@ -454,19 +396,15 @@ EXPORT_SYMBOL_GPL(cpuidle_unregister_device);
 
 static void smp_callback(void *v)
 {
-	/* we already woke the CPU up, nothing more to do */
+	
 }
 
-/*
- * This function gets called when a part of the kernel has a new latency
- * requirement.  This means we need to get all processors out of their C-state,
- * and then recalculate a new suitable C-state. Just do a cross-cpu IPI; that
- * wakes them all right up.
- */
 static int cpuidle_latency_notify(struct notifier_block *b,
 		unsigned long l, void *v)
 {
-	smp_call_function(smp_callback, NULL, 1);
+    mutex_lock(&latency_notify_lock);
+    smp_call_function(smp_callback, NULL, 1);
+    mutex_unlock(&latency_notify_lock);
 	return NOTIFY_OK;
 }
 
@@ -479,15 +417,12 @@ static inline void latency_notifier_init(struct notifier_block *n)
 	pm_qos_add_notifier(PM_QOS_CPU_DMA_LATENCY, n);
 }
 
-#else /* CONFIG_SMP */
+#else 
 
 #define latency_notifier_init(x) do { } while (0)
 
-#endif /* CONFIG_SMP */
+#endif 
 
-/**
- * cpuidle_init - core initializer
- */
 static int __init cpuidle_init(void)
 {
 	int ret;

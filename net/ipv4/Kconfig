@@ -398,7 +398,7 @@ config INET_DIAG
 	  Support for INET (TCP, DCCP, etc) socket monitoring interface used by
 	  native Linux tools such as ss. ss is included in iproute2, currently
 	  downloadable at:
-	  
+
 	    http://www.linuxfoundation.org/collaborate/workgroups/networking/iproute2
 
 	  If unsure, say Y.
@@ -537,7 +537,7 @@ config TCP_CONG_VENO
 	distinguishing to circumvent the difficult judgment of the packet loss
 	type. TCP Veno cuts down less congestion window in response to random
 	loss packets.
-	See <http://ieeexplore.ieee.org/xpl/freeabs_all.jsp?arnumber=1177186> 
+	See <http://ieeexplore.ieee.org/xpl/freeabs_all.jsp?arnumber=1177186>
 
 config TCP_CONG_YEAH
 	tristate "YeAH TCP"
@@ -630,3 +630,21 @@ config TCP_MD5SIG
 	  on the Internet.
 
 	  If unsure, say N.
+
+config HTC_NETWORK_MODIFY
+    tristate "HTC_NETWORK_MODIFY"
+	---help---
+	HTC_NETWORK_MODIFY
+
+config HTC_NETWORK_DEBUG
+	tristate "HTC_NETWORK_DEBUG"
+	default n
+	---help---
+	HTC_NETWORK_DEBUG
+
+config HTC_MONITOR
+	tristate "HTC_MONITOR"
+	default n
+	---help---
+	  Come up with a way to add information of data usage in attribute file
+	  for identifying the process that requested for data transmission.

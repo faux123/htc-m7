@@ -79,7 +79,7 @@ static int ping_v4_get_port(struct sock *sk, unsigned short ident)
 
 		for (i = 0; i < (1L << 16); i++, result++) {
 			if (!result)
-				result++; /* avoid zero */
+				result++; 
 			hlist = ping_hashslot(&ping_table, sock_net(sk),
 					    result);
 			ping_portaddr_for_each_entry(sk2, node, hlist) {
@@ -89,7 +89,7 @@ static int ping_v4_get_port(struct sock *sk, unsigned short ident)
 					goto next_port;
 			}
 
-			/* found */
+			
 			ping_port_rover = ident = result;
 			break;
 next_port:
@@ -128,7 +128,7 @@ fail:
 static void ping_v4_hash(struct sock *sk)
 {
 	pr_debug("ping_v4_hash(sk->port=%u)\n", inet_sk(sk)->inet_num);
-	BUG(); /* "Please do not press this button again." */
+	BUG(); 
 }
 
 static void ping_v4_unhash(struct sock *sk)
@@ -234,10 +234,6 @@ static void ping_close(struct sock *sk, long timeout)
 	sk_common_release(sk);
 }
 
-/*
- * We need our own bind because there are no privileged id's == local ports.
- * Moreover, we don't allow binding to multi- and broadcast addresses.
- */
 
 static int ping_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len)
 {
@@ -298,9 +294,6 @@ out:
 	return err;
 }
 
-/*
- * Is this a supported type of ICMP message?
- */
 
 static inline int ping_supported(int type, int code)
 {
@@ -309,10 +302,6 @@ static inline int ping_supported(int type, int code)
 	return 0;
 }
 
-/*
- * This routine is called by the ICMP module when it gets some
- * sort of error condition.
- */
 
 static int ping_queue_rcv_skb(struct sock *sk, struct sk_buff *skb);
 
@@ -328,7 +317,7 @@ void ping_err(struct sk_buff *skb, u32 info)
 	int harderr;
 	int err;
 
-	/* We assume the packet has already been checked by icmp_unreach */
+	
 
 	if (!ping_supported(icmph->type, icmph->code))
 		return;
@@ -340,7 +329,7 @@ void ping_err(struct sk_buff *skb, u32 info)
 			    ntohs(icmph->un.echo.id), skb->dev->ifindex);
 	if (sk == NULL) {
 		pr_debug("no socket, dropping\n");
-		return;	/* No socket for error */
+		return;	
 	}
 	pr_debug("err on socket %p\n", sk);
 
@@ -354,8 +343,6 @@ void ping_err(struct sk_buff *skb, u32 info)
 		err = EHOSTUNREACH;
 		break;
 	case ICMP_SOURCE_QUENCH:
-		/* This is not a real error but ping wants to see it.
-		 * Report it with some fake errno. */
 		err = EREMOTEIO;
 		break;
 	case ICMP_PARAMETERPROB:
@@ -363,7 +350,7 @@ void ping_err(struct sk_buff *skb, u32 info)
 		harderr = 1;
 		break;
 	case ICMP_DEST_UNREACH:
-		if (code == ICMP_FRAG_NEEDED) { /* Path MTU discovery */
+		if (code == ICMP_FRAG_NEEDED) { 
 			if (inet_sock->pmtudisc != IP_PMTUDISC_DONT) {
 				err = EMSGSIZE;
 				harderr = 1;
@@ -378,20 +365,16 @@ void ping_err(struct sk_buff *skb, u32 info)
 		}
 		break;
 	case ICMP_REDIRECT:
-		/* See ICMP_SOURCE_QUENCH */
+		
 		err = EREMOTEIO;
 		break;
 	}
 
-	/*
-	 *      RFC1122: OK.  Passes ICMP errors back to application, as per
-	 *	4.1.3.3.
-	 */
 	if (!inet_sock->recverr) {
 		if (!harderr || sk->sk_state != TCP_ESTABLISHED)
 			goto out;
 	} else {
-		ip_icmp_error(sk, skb, err, 0 /* no remote port */,
+		ip_icmp_error(sk, skb, err, 0 ,
 			 info, (u8 *)icmph);
 	}
 	sk->sk_err = err;
@@ -400,9 +383,6 @@ out:
 	sock_put(sk);
 }
 
-/*
- *	Copy and checksum an ICMP Echo packet from user space into a buffer.
- */
 
 struct pingfakehdr {
 	struct icmphdr icmph;
@@ -469,18 +449,11 @@ static int ping_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	if (len > 0xFFFF)
 		return -EMSGSIZE;
 
-	/*
-	 *	Check the flags.
-	 */
 
-	/* Mirror BSD error message compatibility */
+	
 	if (msg->msg_flags & MSG_OOB)
 		return -EOPNOTSUPP;
 
-	/*
-	 *	Fetch the ICMP header provided by the userland.
-	 *	iovec is modified!
-	 */
 
 	if (memcpy_fromiovec((u8 *)&user_icmph, msg->msg_iov,
 			     sizeof(struct icmphdr)))
@@ -488,9 +461,6 @@ static int ping_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	if (!ping_supported(user_icmph.type, user_icmph.code))
 		return -EINVAL;
 
-	/*
-	 *	Get and verify the address.
-	 */
 
 	if (msg->msg_name) {
 		struct sockaddr_in *usin = (struct sockaddr_in *)msg->msg_name;
@@ -499,12 +469,12 @@ static int ping_sendmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		if (usin->sin_family != AF_INET)
 			return -EINVAL;
 		daddr = usin->sin_addr.s_addr;
-		/* no remote port */
+		
 	} else {
 		if (sk->sk_state != TCP_ESTABLISHED)
 			return -EDESTADDRREQ;
 		daddr = inet->inet_daddr;
-		/* no remote port */
+		
 	}
 
 	ipc.addr = inet->inet_saddr;
@@ -586,8 +556,8 @@ back_from_confirm:
 
 	lock_sock(sk);
 
-	pfh.icmph.type = user_icmph.type; /* already checked */
-	pfh.icmph.code = user_icmph.code; /* ditto */
+	pfh.icmph.type = user_icmph.type; 
+	pfh.icmph.code = user_icmph.code; 
 	pfh.icmph.checksum = 0;
 	pfh.icmph.un.echo.id = inet->inet_sport;
 	pfh.icmph.un.echo.sequence = user_icmph.un.echo.sequence;
@@ -628,6 +598,10 @@ static int ping_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 	struct sk_buff *skb;
 	int copied, err;
 
+#ifdef CONFIG_HTC_NETWORK_MODIFY
+	err = 0 ;
+#endif
+
 	pr_debug("ping_recvmsg(sk=%p,sk->num=%u)\n", isk, isk->inet_num);
 
 	err = -EOPNOTSUPP;
@@ -650,17 +624,17 @@ static int ping_recvmsg(struct kiocb *iocb, struct sock *sk, struct msghdr *msg,
 		copied = len;
 	}
 
-	/* Don't bother checking the checksum */
+	
 	err = skb_copy_datagram_iovec(skb, 0, msg->msg_iov, copied);
 	if (err)
 		goto done;
 
 	sock_recv_timestamp(msg, sk, skb);
 
-	/* Copy the address. */
+	
 	if (sin) {
 		sin->sin_family = AF_INET;
-		sin->sin_port = 0 /* skb->h.uh->source */;
+		sin->sin_port = 0 ;
 		sin->sin_addr.s_addr = ip_hdr(skb)->saddr;
 		memset(sin->sin_zero, 0, sizeof(sin->sin_zero));
 	}
@@ -688,9 +662,6 @@ static int ping_queue_rcv_skb(struct sock *sk, struct sk_buff *skb)
 }
 
 
-/*
- *	All we need to do is get the socket.
- */
 
 void ping_rcv(struct sk_buff *skb)
 {
@@ -701,12 +672,12 @@ void ping_rcv(struct sk_buff *skb)
 	__be32 saddr = iph->saddr;
 	__be32 daddr = iph->daddr;
 
-	/* We assume the packet has already been checked by icmp_rcv */
+	
 
 	pr_debug("ping_rcv(skb=%p,id=%04x,seq=%04x)\n",
 		 skb, ntohs(icmph->un.echo.id), ntohs(icmph->un.echo.sequence));
 
-	/* Push ICMP header back */
+	
 	skb_push(skb, skb->data - (u8 *)icmph);
 
 	sk = ping_v4_lookup(net, saddr, daddr, ntohs(icmph->un.echo.id),
@@ -719,7 +690,7 @@ void ping_rcv(struct sk_buff *skb)
 	}
 	pr_debug("no socket, dropping\n");
 
-	/* We're called from icmp_rcv(). kfree_skb() is done there. */
+	
 }
 
 struct proto ping_prot = {

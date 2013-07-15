@@ -42,14 +42,6 @@ static void perf_output_wakeup(struct perf_output_handle *handle)
 	irq_work_queue(&handle->event->pending);
 }
 
-/*
- * We need to ensure a later event_id doesn't publish a head when a former
- * event isn't done writing. However since we need to deal with NMIs we
- * cannot fully serialize things.
- *
- * We only publish the head (and generate a wakeup) when the outer-most
- * event completes.
- */
 static void perf_output_get_handle(struct perf_output_handle *handle)
 {
 	struct ring_buffer *rb = handle->rb;
@@ -67,24 +59,12 @@ static void perf_output_put_handle(struct perf_output_handle *handle)
 again:
 	head = local_read(&rb->head);
 
-	/*
-	 * IRQ/NMI can happen here, which means we can miss a head update.
-	 */
 
 	if (!local_dec_and_test(&rb->nest))
 		goto out;
 
-	/*
-	 * Publish the known good head. Rely on the full barrier implied
-	 * by atomic_dec_and_test() order the rb->head read and this
-	 * write.
-	 */
 	rb->user_page->data_head = head;
 
-	/*
-	 * Now check if we missed an update, rely on the (compiler)
-	 * barrier in atomic_dec_and_test() to re-read rb->head.
-	 */
 	if (unlikely(head != local_read(&rb->head))) {
 		local_inc(&rb->nest);
 		goto again;
@@ -111,9 +91,6 @@ int perf_output_begin(struct perf_output_handle *handle,
 	} lost_event;
 
 	rcu_read_lock();
-	/*
-	 * For inherited events we send all the output towards the parent.
-	 */
 	if (event->parent)
 		event = event->parent;
 
@@ -138,11 +115,6 @@ int perf_output_begin(struct perf_output_handle *handle,
 	perf_output_get_handle(handle);
 
 	do {
-		/*
-		 * Userspace could choose to issue a mb() before updating the
-		 * tail pointer. So that all reads will be completed before the
-		 * write is issued.
-		 */
 		tail = ACCESS_ONCE(rb->user_page->data_tail);
 		smp_rmb();
 		offset = head = local_read(&rb->head);
@@ -216,9 +188,6 @@ ring_buffer_init(struct ring_buffer *rb, long watermark, int flags)
 
 #ifndef CONFIG_PERF_USE_VMALLOC
 
-/*
- * Back perf_mmap() with regular GFP_KERNEL-0 pages.
- */
 
 struct page *
 perf_mmap_to_page(struct ring_buffer *rb, unsigned long pgoff)

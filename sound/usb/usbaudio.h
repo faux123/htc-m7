@@ -21,14 +21,10 @@
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
  */
 
-/* handling of USB vendor/product ID pairs as 32-bit numbers */
 #define USB_ID(vendor, product) (((vendor) << 16) | (product))
 #define USB_ID_VENDOR(id) ((id) >> 16)
 #define USB_ID_PRODUCT(id) ((u16)(id))
 
-/*
- *
- */
 
 struct snd_usb_audio {
 	int index;
@@ -40,30 +36,26 @@ struct snd_usb_audio {
 	unsigned int shutdown:1;
 	unsigned int probing:1;
 	unsigned int autosuspended:1;	
-	unsigned int txfr_quirk:1; /* Subframe boundaries on transfers */
+	unsigned int txfr_quirk:1; 
 	
 	int num_interfaces;
 	int num_suspended_intf;
 
-	struct list_head pcm_list;	/* list of pcm streams */
+	struct list_head pcm_list;	
 	int pcm_devs;
 
-	struct list_head midi_list;	/* list of midi interfaces */
+	struct list_head midi_list;	
 
-	struct list_head mixer_list;	/* list of mixer interfaces */
+	struct list_head mixer_list;	
 
-	int setup;			/* from the 'device_setup' module param */
-	int nrpacks;			/* from the 'nrpacks' module param */
-	int async_unlink;		/* from the 'async_unlink' module param */
+	int setup;			
+	int nrpacks;			
+	int async_unlink;		
 
-	struct usb_host_interface *ctrl_intf;	/* the audio control interface */
+	struct usb_host_interface *ctrl_intf;	
 };
 
-/*
- * Information about devices with broken descriptors
- */
 
-/* special values for .ifnum */
 #define QUIRK_NO_INTERFACE		-2
 #define QUIRK_ANY_INTERFACE		-1
 
@@ -102,4 +94,4 @@ struct snd_usb_audio_quirk {
 #define combine_triple(s)  (combine_word(s) | ((unsigned int)(s)[2] << 16))
 #define combine_quad(s)    (combine_triple(s) | ((unsigned int)(s)[3] << 24))
 
-#endif /* __USBAUDIO_H */
+#endif 

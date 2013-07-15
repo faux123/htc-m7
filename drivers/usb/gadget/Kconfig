@@ -83,7 +83,7 @@ config USB_GADGET_DEBUG_FS
 config USB_GADGET_VBUS_DRAW
 	int "Maximum VBUS Power usage (2-500 mA)"
 	range 2 500
-	default 2
+	default 500
 	help
 	   Some devices need to draw power from USB when they are
 	   configured, perhaps to operate circuitry or to recharge
@@ -123,13 +123,7 @@ config USB_GADGET_STORAGE_NUM_BUFFERS
 #   - discrete ones (including all PCI-only controllers)
 #   - debug/dummy gadget+hcd is last.
 #
-choice
-	prompt "USB Peripheral Controller"
-	help
-	   A USB device uses a controller to talk to its host.
-	   Systems should have only one such upstream link.
-	   Many controller drivers are platform-specific; these
-	   often need board-specific hooks.
+menu "USB Peripheral Controller"
 
 #
 # Integrated controllers
@@ -494,9 +488,58 @@ config USB_CI13XXX_MSM
 	  dynamically linked module called "ci13xxx_msm" and force all
 	  gadget drivers to also be dynamically linked.
 
+config USB_CI13XXX_MSM_HSIC
+	tristate "MIPS HSIC CI13xxx for MSM"
+	depends on ARCH_MSM
+	select USB_GADGET_DUALSPEED
+	help
+	  MSM SoC has chipidea USB controller.  This driver uses
+	  ci13xxx_udc core. Support USB-HSIC core.
+
+	  Say "y" to link the driver statically, or "m" to build a
+	  dynamically linked module called "ci13xxx_msm_hsic" and force all
+	  gadget drivers to also be dynamically linked.
+
+config USB_DWC3_MSM
+	tristate "DesignWare USB3.0 (DRD) Controller for MSM"
+	depends on ARCH_MSM
+	select USB_DWC3
+	select USB_GADGET_DUALSPEED
+	select USB_GADGET_SELECTED
+	help
+	  The DesignWare USB3.0 controller is a SuperSpeed USB3.0 Controller
+	  integrated into the Qualcomm MSM chipset series, supporting host,
+	  device and otg modes of operation. For more information please
+	  refer to http://www.qualcomm.com/chipsets.
+
+config USB_DWC3_OMAP
+	tristate "DesignWare USB3.0 (DRD) Controller for OMAP"
+	depends on ARCH_OMAP
+	select USB_DWC3
+	select USB_GADGET_DUALSPEED
+	select USB_GADGET_SUPERSPEED
+	select USB_GADGET_SELECTED
+	help
+	  DesignWare USB3.0 controller is a SuperSpeed USB3.0 Controller
+	  which can be configured for peripheral-only, host-only, hub-only
+	  and Dual-Role operation. This Controller was first integrated into
+	  the OMAP5 series of processors. More information about the OMAP5
+	  version of this controller, refer to http://www.ti.com/omap5.
+
 #
 # LAST -- dummy/emulated controller
 #
+
+config USB_MSM_72K
+	tristate "MSM 72K Device Controller"
+	depends on ARCH_MSM
+	select USB_GADGET_DUALSPEED
+	help
+	   USB gadget driver for Qualcomm MSM 72K architecture.
+
+	   Say "y" to link the driver statically, or "m" to build a
+	   dynamically linked module called "msm72k" and force all
+	   gadget drivers to also be dynamically linked.
 
 config USB_DUMMY_HCD
 	tristate "Dummy HCD (DEVELOPMENT)"
@@ -525,7 +568,7 @@ config USB_DUMMY_HCD
 # NOTE:  Please keep dummy_hcd LAST so that "real hardware" appears
 # first and will be selected by default.
 
-endchoice
+endmenu
 
 # Selected by UDC drivers that support high-speed operation.
 config USB_GADGET_DUALSPEED
@@ -533,8 +576,15 @@ config USB_GADGET_DUALSPEED
 
 # Selected by UDC drivers that support super-speed opperation
 config USB_GADGET_SUPERSPEED
-	bool
+	bool "Operate as superspeed"
+	depends on USB_GADGET
 	depends on USB_GADGET_DUALSPEED
+	default n
+	help
+	 When a superspeed peripheral controller is selected
+	 (for example DesignWare USB3.0 controller), use this flag to
+	 indicate if the device should operate in superspeed(=y)
+	 or not.
 
 #
 # USB Gadget Drivers
@@ -798,6 +848,16 @@ config USB_MASS_STORAGE
 	  Say "y" to link the driver statically, or "m" to build
 	  a dynamically linked module called "g_mass_storage".
 
+config USB_GADGET_TARGET
+	tristate "USB Gadget Target Fabric Module"
+	depends on TARGET_CORE
+	help
+	  This fabric is an USB gadget. Two USB protocols are supported that is
+	  BBB or BOT (Bulk Only Transport) and UAS (USB Attached SCSI). BOT is
+	  advertised on alternative interface 0 (primary) and UAS is on
+	  alternative interface 1. Both protocols can work on USB2.0 and USB3.0.
+	  UAS utilizes the USB 3.0 feature called streams support.
+
 config USB_G_SERIAL
 	tristate "Serial Gadget (with CDC ACM and CDC OBEX support)"
 	help
@@ -845,6 +905,255 @@ config USB_G_PRINTER
 
 	  For more information, see Documentation/usb/gadget_printer.txt
 	  which includes sample code for accessing the device file.
+
+config USB_G_ANDROID
+	boolean "Android Composite Gadget"
+	help
+	  The Android Composite Gadget supports multiple USB
+	  functions: adb, acm, mass storage, mtp, accessory
+	  and rndis.
+	  Each function can be configured and enabled/disabled
+	  dynamically from userspace through a sysfs interface.
+
+config USB_ANDROID_ACM
+	boolean "Android gadget ACM serial function"
+	depends on USB_G_ANDROID
+	help
+	  Provides ACM serial function for android gadget driver.
+
+config PASCAL_DETECT
+	boolean "PASCAL DETECT"
+	depends on USB_ANDROID_ACM
+	default n
+	help
+	  Provides ACM serial function for pascal mode.
+
+config LISMO
+	boolean "LISMO"
+	depends on USB_G_ANDROID
+	default n
+	help
+	  Provides LISMO service.
+
+config USB_ANDROID_ADB
+	boolean "Android gadget adb function"
+	depends on USB_G_ANDROID
+	default y
+	help
+	  Provides adb function for android gadget driver.
+
+config USB_ANDROID_DIAG
+	boolean "USB MSM7K Diag Function"
+	depends on USB_G_ANDROID
+	default y
+	help
+	  Qualcomm diagnostics interface support.
+
+config USB_ANDROID_MDM9K_DIAG
+        boolean "USB MDM 9k Diag Function"
+        depends on USB_ANDROID_DIAG
+        help
+          Qualcomm diagnostics interface support for 9K.
+
+config USB_ANDROID_MDM9K_MODEM
+        boolean "USB MDM 9k Modem Function"
+        depends on USB_G_ANDROID
+        help
+          Qualcomm Modem interface support for 9K.
+
+config USB_ANDROID_MASS_STORAGE
+	boolean "Android gadget mass storage function"
+	depends on USB_G_ANDROID && SWITCH
+	default y
+	help
+	  Provides USB mass storage function for android gadget driver.
+
+config USB_ANDROID_MTP
+	boolean "Android MTP function"
+	depends on USB_G_ANDROID
+	help
+	  Provides Media Transfer Protocol (MTP) support for android gadget driver.
+
+config USB_ANDROID_RNDIS
+	boolean "Android gadget RNDIS ethernet function"
+	depends on USB_G_ANDROID
+	default n
+	help
+	  Provides RNDIS ethernet function for android gadget driver.
+
+config USB_ANDROID_RMNET
+	boolean "RmNet function driver"
+	depends on USB_G_ANDROID
+	default n
+	help
+	  Enabling this option adds rmnet support to the
+	  android gadget. Rmnet is an alternative to CDC-ECM
+	  and Windows RNDIS. It uses QUALCOMM MSM Interface
+	  for control transfers. It acts like a bridge between
+	  Host and modem found in MSM chipsets.
+
+config RMNET_SMD_CTL_CHANNEL
+	string "control SMD channel name"
+	depends on USB_ANDROID_RMNET
+	default ""
+	help
+	  Control SMD channel for transferring QMI messages
+
+config RMNET_SMD_DATA_CHANNEL
+	string "Data SMD channel name"
+	depends on USB_ANDROID_RMNET
+	default ""
+	help
+	  Data SMD channel for transferring network data
+
+config USB_ANDROID_RMNET_SDIO
+       boolean "RmNet over SDIO function driver"
+       depends on  USB_G_ANDROID && MSM_SDIO_CMUX && MSM_SDIO_DMUX
+       default n
+       help
+         Enabling this option adds rmnet over sdio support to the
+         android gadget. Rmnet is an alternative to CDC-ECM
+         and Windows RNDIS. It uses QUALCOMM MSM Interface
+         for control transfers. It acts like a bridge between
+         Host and modem found in MSM chipsets.
+
+config RMNET_SDIO_CTL_CHANNEL
+       int "control SDIO channel id"
+       depends on USB_ANDROID_RMNET_SDIO
+       help
+         Control SDIO channel for transferring QMI messages
+
+config RMNET_SDIO_DATA_CHANNEL
+       int "Data SDIO channel id"
+       depends on USB_ANDROID_RMNET_SDIO
+       help
+         Data SDIO channel for transferring network data
+
+config USB_ANDROID_RMNET_SMD_SDIO
+       boolean "RmNet over SMD/SDIO function driver"
+       depends on  USB_G_ANDROID && MSM_SDIO_CMUX && MSM_SDIO_DMUX
+       default n
+       help
+         Enabling this option adds rmnet over sdio support to the
+         android gadget. Rmnet is an alternative to CDC-ECM
+         and Windows RNDIS. It uses QUALCOMM MSM Interface
+         for control transfers. It acts like a bridge between
+         Host and modem found in MSM chipsets.
+
+config RMNET_SMD_SDIO_CTL_CHANNEL
+       int "control SDIO channel id"
+       depends on USB_ANDROID_RMNET_SMD_SDIO
+       default 8
+       help
+         Control SDIO channel for transferring QMI messages
+
+config RMNET_SMD_SDIO_DATA_CHANNEL
+       int "Data SDIO channel id"
+       default 8
+       depends on USB_ANDROID_RMNET_SMD_SDIO
+       help
+         Data SDIO channel for transferring network data
+
+config RMNET_SDIO_SMD_DATA_CHANNEL
+	string "Data SMD channel name"
+	depends on USB_ANDROID_RMNET_SMD_SDIO
+	default "DATA40"
+	help
+	  Data SMD channel for transferring network data
+
+config USB_ANDROID_RMNET_BAM
+       boolean "RmNet over BAM driver"
+       depends on  USB_G_ANDROID && MSM_BAM_DMUX
+       help
+         Enabling this option adds rmnet over BAM support to the
+         android gadget. Rmnet is an alternative to CDC-ECM
+         and Windows RNDIS. It uses QUALCOMM MSM Interface
+         for control transfers. It acts like a bridge between
+         Host and Modem processor using bam-dmux interface.
+	 This option enables only DATA interface. Control
+	 interface has to be enabled separately
+
+config USB_ANDROID_RMNET_CTRL_SMD
+       boolean "RmNet control over SMD driver"
+       depends on  USB_G_ANDROID && MSM_SMD
+       help
+         Enabling this option adds rmnet control over SMD
+	 support to the android gadget. Rmnet is an
+	 alternative to CDC-ECM and Windows RNDIS.
+	 It uses QUALCOMM MSM Interface for control
+	 transfers. This option enables only control interface.
+	 Data interface has to be enabled separately
+
+config USB_F_SERIAL
+	boolean "generic serial function driver"
+	depends on USB_G_ANDROID
+	default n
+	help
+	  Say "y" to link the driver statically, or "m" to build
+	  as a part of "g_android"
+
+config MODEM_SUPPORT
+	boolean "modem support in generic serial function driver"
+	depends on USB_F_SERIAL
+	default y
+	help
+          This feature enables the modem functionality in the
+	  generic serial.
+	  adds interrupt endpoint support to send modem notifications
+	  to host.
+	  adds CDC descriptors to enumerate the generic serial as MODEM.
+	  adds CDC class requests to configure MODEM line settings.
+	  Say "y" to enable MODEM support in the generic serial driver.
+
+config USB_ANDROID_SERIAL
+	boolean "Android gadget Serial function"
+	depends on USB_G_ANDROID
+	help
+
+config USB_ANDROID_PROJECTOR
+	boolean "Android gadget Projector function"
+	depends on USB_G_ANDROID
+	help
+
+config USB_ANDROID_ECM
+	boolean "Android gadget ECM function"
+	depends on USB_G_ANDROID
+	help
+
+config USB_F_SERIAL_SDIO
+	boolean "generic serial function driver over SDIO"
+	depends on USB_G_ANDROID && MSM_SDIO_CMUX && MSM_SDIO_AL
+	default n
+	help
+          Gadget serial driver is one way to communicate with modem
+          device. This option enables serial driver to communicate
+          to modem device using sdio. It makes very minimal changes
+          to Gadget usb serial interface(f_serial.c) and adds
+          separate transport layer u_sdio(very similar to u_serial.c)
+          Say "y" to link the driver staticall
+
+config USB_F_SERIAL_SMD
+	boolean "generic serial function driver over SMD"
+	depends on USB_G_ANDROID && MSM_SMD
+	default n
+	help
+          Gadget serial driver is one way to communicate with modem
+          device. This option enables serial driver to communicate
+          to modem device using smd. It makes very minimal changes
+          to Gadget usb serial interface(f_serial.c) and adds
+          separate transport layer u_smd(very similar to u_serial.c)
+          Say "y" to link the driver statically
+
+config USB_ANDROID_USBNET
+	boolean "Android gadget USBNET function for VoIP"
+	depends on USB_G_ANDROID
+	default n
+	help
+
+config USB_ANDROID_NCM
+	boolean "Android gadget NCM function"
+	depends on USB_G_ANDROID
+	help
 
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"
@@ -976,5 +1285,91 @@ config USB_G_WEBCAM
 	  dynamically linked module called "g_webcam".
 
 endchoice
+
+config USB_CSW_HACK
+	boolean "USB Mass storage csw hack Feature"
+	default y
+	help
+	 This csw hack feature is for increasing the performance of the mass
+	 storage
+
+config USB_MSC_PROFILING
+	bool "USB MSC performance profiling"
+	help
+	  If you say Y here, support will be added for collecting
+	  Mass-storage performance numbers at the VFS level.
+
+config MODEM_SUPPORT
+	boolean "modem support in generic serial function driver"
+	depends on USB_G_ANDROID
+	default y
+	help
+          This feature enables the modem functionality in the
+	  generic serial.
+	  adds interrupt endpoint support to send modem notifications
+	  to host.
+	  adds CDC descriptors to enumerate the generic serial as MODEM.
+	  adds CDC class requests to configure MODEM line settings.
+	  Say "y" to enable MODEM support in the generic serial driver.
+
+config RMNET_SMD_CTL_CHANNEL
+	string "RMNET control SMD channel name"
+	depends on USB_G_ANDROID && MSM_SMD
+	default ""
+	help
+	  Control SMD channel for transferring QMI messages
+
+config RMNET_SMD_DATA_CHANNEL
+	string "RMNET Data SMD channel name"
+	depends on USB_G_ANDROID && MSM_SMD
+	default ""
+	help
+	  Data SMD channel for transferring network data
+
+config RMNET_SDIO_CTL_CHANNEL
+       int "RMNET control SDIO channel id"
+       default 8
+       depends on MSM_SDIO_CMUX && MSM_SDIO_DMUX
+       help
+         Control SDIO channel for transferring RMNET QMI messages
+
+config RMNET_SDIO_DATA_CHANNEL
+       int "RMNET Data SDIO channel id"
+       default 8
+       depends on MSM_SDIO_CMUX && MSM_SDIO_DMUX
+       help
+         Data SDIO channel for transferring network data
+
+config RMNET_SMD_SDIO_CTL_CHANNEL
+       int "RMNET(sdio_smd) Control SDIO channel id"
+       depends on MSM_SDIO_CMUX && MSM_SDIO_DMUX
+       default 8
+       help
+         Control SDIO channel for transferring QMI messages
+
+config RMNET_SMD_SDIO_DATA_CHANNEL
+       int "RMNET(sdio_smd) Data SDIO channel id"
+       default 8
+       depends on MSM_SDIO_CMUX && MSM_SDIO_DMUX
+       help
+         Data SDIO channel for transferring network data
+
+config RMNET_SDIO_SMD_DATA_CHANNEL
+       string "RMNET(sdio_smd) Data SMD channel name"
+       depends on MSM_SDIO_CMUX && MSM_SDIO_DMUX
+       default "DATA40"
+       help
+	  Data SMD channel for transferring network data
+
+config USB_ANDROID_RMNET_CTRL_SMD
+       boolean "RmNet(BAM) control over SMD driver"
+       depends on MSM_SMD
+       help
+         Enabling this option adds rmnet control over SMD
+	 support to the android gadget. Rmnet is an
+	 alternative to CDC-ECM and Windows RNDIS.
+	 It uses QUALCOMM MSM Interface for control
+	 transfers. This option enables only control interface.
+	 Data interface used is BAM.
 
 endif # USB_GADGET

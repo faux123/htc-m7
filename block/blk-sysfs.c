@@ -1,6 +1,3 @@
-/*
- * Functions related to sysfs handling
- */
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/module.h>
@@ -456,21 +453,6 @@ queue_attr_store(struct kobject *kobj, struct attribute *attr,
 	return res;
 }
 
-/**
- * blk_release_queue: - release a &struct request_queue when it is no longer needed
- * @kobj:    the kobj belonging to the request queue to be released
- *
- * Description:
- *     blk_release_queue is the pair to blk_init_queue() or
- *     blk_queue_make_request().  It should be called when a request queue is
- *     being released; typically when a block device is being de-registered.
- *     Currently, its primary task it to free all the &struct request
- *     structures that were allocated to the queue and the queue itself.
- *
- * Caveat:
- *     Hopefully the low level driver will have finished any
- *     outstanding requests first...
- **/
 static void blk_release_queue(struct kobject *kobj)
 {
 	struct request_queue *q =

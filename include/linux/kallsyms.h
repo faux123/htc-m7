@@ -16,10 +16,8 @@
 struct module;
 
 #ifdef CONFIG_KALLSYMS
-/* Lookup the address for a symbol. Returns 0 if not found. */
 unsigned long kallsyms_lookup_name(const char *name);
 
-/* Call a function on each kallsyms symbol in the core kernel */
 int kallsyms_on_each_symbol(int (*fn)(void *, const char *, struct module *,
 				      unsigned long),
 			    void *data);
@@ -28,23 +26,21 @@ extern int kallsyms_lookup_size_offset(unsigned long addr,
 				  unsigned long *symbolsize,
 				  unsigned long *offset);
 
-/* Lookup an address.  modname is set to NULL if it's in the kernel. */
 const char *kallsyms_lookup(unsigned long addr,
 			    unsigned long *symbolsize,
 			    unsigned long *offset,
 			    char **modname, char *namebuf);
 
-/* Look up a kernel symbol and return it in a text buffer. */
 extern int sprint_symbol(char *buffer, unsigned long address);
+extern int sprint_symbol_no_offset(char *buffer, unsigned long address);
 extern int sprint_backtrace(char *buffer, unsigned long address);
 
-/* Look up a kernel symbol and print it to the kernel messages. */
 extern void __print_symbol(const char *fmt, unsigned long address);
 
 int lookup_symbol_name(unsigned long addr, char *symname);
 int lookup_symbol_attrs(unsigned long addr, unsigned long *size, unsigned long *offset, char *modname, char *name);
 
-#else /* !CONFIG_KALLSYMS */
+#else 
 
 static inline unsigned long kallsyms_lookup_name(const char *name)
 {
@@ -80,6 +76,12 @@ static inline int sprint_symbol(char *buffer, unsigned long addr)
 	return 0;
 }
 
+static inline int sprint_symbol_no_offset(char *buffer, unsigned long addr)
+{
+	*buffer = '\0';
+	return 0;
+}
+
 static inline int sprint_backtrace(char *buffer, unsigned long addr)
 {
 	*buffer = '\0';
@@ -96,11 +98,9 @@ static inline int lookup_symbol_attrs(unsigned long addr, unsigned long *size, u
 	return -ERANGE;
 }
 
-/* Stupid that this does nothing, but I didn't create this mess. */
 #define __print_symbol(fmt, addr)
-#endif /*CONFIG_KALLSYMS*/
+#endif 
 
-/* This macro allows us to keep printk typechecking */
 static __printf(1, 2)
 void __check_printsym_format(const char *fmt, ...)
 {
@@ -118,4 +118,4 @@ static inline void print_ip_sym(unsigned long ip)
 	printk("[<%p>] %pS\n", (void *) ip, (void *) ip);
 }
 
-#endif /*_LINUX_KALLSYMS_H*/
+#endif 

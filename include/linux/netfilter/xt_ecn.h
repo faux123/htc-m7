@@ -20,7 +20,6 @@
 
 #define XT_ECN_OP_MATCH_MASK	0xce
 
-/* match info */
 struct xt_ecn_info {
 	__u8 operation;
 	__u8 invert;
@@ -32,4 +31,4 @@ struct xt_ecn_info {
 	} proto;
 };
 
-#endif /* _XT_ECN_H */
+#endif 
