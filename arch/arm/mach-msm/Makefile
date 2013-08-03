@@ -489,4 +489,6 @@ obj-$(CONFIG_IO_FOOTPRINT) += io_footprint.o
 #PWR2_ADD, @CPU Sniffer: CPU usage statistics.
 obj-y += htc_cpu_usage_stats.o
 
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
+
 obj-$(CONFIG_MSM_CPUFREQ_LIMITER) += cpufreq_limit.o

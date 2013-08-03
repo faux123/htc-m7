@@ -2788,5 +2788,13 @@ config QUALCOMM_WLAN_PXO
 	bool "Use PXO for WLAN clock source"
 	help
 	  Use PXO for clock source of WLAN chip
+
+config FORCE_FAST_CHARGE
+	bool "Force AC charge mode at will"
+	default y
+	help
+		A simple sysfs interface to force adapters that
+		are detected as USB to charge as AC.
+
 endif
 
