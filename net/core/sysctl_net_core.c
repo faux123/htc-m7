@@ -1,9 +1,3 @@
-/* -*- linux-c -*-
- * sysctl_net_core.c: sysctl interface to net core subsystem.
- *
- * Begun April 1, 1996, Mike Shaver.
- * Added /proc/sys/net/core directory entry (empty =) ). [MS]
- */
 
 #include <linux/mm.h>
 #include <linux/sysctl.h>
@@ -44,7 +38,7 @@ static int rps_sock_flow_sysctl(ctl_table *table, int write,
 	if (write) {
 		if (size) {
 			if (size > 1<<30) {
-				/* Enforce limit to prevent overflow */
+				
 				mutex_unlock(&sock_flow_mutex);
 				return -EINVAL;
 			}
@@ -82,7 +76,7 @@ static int rps_sock_flow_sysctl(ctl_table *table, int write,
 
 	return ret;
 }
-#endif /* CONFIG_RPS */
+#endif 
 
 static struct ctl_table net_core_table[] = {
 #ifdef CONFIG_NET
@@ -173,7 +167,7 @@ static struct ctl_table net_core_table[] = {
 		.proc_handler	= rps_sock_flow_sysctl
 	},
 #endif
-#endif /* CONFIG_NET */
+#endif 
 	{
 		.procname	= "netdev_budget",
 		.data		= &netdev_budget,

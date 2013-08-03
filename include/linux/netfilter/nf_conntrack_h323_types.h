@@ -5,17 +5,17 @@
  * This source code is licensed under General Public License version 2.
  */
 
-typedef struct TransportAddress_ipAddress {	/* SEQUENCE */
-	int options;		/* No use */
+typedef struct TransportAddress_ipAddress {	
+	int options;		
 	unsigned ip;
 } TransportAddress_ipAddress;
 
-typedef struct TransportAddress_ip6Address {	/* SEQUENCE */
-	int options;		/* No use */
+typedef struct TransportAddress_ip6Address {	
+	int options;		
 	unsigned ip;
 } TransportAddress_ip6Address;
 
-typedef struct TransportAddress {	/* CHOICE */
+typedef struct TransportAddress {	
 	enum {
 		eTransportAddress_ipAddress,
 		eTransportAddress_ipSourceRoute,
@@ -31,7 +31,7 @@ typedef struct TransportAddress {	/* CHOICE */
 	};
 } TransportAddress;
 
-typedef struct DataProtocolCapability {	/* CHOICE */
+typedef struct DataProtocolCapability {	
 	enum {
 		eDataProtocolCapability_nonStandard,
 		eDataProtocolCapability_v14buffered,
@@ -50,7 +50,7 @@ typedef struct DataProtocolCapability {	/* CHOICE */
 	} choice;
 } DataProtocolCapability;
 
-typedef struct DataApplicationCapability_application {	/* CHOICE */
+typedef struct DataApplicationCapability_application {	
 	enum {
 		eDataApplicationCapability_application_nonStandard,
 		eDataApplicationCapability_application_t120,
@@ -72,12 +72,12 @@ typedef struct DataApplicationCapability_application {	/* CHOICE */
 	};
 } DataApplicationCapability_application;
 
-typedef struct DataApplicationCapability {	/* SEQUENCE */
-	int options;		/* No use */
+typedef struct DataApplicationCapability {	
+	int options;		
 	DataApplicationCapability_application application;
 } DataApplicationCapability;
 
-typedef struct DataType {	/* CHOICE */
+typedef struct DataType {	
 	enum {
 		eDataType_nonStandard,
 		eDataType_nullData,
@@ -94,17 +94,17 @@ typedef struct DataType {	/* CHOICE */
 	};
 } DataType;
 
-typedef struct UnicastAddress_iPAddress {	/* SEQUENCE */
-	int options;		/* No use */
+typedef struct UnicastAddress_iPAddress {	
+	int options;		
 	unsigned network;
 } UnicastAddress_iPAddress;
 
-typedef struct UnicastAddress_iP6Address {	/* SEQUENCE */
-	int options;		/* No use */
+typedef struct UnicastAddress_iP6Address {	
+	int options;		
 	unsigned network;
 } UnicastAddress_iP6Address;
 
-typedef struct UnicastAddress {	/* CHOICE */
+typedef struct UnicastAddress {	
 	enum {
 		eUnicastAddress_iPAddress,
 		eUnicastAddress_iPXAddress,
@@ -120,7 +120,7 @@ typedef struct UnicastAddress {	/* CHOICE */
 	};
 } UnicastAddress;
 
-typedef struct H245_TransportAddress {	/* CHOICE */
+typedef struct H245_TransportAddress {	
 	enum {
 		eH245_TransportAddress_unicastAddress,
 		eH245_TransportAddress_multicastAddress,
@@ -130,7 +130,7 @@ typedef struct H245_TransportAddress {	/* CHOICE */
 	};
 } H245_TransportAddress;
 
-typedef struct H2250LogicalChannelParameters {	/* SEQUENCE */
+typedef struct H2250LogicalChannelParameters {	
 	enum {
 		eH2250LogicalChannelParameters_nonStandard = (1 << 31),
 		eH2250LogicalChannelParameters_associatedSessionID =
@@ -156,7 +156,7 @@ typedef struct H2250LogicalChannelParameters {	/* SEQUENCE */
 	H245_TransportAddress mediaControlChannel;
 } H2250LogicalChannelParameters;
 
-typedef struct OpenLogicalChannel_forwardLogicalChannelParameters_multiplexParameters {	/* CHOICE */
+typedef struct OpenLogicalChannel_forwardLogicalChannelParameters_multiplexParameters {	
 	enum {
 		eOpenLogicalChannel_forwardLogicalChannelParameters_multiplexParameters_h222LogicalChannelParameters,
 		eOpenLogicalChannel_forwardLogicalChannelParameters_multiplexParameters_h223LogicalChannelParameters,
@@ -169,7 +169,7 @@ typedef struct OpenLogicalChannel_forwardLogicalChannelParameters_multiplexParam
 	};
 } OpenLogicalChannel_forwardLogicalChannelParameters_multiplexParameters;
 
-typedef struct OpenLogicalChannel_forwardLogicalChannelParameters {	/* SEQUENCE */
+typedef struct OpenLogicalChannel_forwardLogicalChannelParameters {	
 	enum {
 		eOpenLogicalChannel_forwardLogicalChannelParameters_portNumber
 		    = (1 << 31),
@@ -183,7 +183,7 @@ typedef struct OpenLogicalChannel_forwardLogicalChannelParameters {	/* SEQUENCE 
 	    multiplexParameters;
 } OpenLogicalChannel_forwardLogicalChannelParameters;
 
-typedef struct OpenLogicalChannel_reverseLogicalChannelParameters_multiplexParameters {	/* CHOICE */
+typedef struct OpenLogicalChannel_reverseLogicalChannelParameters_multiplexParameters {	
 	enum {
 		eOpenLogicalChannel_reverseLogicalChannelParameters_multiplexParameters_h223LogicalChannelParameters,
 		eOpenLogicalChannel_reverseLogicalChannelParameters_multiplexParameters_v76LogicalChannelParameters,
@@ -194,7 +194,7 @@ typedef struct OpenLogicalChannel_reverseLogicalChannelParameters_multiplexParam
 	};
 } OpenLogicalChannel_reverseLogicalChannelParameters_multiplexParameters;
 
-typedef struct OpenLogicalChannel_reverseLogicalChannelParameters {	/* SEQUENCE */
+typedef struct OpenLogicalChannel_reverseLogicalChannelParameters {	
 	enum {
 		eOpenLogicalChannel_reverseLogicalChannelParameters_multiplexParameters
 		    = (1 << 31),
@@ -207,7 +207,7 @@ typedef struct OpenLogicalChannel_reverseLogicalChannelParameters {	/* SEQUENCE 
 	    multiplexParameters;
 } OpenLogicalChannel_reverseLogicalChannelParameters;
 
-typedef struct NetworkAccessParameters_networkAddress {	/* CHOICE */
+typedef struct NetworkAccessParameters_networkAddress {	
 	enum {
 		eNetworkAccessParameters_networkAddress_q2931Address,
 		eNetworkAccessParameters_networkAddress_e164Address,
@@ -218,7 +218,7 @@ typedef struct NetworkAccessParameters_networkAddress {	/* CHOICE */
 	};
 } NetworkAccessParameters_networkAddress;
 
-typedef struct NetworkAccessParameters {	/* SEQUENCE */
+typedef struct NetworkAccessParameters {	
 	enum {
 		eNetworkAccessParameters_distribution = (1 << 31),
 		eNetworkAccessParameters_externalReference = (1 << 30),
@@ -227,7 +227,7 @@ typedef struct NetworkAccessParameters {	/* SEQUENCE */
 	NetworkAccessParameters_networkAddress networkAddress;
 } NetworkAccessParameters;
 
-typedef struct OpenLogicalChannel {	/* SEQUENCE */
+typedef struct OpenLogicalChannel {	
 	enum {
 		eOpenLogicalChannel_reverseLogicalChannelParameters =
 		    (1 << 31),
@@ -241,12 +241,12 @@ typedef struct OpenLogicalChannel {	/* SEQUENCE */
 	NetworkAccessParameters separateStack;
 } OpenLogicalChannel;
 
-typedef struct Setup_UUIE_fastStart {	/* SEQUENCE OF */
+typedef struct Setup_UUIE_fastStart {	
 	int count;
 	OpenLogicalChannel item[30];
 } Setup_UUIE_fastStart;
 
-typedef struct Setup_UUIE {	/* SEQUENCE */
+typedef struct Setup_UUIE {	
 	enum {
 		eSetup_UUIE_h245Address = (1 << 31),
 		eSetup_UUIE_sourceAddress = (1 << 30),
@@ -287,12 +287,12 @@ typedef struct Setup_UUIE {	/* SEQUENCE */
 	Setup_UUIE_fastStart fastStart;
 } Setup_UUIE;
 
-typedef struct CallProceeding_UUIE_fastStart {	/* SEQUENCE OF */
+typedef struct CallProceeding_UUIE_fastStart {	
 	int count;
 	OpenLogicalChannel item[30];
 } CallProceeding_UUIE_fastStart;
 
-typedef struct CallProceeding_UUIE {	/* SEQUENCE */
+typedef struct CallProceeding_UUIE {	
 	enum {
 		eCallProceeding_UUIE_h245Address = (1 << 31),
 		eCallProceeding_UUIE_callIdentifier = (1 << 30),
@@ -309,12 +309,12 @@ typedef struct CallProceeding_UUIE {	/* SEQUENCE */
 	CallProceeding_UUIE_fastStart fastStart;
 } CallProceeding_UUIE;
 
-typedef struct Connect_UUIE_fastStart {	/* SEQUENCE OF */
+typedef struct Connect_UUIE_fastStart {	
 	int count;
 	OpenLogicalChannel item[30];
 } Connect_UUIE_fastStart;
 
-typedef struct Connect_UUIE {	/* SEQUENCE */
+typedef struct Connect_UUIE {	
 	enum {
 		eConnect_UUIE_h245Address = (1 << 31),
 		eConnect_UUIE_callIdentifier = (1 << 30),
@@ -337,12 +337,12 @@ typedef struct Connect_UUIE {	/* SEQUENCE */
 	Connect_UUIE_fastStart fastStart;
 } Connect_UUIE;
 
-typedef struct Alerting_UUIE_fastStart {	/* SEQUENCE OF */
+typedef struct Alerting_UUIE_fastStart {	
 	int count;
 	OpenLogicalChannel item[30];
 } Alerting_UUIE_fastStart;
 
-typedef struct Alerting_UUIE {	/* SEQUENCE */
+typedef struct Alerting_UUIE {	
 	enum {
 		eAlerting_UUIE_h245Address = (1 << 31),
 		eAlerting_UUIE_callIdentifier = (1 << 30),
@@ -364,7 +364,7 @@ typedef struct Alerting_UUIE {	/* SEQUENCE */
 	Alerting_UUIE_fastStart fastStart;
 } Alerting_UUIE;
 
-typedef struct FacilityReason {	/* CHOICE */
+typedef struct FacilityReason {	
 	enum {
 		eFacilityReason_routeCallToGatekeeper,
 		eFacilityReason_callForwarded,
@@ -380,12 +380,12 @@ typedef struct FacilityReason {	/* CHOICE */
 	} choice;
 } FacilityReason;
 
-typedef struct Facility_UUIE_fastStart {	/* SEQUENCE OF */
+typedef struct Facility_UUIE_fastStart {	
 	int count;
 	OpenLogicalChannel item[30];
 } Facility_UUIE_fastStart;
 
-typedef struct Facility_UUIE {	/* SEQUENCE */
+typedef struct Facility_UUIE {	
 	enum {
 		eFacility_UUIE_alternativeAddress = (1 << 31),
 		eFacility_UUIE_alternativeAliasAddress = (1 << 30),
@@ -413,12 +413,12 @@ typedef struct Facility_UUIE {	/* SEQUENCE */
 	Facility_UUIE_fastStart fastStart;
 } Facility_UUIE;
 
-typedef struct Progress_UUIE_fastStart {	/* SEQUENCE OF */
+typedef struct Progress_UUIE_fastStart {	
 	int count;
 	OpenLogicalChannel item[30];
 } Progress_UUIE_fastStart;
 
-typedef struct Progress_UUIE {	/* SEQUENCE */
+typedef struct Progress_UUIE {	
 	enum {
 		eProgress_UUIE_h245Address = (1 << 31),
 		eProgress_UUIE_h245SecurityMode = (1 << 30),
@@ -433,7 +433,7 @@ typedef struct Progress_UUIE {	/* SEQUENCE */
 	Progress_UUIE_fastStart fastStart;
 } Progress_UUIE;
 
-typedef struct H323_UU_PDU_h323_message_body {	/* CHOICE */
+typedef struct H323_UU_PDU_h323_message_body {	
 	enum {
 		eH323_UU_PDU_h323_message_body_setup,
 		eH323_UU_PDU_h323_message_body_callProceeding,
@@ -459,7 +459,7 @@ typedef struct H323_UU_PDU_h323_message_body {	/* CHOICE */
 	};
 } H323_UU_PDU_h323_message_body;
 
-typedef struct RequestMessage {	/* CHOICE */
+typedef struct RequestMessage {	
 	enum {
 		eRequestMessage_nonStandard,
 		eRequestMessage_masterSlaveDetermination,
@@ -482,7 +482,7 @@ typedef struct RequestMessage {	/* CHOICE */
 	};
 } RequestMessage;
 
-typedef struct OpenLogicalChannelAck_reverseLogicalChannelParameters_multiplexParameters {	/* CHOICE */
+typedef struct OpenLogicalChannelAck_reverseLogicalChannelParameters_multiplexParameters {	
 	enum {
 		eOpenLogicalChannelAck_reverseLogicalChannelParameters_multiplexParameters_h222LogicalChannelParameters,
 		eOpenLogicalChannelAck_reverseLogicalChannelParameters_multiplexParameters_h2250LogicalChannelParameters,
@@ -492,7 +492,7 @@ typedef struct OpenLogicalChannelAck_reverseLogicalChannelParameters_multiplexPa
 	};
 } OpenLogicalChannelAck_reverseLogicalChannelParameters_multiplexParameters;
 
-typedef struct OpenLogicalChannelAck_reverseLogicalChannelParameters {	/* SEQUENCE */
+typedef struct OpenLogicalChannelAck_reverseLogicalChannelParameters {	
 	enum {
 		eOpenLogicalChannelAck_reverseLogicalChannelParameters_portNumber
 		    = (1 << 31),
@@ -505,7 +505,7 @@ typedef struct OpenLogicalChannelAck_reverseLogicalChannelParameters {	/* SEQUEN
 	    multiplexParameters;
 } OpenLogicalChannelAck_reverseLogicalChannelParameters;
 
-typedef struct H2250LogicalChannelAckParameters {	/* SEQUENCE */
+typedef struct H2250LogicalChannelAckParameters {	
 	enum {
 		eH2250LogicalChannelAckParameters_nonStandard = (1 << 31),
 		eH2250LogicalChannelAckParameters_sessionID = (1 << 30),
@@ -522,7 +522,7 @@ typedef struct H2250LogicalChannelAckParameters {	/* SEQUENCE */
 	H245_TransportAddress mediaControlChannel;
 } H2250LogicalChannelAckParameters;
 
-typedef struct OpenLogicalChannelAck_forwardMultiplexAckParameters {	/* CHOICE */
+typedef struct OpenLogicalChannelAck_forwardMultiplexAckParameters {	
 	enum {
 		eOpenLogicalChannelAck_forwardMultiplexAckParameters_h2250LogicalChannelAckParameters,
 	} choice;
@@ -532,7 +532,7 @@ typedef struct OpenLogicalChannelAck_forwardMultiplexAckParameters {	/* CHOICE *
 	};
 } OpenLogicalChannelAck_forwardMultiplexAckParameters;
 
-typedef struct OpenLogicalChannelAck {	/* SEQUENCE */
+typedef struct OpenLogicalChannelAck {	
 	enum {
 		eOpenLogicalChannelAck_reverseLogicalChannelParameters =
 		    (1 << 31),
@@ -548,7 +548,7 @@ typedef struct OpenLogicalChannelAck {	/* SEQUENCE */
 	    forwardMultiplexAckParameters;
 } OpenLogicalChannelAck;
 
-typedef struct ResponseMessage {	/* CHOICE */
+typedef struct ResponseMessage {	
 	enum {
 		eResponseMessage_nonStandard,
 		eResponseMessage_masterSlaveDeterminationAck,
@@ -580,7 +580,7 @@ typedef struct ResponseMessage {	/* CHOICE */
 	};
 } ResponseMessage;
 
-typedef struct MultimediaSystemControlMessage {	/* CHOICE */
+typedef struct MultimediaSystemControlMessage {	
 	enum {
 		eMultimediaSystemControlMessage_request,
 		eMultimediaSystemControlMessage_response,
@@ -593,12 +593,12 @@ typedef struct MultimediaSystemControlMessage {	/* CHOICE */
 	};
 } MultimediaSystemControlMessage;
 
-typedef struct H323_UU_PDU_h245Control {	/* SEQUENCE OF */
+typedef struct H323_UU_PDU_h245Control {	
 	int count;
 	MultimediaSystemControlMessage item[4];
 } H323_UU_PDU_h245Control;
 
-typedef struct H323_UU_PDU {	/* SEQUENCE */
+typedef struct H323_UU_PDU {	
 	enum {
 		eH323_UU_PDU_nonStandardData = (1 << 31),
 		eH323_UU_PDU_h4501SupplementaryService = (1 << 30),
@@ -615,14 +615,14 @@ typedef struct H323_UU_PDU {	/* SEQUENCE */
 	H323_UU_PDU_h245Control h245Control;
 } H323_UU_PDU;
 
-typedef struct H323_UserInformation {	/* SEQUENCE */
+typedef struct H323_UserInformation {	
 	enum {
 		eH323_UserInformation_user_data = (1 << 31),
 	} options;
 	H323_UU_PDU h323_uu_pdu;
 } H323_UserInformation;
 
-typedef struct GatekeeperRequest {	/* SEQUENCE */
+typedef struct GatekeeperRequest {	
 	enum {
 		eGatekeeperRequest_nonStandardData = (1 << 31),
 		eGatekeeperRequest_gatekeeperIdentifier = (1 << 30),
@@ -642,7 +642,7 @@ typedef struct GatekeeperRequest {	/* SEQUENCE */
 	TransportAddress rasAddress;
 } GatekeeperRequest;
 
-typedef struct GatekeeperConfirm {	/* SEQUENCE */
+typedef struct GatekeeperConfirm {	
 	enum {
 		eGatekeeperConfirm_nonStandardData = (1 << 31),
 		eGatekeeperConfirm_gatekeeperIdentifier = (1 << 30),
@@ -659,17 +659,17 @@ typedef struct GatekeeperConfirm {	/* SEQUENCE */
 	TransportAddress rasAddress;
 } GatekeeperConfirm;
 
-typedef struct RegistrationRequest_callSignalAddress {	/* SEQUENCE OF */
+typedef struct RegistrationRequest_callSignalAddress {	
 	int count;
 	TransportAddress item[10];
 } RegistrationRequest_callSignalAddress;
 
-typedef struct RegistrationRequest_rasAddress {	/* SEQUENCE OF */
+typedef struct RegistrationRequest_rasAddress {	
 	int count;
 	TransportAddress item[10];
 } RegistrationRequest_rasAddress;
 
-typedef struct RegistrationRequest {	/* SEQUENCE */
+typedef struct RegistrationRequest {	
 	enum {
 		eRegistrationRequest_nonStandardData = (1 << 31),
 		eRegistrationRequest_terminalAlias = (1 << 30),
@@ -701,12 +701,12 @@ typedef struct RegistrationRequest {	/* SEQUENCE */
 	unsigned timeToLive;
 } RegistrationRequest;
 
-typedef struct RegistrationConfirm_callSignalAddress {	/* SEQUENCE OF */
+typedef struct RegistrationConfirm_callSignalAddress {	
 	int count;
 	TransportAddress item[10];
 } RegistrationConfirm_callSignalAddress;
 
-typedef struct RegistrationConfirm {	/* SEQUENCE */
+typedef struct RegistrationConfirm {	
 	enum {
 		eRegistrationConfirm_nonStandardData = (1 << 31),
 		eRegistrationConfirm_terminalAlias = (1 << 30),
@@ -733,12 +733,12 @@ typedef struct RegistrationConfirm {	/* SEQUENCE */
 	unsigned timeToLive;
 } RegistrationConfirm;
 
-typedef struct UnregistrationRequest_callSignalAddress {	/* SEQUENCE OF */
+typedef struct UnregistrationRequest_callSignalAddress {	
 	int count;
 	TransportAddress item[10];
 } UnregistrationRequest_callSignalAddress;
 
-typedef struct UnregistrationRequest {	/* SEQUENCE */
+typedef struct UnregistrationRequest {	
 	enum {
 		eUnregistrationRequest_endpointAlias = (1 << 31),
 		eUnregistrationRequest_nonStandardData = (1 << 30),
@@ -757,7 +757,7 @@ typedef struct UnregistrationRequest {	/* SEQUENCE */
 	UnregistrationRequest_callSignalAddress callSignalAddress;
 } UnregistrationRequest;
 
-typedef struct AdmissionRequest {	/* SEQUENCE */
+typedef struct AdmissionRequest {	
 	enum {
 		eAdmissionRequest_callModel = (1 << 31),
 		eAdmissionRequest_destinationInfo = (1 << 30),
@@ -789,7 +789,7 @@ typedef struct AdmissionRequest {	/* SEQUENCE */
 	TransportAddress srcCallSignalAddress;
 } AdmissionRequest;
 
-typedef struct AdmissionConfirm {	/* SEQUENCE */
+typedef struct AdmissionConfirm {	
 	enum {
 		eAdmissionConfirm_irrFrequency = (1 << 31),
 		eAdmissionConfirm_nonStandardData = (1 << 30),
@@ -818,7 +818,7 @@ typedef struct AdmissionConfirm {	/* SEQUENCE */
 	TransportAddress destCallSignalAddress;
 } AdmissionConfirm;
 
-typedef struct LocationRequest {	/* SEQUENCE */
+typedef struct LocationRequest {	
 	enum {
 		eLocationRequest_endpointIdentifier = (1 << 31),
 		eLocationRequest_nonStandardData = (1 << 30),
@@ -838,7 +838,7 @@ typedef struct LocationRequest {	/* SEQUENCE */
 	TransportAddress replyAddress;
 } LocationRequest;
 
-typedef struct LocationConfirm {	/* SEQUENCE */
+typedef struct LocationConfirm {	
 	enum {
 		eLocationConfirm_nonStandardData = (1 << 31),
 		eLocationConfirm_destinationInfo = (1 << 30),
@@ -861,12 +861,12 @@ typedef struct LocationConfirm {	/* SEQUENCE */
 	TransportAddress rasAddress;
 } LocationConfirm;
 
-typedef struct InfoRequestResponse_callSignalAddress {	/* SEQUENCE OF */
+typedef struct InfoRequestResponse_callSignalAddress {	
 	int count;
 	TransportAddress item[10];
 } InfoRequestResponse_callSignalAddress;
 
-typedef struct InfoRequestResponse {	/* SEQUENCE */
+typedef struct InfoRequestResponse {	
 	enum {
 		eInfoRequestResponse_nonStandardData = (1 << 31),
 		eInfoRequestResponse_endpointAlias = (1 << 30),
@@ -884,7 +884,7 @@ typedef struct InfoRequestResponse {	/* SEQUENCE */
 	InfoRequestResponse_callSignalAddress callSignalAddress;
 } InfoRequestResponse;
 
-typedef struct RasMessage {	/* CHOICE */
+typedef struct RasMessage {	
 	enum {
 		eRasMessage_gatekeeperRequest,
 		eRasMessage_gatekeeperConfirm,

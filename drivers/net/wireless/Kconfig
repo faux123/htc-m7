@@ -268,9 +268,58 @@ config MWL8K
 	  To compile this driver as a module, choose M here: the module
 	  will be called mwl8k.  If unsure, say N.
 
+config WIFI_CONTROL_FUNC
+	bool "Enable WiFi control function abstraction"
+	help
+	  Enables Power/Reset/Carddetect function abstraction
+
+config LIBRA_SDIOIF
+	tristate "Qualcomm libra wlan SDIO driver"
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	select WEXT_CORE
+	select WEXT_SPY
+	depends on MMC_MSM
+	---help---
+	  A driver for Qualcomm WLAN SDIO Libra chipset.
+
+config ATH6K_LEGACY_EXT
+	tristate "QCA AR6003 wlan SDIO driver - External"
+	depends on MMC_MSM && WLAN
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	---help---
+	  This module adds support for wireless adapters based on QCA AR6003 chipset
+	  running over SDIO. Driver is built outside of kernel tree, this config
+	  only enables configurations required for QCA AR6003 wlan driver.
+
+config WCNSS_CORE
+	tristate "Qualcomm WCNSS CORE driver"
+	depends on ARCH_MSM8960
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	select WEXT_CORE
+	select WEXT_SPY
+	---help---
+	  Core driver for the Qualcomm WCNSS triple play connectivity subsystem
+
+config WCNSS_MEM_PRE_ALLOC
+	tristate "WCNSS pre-alloc memory support"
+	depends on WCNSS_CORE
+	---help---
+	  Pre-allocate memory for the WLAN driver module
+
+config QUALCOMM_WLAN
+        tristate "Qualcomm wireless cards support"
+
+        ---help---
+          This module adds support for wireless adapters based on
+          Qualcomm chipset.
+
 source "drivers/net/wireless/ath/Kconfig"
 source "drivers/net/wireless/b43/Kconfig"
 source "drivers/net/wireless/b43legacy/Kconfig"
+source "drivers/net/wireless/bcmdhd/Kconfig"
 source "drivers/net/wireless/brcm80211/Kconfig"
 source "drivers/net/wireless/hostap/Kconfig"
 source "drivers/net/wireless/ipw2x00/Kconfig"
@@ -286,5 +335,8 @@ source "drivers/net/wireless/wl1251/Kconfig"
 source "drivers/net/wireless/wl12xx/Kconfig"
 source "drivers/net/wireless/zd1211rw/Kconfig"
 source "drivers/net/wireless/mwifiex/Kconfig"
+source "drivers/net/wireless/bcmdhd_4330/Kconfig"
+source "drivers/net/wireless/bcmdhd_4334/Kconfig"
+source "drivers/net/wireless/bcmdhd_4335/Kconfig"
 
 endif # WLAN

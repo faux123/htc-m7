@@ -4,7 +4,6 @@
 #include "nl80211.h"
 #include "core.h"
 
-/* Default values, timeouts in ms */
 #define MESH_TTL 		31
 #define MESH_DEFAULT_ELEMENT_TTL 31
 #define MESH_MAX_RETR	 	3
@@ -15,25 +14,15 @@
 #define MESH_PATH_TIMEOUT	5000
 #define MESH_RANN_INTERVAL      5000
 
-/*
- * Minimum interval between two consecutive PREQs originated by the same
- * interface
- */
 #define MESH_PREQ_MIN_INT	10
 #define MESH_PERR_MIN_INT	100
 #define MESH_DIAM_TRAVERSAL_TIME 50
 
 #define MESH_RSSI_THRESHOLD	0
 
-/*
- * A path will be refreshed if it is used PATH_REFRESH_TIME milliseconds
- * before timing out.  This way it will remain ACTIVE and no data frames
- * will be unnecessarily held in the pending queue.
- */
 #define MESH_PATH_REFRESH_TIME			1000
 #define MESH_MIN_DISCOVERY_TIMEOUT (2 * MESH_DIAM_TRAVERSAL_TIME)
 
-/* Default maximum number of established plinks per interface */
 #define MESH_MAX_ESTAB_PLINKS	32
 
 #define MESH_MAX_PREQ_RETRIES	4

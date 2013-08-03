@@ -1,6 +1,3 @@
-/*
- * /proc/sys support
- */
 #include <linux/init.h>
 #include <linux/sysctl.h>
 #include <linux/poll.h>
@@ -75,7 +72,6 @@ static int namecmp(const char *name1, int len1, const char *name2, int len2)
 	return cmp;
 }
 
-/* Called under sysctl_lock */
 static struct ctl_table *find_entry(struct ctl_table_header **phead,
 	struct ctl_dir *dir, const char *name, int namelen)
 {
@@ -207,7 +203,6 @@ fail_links:
 	return err;
 }
 
-/* called under sysctl_lock */
 static int use_table(struct ctl_table_header *p)
 {
 	if (unlikely(p->unregistering))
@@ -216,7 +211,6 @@ static int use_table(struct ctl_table_header *p)
 	return 1;
 }
 
-/* called under sysctl_lock */
 static void unuse_table(struct ctl_table_header *p)
 {
 	if (!--p->used)
@@ -224,13 +218,8 @@ static void unuse_table(struct ctl_table_header *p)
 			complete(p->unregistering);
 }
 
-/* called under sysctl_lock, will reacquire if has to wait */
 static void start_unregistering(struct ctl_table_header *p)
 {
-	/*
-	 * if p->used is 0, nobody will ever touch that entry again;
-	 * we'll eliminate all paths to it before dropping sysctl_lock
-	 */
 	if (unlikely(p->used)) {
 		struct completion wait;
 		init_completion(&wait);
@@ -239,13 +228,9 @@ static void start_unregistering(struct ctl_table_header *p)
 		wait_for_completion(&wait);
 		spin_lock(&sysctl_lock);
 	} else {
-		/* anything non-NULL; we'll never dereference it */
+		
 		p->unregistering = ERR_PTR(-EINVAL);
 	}
-	/*
-	 * do not remove from the list until nobody holds it; walking the
-	 * list in do_sysctl() relies on that.
-	 */
 	erase_header(p);
 }
 
@@ -364,10 +349,6 @@ void register_sysctl_root(struct ctl_table_root *root)
 {
 }
 
-/*
- * sysctl_perm does NOT grant the superuser all rights automatically, because
- * some sysctl variables are readonly even to root.
- */
 
 static int test_perm(int mode, int op)
 {
@@ -489,20 +470,16 @@ static ssize_t proc_sys_call_handler(struct file *filp, void __user *buf,
 	if (IS_ERR(head))
 		return PTR_ERR(head);
 
-	/*
-	 * At this point we know that the sysctl was not unregistered
-	 * and won't be until we finish.
-	 */
 	error = -EPERM;
 	if (sysctl_perm(head->root, table, write ? MAY_WRITE : MAY_READ))
 		goto out;
 
-	/* if that can happen at all, it should be -EINVAL, not -EISDIR */
+	
 	error = -EINVAL;
 	if (!table->proc_handler)
 		goto out;
 
-	/* careful: calling conventions are nasty here */
+	
 	res = count;
 	error = table->proc_handler(table, write, buf, &res, ppos);
 	if (!error)
@@ -530,7 +507,7 @@ static int proc_sys_open(struct inode *inode, struct file *filp)
 	struct ctl_table_header *head = grab_header(inode);
 	struct ctl_table *table = PROC_I(inode)->sysctl_entry;
 
-	/* sysctl was unregistered */
+	
 	if (IS_ERR(head))
 		return PTR_ERR(head);
 
@@ -550,7 +527,7 @@ static unsigned int proc_sys_poll(struct file *filp, poll_table *wait)
 	unsigned int ret = DEFAULT_POLLMASK;
 	unsigned long event;
 
-	/* sysctl was unregistered */
+	
 	if (IS_ERR(head))
 		return POLLERR | POLLHUP;
 
@@ -621,7 +598,7 @@ static int proc_sys_link_fill_cache(struct file *filp, void *dirent,
 	head = sysctl_head_grab(head);
 
 	if (S_ISLNK(table->mode)) {
-		/* It is not an error if we can not follow the link ignore it */
+		
 		err = sysctl_follow_link(&head, &table, current->nsproxy);
 		if (err)
 			goto out;
@@ -670,7 +647,7 @@ static int proc_sys_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	ctl_dir = container_of(head, struct ctl_dir, header);
 
 	ret = 0;
-	/* Avoid a switch here: arm builds fail with missing __cmpdi2 */
+	
 	if (filp->f_pos == 0) {
 		if (filldir(dirent, ".", 1, filp->f_pos,
 				inode->i_ino, DT_DIR) < 0)
@@ -700,15 +677,11 @@ out:
 
 static int proc_sys_permission(struct inode *inode, int mask)
 {
-	/*
-	 * sysctl entries that are not writeable,
-	 * are _NOT_ writeable, capabilities or not.
-	 */
 	struct ctl_table_header *head;
 	struct ctl_table *table;
 	int error;
 
-	/* Executable files are not allowed under /proc/sys/ */
+	
 	if ((mask & MAY_EXEC) && S_ISREG(inode->i_mode))
 		return -EACCES;
 
@@ -717,9 +690,9 @@ static int proc_sys_permission(struct inode *inode, int mask)
 		return PTR_ERR(head);
 
 	table = PROC_I(inode)->sysctl_entry;
-	if (!table) /* global root - r-xr-xr-x */
+	if (!table) 
 		error = mask & MAY_WRITE ? -EACCES : 0;
-	else /* Use the permissions on the sysctl table entry */
+	else 
 		error = sysctl_perm(head->root, table, mask & ~MAY_NOT_BLOCK);
 
 	sysctl_head_finish(head);
@@ -827,9 +800,7 @@ static int proc_sys_compare(const struct dentry *parent,
 		unsigned int len, const char *str, const struct qstr *name)
 {
 	struct ctl_table_header *head;
-	/* Although proc doesn't have negative dentries, rcu-walk means
-	 * that inode here can be NULL */
-	/* AV: can it, indeed? */
+	
 	if (!inode)
 		return 1;
 	if (name->len != len)
@@ -886,18 +857,6 @@ static struct ctl_dir *new_dir(struct ctl_table_set *set,
 	return new;
 }
 
-/**
- * get_subdir - find or create a subdir with the specified name.
- * @dir:  Directory to create the subdirectory in
- * @name: The name of the subdirectory to find or create
- * @namelen: The length of name
- *
- * Takes a directory with an elevated reference count so we know that
- * if we drop the lock the directory will not go away.  Upon success
- * the reference is moved from @dir to the returned subdirectory.
- * Upon error an error code is returned and the reference on @dir is
- * simply dropped.
- */
 static struct ctl_dir *get_subdir(struct ctl_dir *dir,
 				  const char *name, int namelen)
 {
@@ -919,14 +878,14 @@ static struct ctl_dir *get_subdir(struct ctl_dir *dir,
 	if (!new)
 		goto failed;
 
-	/* Was the subdir added while we dropped the lock? */
+	
 	subdir = find_subdir(dir, name, namelen);
 	if (!IS_ERR(subdir))
 		goto found;
 	if (PTR_ERR(subdir) != -ENOENT)
 		goto failed;
 
-	/* Nope.  Use the our freshly made directory entry. */
+	
 	err = insert_header(dir, &new->header);
 	subdir = ERR_PTR(err);
 	if (err)
@@ -1090,7 +1049,7 @@ static bool get_links(struct ctl_dir *dir,
 	struct ctl_table_header *head;
 	struct ctl_table *entry, *link;
 
-	/* Are there links available for every entry in table? */
+	
 	for (entry = table; entry->procname; entry++) {
 		const char *procname = entry->procname;
 		link = find_entry(&head, dir, procname, strlen(procname));
@@ -1103,7 +1062,7 @@ static bool get_links(struct ctl_dir *dir,
 		return false;
 	}
 
-	/* The checks passed.  Increase the registration count on the links */
+	
 	for (entry = table; entry->procname; entry++) {
 		const char *procname = entry->procname;
 		link = find_entry(&head, dir, procname, strlen(procname));
@@ -1153,48 +1112,6 @@ out:
 	return err;
 }
 
-/**
- * __register_sysctl_table - register a leaf sysctl table
- * @set: Sysctl tree to register on
- * @path: The path to the directory the sysctl table is in.
- * @table: the top-level table structure
- *
- * Register a sysctl table hierarchy. @table should be a filled in ctl_table
- * array. A completely 0 filled entry terminates the table.
- *
- * The members of the &struct ctl_table structure are used as follows:
- *
- * procname - the name of the sysctl file under /proc/sys. Set to %NULL to not
- *            enter a sysctl file
- *
- * data - a pointer to data for use by proc_handler
- *
- * maxlen - the maximum size in bytes of the data
- *
- * mode - the file permissions for the /proc/sys file
- *
- * child - must be %NULL.
- *
- * proc_handler - the text handler routine (described below)
- *
- * extra1, extra2 - extra pointers usable by the proc handler routines
- *
- * Leaf nodes in the sysctl tree will be represented by a single file
- * under /proc; non-leaf nodes will be represented by directories.
- *
- * There must be a proc_handler routine for any terminal nodes.
- * Several default handlers are available to cover common cases -
- *
- * proc_dostring(), proc_dointvec(), proc_dointvec_jiffies(),
- * proc_dointvec_userhz_jiffies(), proc_dointvec_minmax(),
- * proc_doulongvec_ms_jiffies_minmax(), proc_doulongvec_minmax()
- *
- * It is the handler's job to read the input buffer from user memory
- * and process it. The handler should return 0 on success.
- *
- * This routine returns %NULL on a failure to register, and a pointer
- * to the table header on success.
- */
 struct ctl_table_header *__register_sysctl_table(
 	struct ctl_table_set *set,
 	const char *path, struct ctl_table *table)
@@ -1222,11 +1139,11 @@ struct ctl_table_header *__register_sysctl_table(
 
 	spin_lock(&sysctl_lock);
 	dir = &set->dir;
-	/* Reference moved down the diretory tree get_subdir */
+	
 	dir->header.nreg++;
 	spin_unlock(&sysctl_lock);
 
-	/* Find the directory for the ctl_table */
+	
 	for (name = path; name; name = nextname) {
 		int namelen;
 		nextname = strchr(name, '/');
@@ -1262,16 +1179,6 @@ fail:
 	return NULL;
 }
 
-/**
- * register_sysctl - register a sysctl table
- * @path: The path to the directory the sysctl table is in.
- * @table: the table structure
- *
- * Register a sysctl table. @table should be a filled in ctl_table
- * array. A completely 0 filled entry terminates the table.
- *
- * See __register_sysctl_table for more details.
- */
 struct ctl_table_header *register_sysctl(const char *path, struct ctl_table *table)
 {
 	return __register_sysctl_table(&sysctl_table_root.default_set,
@@ -1298,7 +1205,7 @@ static int count_subheaders(struct ctl_table *table)
 	int nr_subheaders = 0;
 	struct ctl_table *entry;
 
-	/* special case: no directory and empty directory */
+	
 	if (!table || !table->procname)
 		return 1;
 
@@ -1329,7 +1236,7 @@ static int register_leaf_sysctl_tables(const char *path, char *pos,
 	}
 
 	files = table;
-	/* If there are mixed files and directories we need a new table */
+	
 	if (nr_dirs && nr_files) {
 		struct ctl_table *new;
 		files = kzalloc(sizeof(struct ctl_table) * (nr_files + 1),
@@ -1346,7 +1253,7 @@ static int register_leaf_sysctl_tables(const char *path, char *pos,
 		}
 	}
 
-	/* Register everything except a directory full of subdirectories */
+	
 	if (nr_files || !nr_dirs) {
 		struct ctl_table_header *header;
 		header = __register_sysctl_table(set, path, files);
@@ -1355,13 +1262,13 @@ static int register_leaf_sysctl_tables(const char *path, char *pos,
 			goto out;
 		}
 
-		/* Remember if we need to free the file table */
+		
 		header->ctl_table_arg = ctl_table_arg;
 		**subheader = header;
 		(*subheader)++;
 	}
 
-	/* Recurse into the subdirectories. */
+	
 	for (entry = table; entry->procname; entry++) {
 		char *child_pos;
 
@@ -1381,21 +1288,10 @@ static int register_leaf_sysctl_tables(const char *path, char *pos,
 	}
 	err = 0;
 out:
-	/* On failure our caller will unregister all registered subheaders */
+	
 	return err;
 }
 
-/**
- * __register_sysctl_paths - register a sysctl table hierarchy
- * @set: Sysctl tree to register on
- * @path: The path to the directory the sysctl table is in.
- * @table: the top-level table structure
- *
- * Register a sysctl table hierarchy. @table should be a filled in ctl_table
- * array. A completely 0 filled entry terminates the table.
- *
- * See __register_sysctl_table for more details.
- */
 struct ctl_table_header *__register_sysctl_paths(
 	struct ctl_table_set *set,
 	const struct ctl_path *path, struct ctl_table *table)
@@ -1457,16 +1353,6 @@ err_register_leaves:
 	goto out;
 }
 
-/**
- * register_sysctl_table_path - register a sysctl table hierarchy
- * @path: The path to the directory the sysctl table is in.
- * @table: the top-level table structure
- *
- * Register a sysctl table hierarchy. @table should be a filled in ctl_table
- * array. A completely 0 filled entry terminates the table.
- *
- * See __register_sysctl_paths for more details.
- */
 struct ctl_table_header *register_sysctl_paths(const struct ctl_path *path,
 						struct ctl_table *table)
 {
@@ -1475,15 +1361,6 @@ struct ctl_table_header *register_sysctl_paths(const struct ctl_path *path,
 }
 EXPORT_SYMBOL(register_sysctl_paths);
 
-/**
- * register_sysctl_table - register a sysctl table hierarchy
- * @table: the top-level table structure
- *
- * Register a sysctl table hierarchy. @table should be a filled in ctl_table
- * array. A completely 0 filled entry terminates the table.
- *
- * See register_sysctl_paths for more details.
- */
 struct ctl_table_header *register_sysctl_table(struct ctl_table *table)
 {
 	static const struct ctl_path null_path[] = { {} };
@@ -1542,13 +1419,6 @@ static void drop_sysctl_table(struct ctl_table_header *header)
 		drop_sysctl_table(&parent->header);
 }
 
-/**
- * unregister_sysctl_table - unregister a sysctl table hierarchy
- * @header: the header returned from register_sysctl_table
- *
- * Unregisters the sysctl table and all children. proc entries may not
- * actually be removed until they are no longer used by anyone.
- */
 void unregister_sysctl_table(struct ctl_table_header * header)
 {
 	int nr_subheaders;

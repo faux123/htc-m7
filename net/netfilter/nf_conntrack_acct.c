@@ -1,4 +1,3 @@
-/* Accouting handling for netfilter. */
 
 /*
  * (C) 2008 Krzysztof Piotr Oledzki <ole@ans.pl>
@@ -34,7 +33,7 @@ static struct ctl_table acct_sysctl_table[] = {
 	},
 	{}
 };
-#endif /* CONFIG_SYSCTL */
+#endif 
 
 unsigned int
 seq_print_acct(struct seq_file *s, const struct nf_conn *ct, int dir)

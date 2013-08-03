@@ -6,4 +6,4 @@ enum die_val {
 	DIE_OOPS = 1,
 };
 
-#endif /* _ASM_GENERIC_KDEBUG_H */
+#endif 

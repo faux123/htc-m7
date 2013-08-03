@@ -6,8 +6,8 @@
 
 struct smc911x_platdata {
 	unsigned long flags;
-	unsigned long irq_flags; /* IRQF_... */
+	unsigned long irq_flags; 
 	int irq_polarity;
 };
 
-#endif /* __SMC911X_H__ */
+#endif 

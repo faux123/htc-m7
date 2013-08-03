@@ -244,19 +244,6 @@ svc_preempt:
 	b	1b
 #endif
 
-__und_fault:
-	@ Correct the PC such that it is pointing at the instruction
-	@ which caused the fault.  If the faulting instruction was ARM
-	@ the PC will be pointing at the next instruction, and have to
-	@ subtract 4.  Otherwise, it is Thumb, and the PC will be
-	@ pointing at the second half of the Thumb instruction.  We
-	@ have to subtract 2.
-	ldr	r2, [r0, #S_PC]
-	sub	r2, r2, r1
-	str	r2, [r0, #S_PC]
-	b	do_undefinstr
-ENDPROC(__und_fault)
-
 	.align	5
 __und_svc:
 #ifdef CONFIG_KPROBES
@@ -274,32 +261,25 @@ __und_svc:
 	@
 	@  r0 - instruction
 	@
-#ifndef CONFIG_THUMB2_KERNEL
+#ifndef	CONFIG_THUMB2_KERNEL
 	ldr	r0, [r4, #-4]
 #else
-	mov	r1, #2
 	ldrh	r0, [r4, #-2]			@ Thumb instruction at LR - 2
 	cmp	r0, #0xe800			@ 32-bit instruction if xx >= 0
-	blo	__und_svc_fault
-	ldrh	r9, [r4]			@ bottom 16 bits
-	add	r4, r4, #2
-	str	r4, [sp, #S_PC]
-	orr	r0, r9, r0, lsl #16
+	ldrhhs	r9, [r4]			@ bottom 16 bits
+	orrhs	r0, r9, r0, lsl #16
 #endif
-	adr	r9, BSYM(__und_svc_finish)
+	adr	r9, BSYM(1f)
 	mov	r2, r4
 	bl	call_fpe
 
-	mov	r1, #4				@ PC correction to apply
-__und_svc_fault:
 	mov	r0, sp				@ struct pt_regs *regs
-	bl	__und_fault
+	bl	do_undefinstr
 
 	@
 	@ IRQs off again before pulling preserved data off the stack
 	@
-__und_svc_finish:
-	disable_irq_notrace
+1:	disable_irq_notrace
 
 	@
 	@ restore SPSR and restart the instruction
@@ -443,33 +423,25 @@ __und_usr:
 	mov	r2, r4
 	mov	r3, r5
 
-	@ r2 = regs->ARM_pc, which is either 2 or 4 bytes ahead of the
-	@      faulting instruction depending on Thumb mode.
-	@ r3 = regs->ARM_cpsr
 	@
-	@ The emulation code returns using r9 if it has emulated the
-	@ instruction, or the more conventional lr if we are to treat
-	@ this as a real undefined instruction
+	@ fall through to the emulation code, which returns using r9 if
+	@ it has emulated the instruction, or the more conventional lr
+	@ if we are to treat this as a real undefined instruction
+	@
+	@  r0 - instruction
 	@
 	adr	r9, BSYM(ret_from_exception)
-
+	adr	lr, BSYM(__und_usr_unknown)
 	tst	r3, #PSR_T_BIT			@ Thumb mode?
-	bne	__und_usr_thumb
-	sub	r4, r2, #4			@ ARM instr at LR - 4
-1:	ldrt	r0, [r4]
+	itet	eq				@ explicit IT needed for the 1f label
+	subeq	r4, r2, #4			@ ARM instr at LR - 4
+	subne	r4, r2, #2			@ Thumb instr at LR - 2
+1:	ldreqt	r0, [r4]
 #ifdef CONFIG_CPU_ENDIAN_BE8
-	rev	r0, r0				@ little endian instruction
+	reveq	r0, r0				@ little endian instruction
 #endif
-	@ r0 = 32-bit ARM instruction which caused the exception
-	@ r2 = PC value for the following instruction (:= regs->ARM_pc)
-	@ r4 = PC value for the faulting instruction
-	@ lr = 32-bit undefined instruction function
-	adr	lr, BSYM(__und_usr_fault_32)
-	b	call_fpe
-
-__und_usr_thumb:
+	beq	call_fpe
 	@ Thumb instruction
-	sub	r4, r2, #2			@ First half of thumb instr at LR - 2
 #if CONFIG_ARM_THUMB && __LINUX_ARM_ARCH__ >= 6 && CONFIG_CPU_V7
 /*
  * Thumb-2 instruction handling.  Note that because pre-v6 and >= v6 platforms
@@ -483,7 +455,7 @@ __und_usr_thumb:
 	ldr	r5, .LCcpu_architecture
 	ldr	r5, [r5]
 	cmp	r5, #CPU_ARCH_ARMv7
-	blo	__und_usr_fault_16		@ 16bit undefined instruction
+	blo	__und_usr_unknown
 /*
  * The following code won't get run unless the running CPU really is v7, so
  * coding round the lack of ldrht on older arches is pointless.  Temporarily
@@ -491,18 +463,15 @@ __und_usr_thumb:
  */
 	.arch	armv6t2
 #endif
-2:	ldrht	r5, [r4]
+2:
+ ARM(	ldrht	r5, [r4], #2	)
+ THUMB(	ldrht	r5, [r4]	)
+ THUMB(	add	r4, r4, #2	)
 	cmp	r5, #0xe800			@ 32bit instruction if xx != 0
-	blo	__und_usr_fault_16		@ 16bit undefined instruction
-3:	ldrht	r0, [r2]
+	blo	__und_usr_unknown
+3:	ldrht	r0, [r4]
 	add	r2, r2, #2			@ r2 is PC + 2, make it PC + 4
-	str	r2, [sp, #S_PC]			@ it's a 2x16bit instr, update
 	orr	r0, r0, r5, lsl #16
-	adr	lr, BSYM(__und_usr_fault_32)
-	@ r0 = the two 16-bit Thumb instructions which caused the exception
-	@ r2 = PC value for the following Thumb instruction (:= regs->ARM_pc)
-	@ r4 = PC value for the first 16-bit Thumb instruction
-	@ lr = 32bit undefined instruction function
 
 #if __LINUX_ARM_ARCH__ < 7
 /* If the target arch was overridden, change it back: */
@@ -513,13 +482,17 @@ __und_usr_thumb:
 #endif
 #endif /* __LINUX_ARM_ARCH__ < 7 */
 #else /* !(CONFIG_ARM_THUMB && __LINUX_ARM_ARCH__ >= 6 && CONFIG_CPU_V7) */
-	b	__und_usr_fault_16
+	b	__und_usr_unknown
 #endif
- UNWIND(.fnend)
+ UNWIND(.fnend		)
 ENDPROC(__und_usr)
 
+	@
+	@ fallthrough to call_fpe
+	@
+
 /*
- * The out of line fixup for the ldrt instructions above.
+ * The out of line fixup for the ldrt above.
  */
 	.pushsection .fixup, "ax"
 4:	mov	pc, r9
@@ -550,12 +523,11 @@ ENDPROC(__und_usr)
  * NEON handler code.
  *
  * Emulators may wish to make use of the following registers:
- *  r0  = instruction opcode (32-bit ARM or two 16-bit Thumb)
- *  r2  = PC value to resume execution after successful emulation
+ *  r0  = instruction opcode.
+ *  r2  = PC+4
  *  r9  = normal "successful" return address
- *  r10 = this threads thread_info structure
+ *  r10 = this threads thread_info structure.
  *  lr  = unrecognised instruction return address
- * IRQs disabled, FIQs enabled.
  */
 	@
 	@ Fall-through from Thumb-2 __und_usr
@@ -690,17 +662,12 @@ ENTRY(no_fp)
 	mov	pc, lr
 ENDPROC(no_fp)
 
-__und_usr_fault_32:
-	mov	r1, #4
-	b	1f
-__und_usr_fault_16:
-	mov	r1, #2
-1:	enable_irq
+__und_usr_unknown:
+	enable_irq
 	mov	r0, sp
 	adr	lr, BSYM(ret_from_exception)
-	b	__und_fault
-ENDPROC(__und_usr_fault_32)
-ENDPROC(__und_usr_fault_16)
+	b	do_undefinstr
+ENDPROC(__und_usr_unknown)
 
 	.align	5
 __pabt_usr:
@@ -746,7 +713,14 @@ ENTRY(__switch_to)
 	ldr	r7, [r7, #TSK_STACK_CANARY]
 #endif
 #ifdef CONFIG_CPU_USE_DOMAINS
+#ifdef CONFIG_EMULATE_DOMAIN_MANAGER_V7
+	stmdb	r13!, {r0-r3, lr}
+	mov	r0, r6
+	bl	emulate_domain_manager_set
+	ldmia	r13!, {r0-r3, lr}
+#else
 	mcr	p15, 0, r6, c3, c0, 0		@ Set domain register
+#endif
 #endif
 	mov	r5, r0
 	add	r4, r2, #TI_CPU_SAVE
@@ -992,7 +966,7 @@ __kuser_helper_end:
  * SP points to a minimal amount of processor-private memory, the address
  * of which is copied into r0 for the mode specific abort handler.
  */
-	.macro	vector_stub, name, mode, correction=0
+	.macro	vector_stub, name, mode, fixup, correction=0
 	.align	5
 
 vector_\name:
@@ -1021,6 +995,18 @@ vector_\name:
 	and	lr, lr, #0x0f
  THUMB(	adr	r0, 1f			)
  THUMB(	ldr	lr, [r0, lr, lsl #2]	)
+	.if	\fixup
+#ifdef CONFIG_MSM_KRAIT_WFE_FIXUP
+	ldr	r0, .krait_fixup
+	ldr	r0, [r0]
+	cmp	r0, #0
+	beq	10f
+	mrc	p15, 7, r0, c15, c0, 5
+	orr	r0, r0, #0x10000
+	mcr	p15, 7, r0, c15, c0, 5
+10:	isb
+#endif
+	.endif
 	mov	r0, sp
  ARM(	ldr	lr, [pc, lr, lsl #2]	)
 	movs	pc, lr			@ branch to handler in SVC mode
@@ -1036,7 +1022,7 @@ __stubs_start:
 /*
  * Interrupt dispatcher
  */
-	vector_stub	irq, IRQ_MODE, 4
+	vector_stub	irq, IRQ_MODE, 1, 4
 
 	.long	__irq_usr			@  0  (USR_26 / USR_32)
 	.long	__irq_invalid			@  1  (FIQ_26 / FIQ_32)
@@ -1059,7 +1045,7 @@ __stubs_start:
  * Data abort dispatcher
  * Enter in ABT mode, spsr = USR CPSR, lr = USR PC
  */
-	vector_stub	dabt, ABT_MODE, 8
+	vector_stub	dabt, ABT_MODE, 0, 8
 
 	.long	__dabt_usr			@  0  (USR_26 / USR_32)
 	.long	__dabt_invalid			@  1  (FIQ_26 / FIQ_32)
@@ -1082,7 +1068,7 @@ __stubs_start:
  * Prefetch abort dispatcher
  * Enter in ABT mode, spsr = USR CPSR, lr = USR PC
  */
-	vector_stub	pabt, ABT_MODE, 4
+	vector_stub	pabt, ABT_MODE, 0, 4
 
 	.long	__pabt_usr			@  0 (USR_26 / USR_32)
 	.long	__pabt_invalid			@  1 (FIQ_26 / FIQ_32)
@@ -1105,7 +1091,7 @@ __stubs_start:
  * Undef instr entry dispatcher
  * Enter in UND mode, spsr = SVC/USR CPSR, lr = SVC/USR PC
  */
-	vector_stub	und, UND_MODE
+	vector_stub	und, UND_MODE, 0
 
 	.long	__und_usr			@  0 (USR_26 / USR_32)
 	.long	__und_invalid			@  1 (FIQ_26 / FIQ_32)
@@ -1157,6 +1143,8 @@ vector_addrexcptn:
 
 .LCvswi:
 	.word	vector_swi
+.krait_fixup:
+	.word	msm_krait_need_wfe_fixup
 
 	.globl	__stubs_end
 __stubs_end:

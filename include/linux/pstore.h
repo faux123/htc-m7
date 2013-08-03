@@ -25,7 +25,6 @@
 #include <linux/time.h>
 #include <linux/kmsg_dump.h>
 
-/* types */
 enum pstore_type_id {
 	PSTORE_TYPE_DMESG	= 0,
 	PSTORE_TYPE_MCE		= 1,
@@ -35,10 +34,10 @@ enum pstore_type_id {
 struct pstore_info {
 	struct module	*owner;
 	char		*name;
-	spinlock_t	buf_lock;	/* serialize access to 'buf' */
+	spinlock_t	buf_lock;	
 	char		*buf;
 	size_t		bufsize;
-	struct mutex	read_mutex;	/* serialize open/read/close */
+	struct mutex	read_mutex;	
 	int		(*open)(struct pstore_info *psi);
 	int		(*close)(struct pstore_info *psi);
 	ssize_t		(*read)(u64 *id, enum pstore_type_id *type,
@@ -62,4 +61,4 @@ pstore_register(struct pstore_info *psi)
 }
 #endif
 
-#endif /*_LINUX_PSTORE_H*/
+#endif 

@@ -51,7 +51,6 @@
 
 #define PPP_VERSION	"2.4.2"
 
-/* Structure for storing local state. */
 struct syncppp {
 	struct tty_struct *tty;
 	unsigned int	flags;
@@ -74,21 +73,16 @@ struct syncppp {
 
 	atomic_t	refcnt;
 	struct completion dead_cmp;
-	struct ppp_channel chan;	/* interface to generic ppp layer */
+	struct ppp_channel chan;	
 };
 
-/* Bit numbers in xmit_flags */
 #define XMIT_WAKEUP	0
 #define XMIT_FULL	1
 
-/* Bits in rbits */
 #define SC_RCV_BITS	(SC_RCV_B7_1|SC_RCV_B7_0|SC_RCV_ODDP|SC_RCV_EVNP)
 
-#define PPPSYNC_MAX_RQLEN	32	/* arbitrary */
+#define PPPSYNC_MAX_RQLEN	32	
 
-/*
- * Prototypes.
- */
 static struct sk_buff* ppp_sync_txmunge(struct syncppp *ap, struct sk_buff *);
 static int ppp_sync_send(struct ppp_channel *chan, struct sk_buff *skb);
 static int ppp_sync_ioctl(struct ppp_channel *chan, unsigned int cmd,
@@ -104,9 +98,6 @@ static const struct ppp_channel_ops sync_ops = {
 	.ioctl      = ppp_sync_ioctl,
 };
 
-/*
- * Utility procedures to print a buffer in hex/ascii
- */
 static void
 ppp_print_hex (register __u8 * out, const __u8 * in, int count)
 {
@@ -133,7 +124,7 @@ ppp_print_char (register __u8 * out, const __u8 * in, int count)
 			*out++ = '.';
 		else {
 			*out++ = next_ch;
-			if (next_ch == '%')   /* printk/syslogd has a bug !! */
+			if (next_ch == '%')   
 				*out++ = '%';
 		}
 	}
@@ -166,21 +157,7 @@ ppp_print_buffer (const char *name, const __u8 *buf, int count)
 }
 
 
-/*
- * Routines implementing the synchronous PPP line discipline.
- */
 
-/*
- * We have a potential race on dereferencing tty->disc_data,
- * because the tty layer provides no locking at all - thus one
- * cpu could be running ppp_synctty_receive while another
- * calls ppp_synctty_close, which zeroes tty->disc_data and
- * frees the memory that ppp_synctty_receive is using.  The best
- * way to fix this is to use a rwlock in the tty struct, but for now
- * we use a single global rwlock for all ttys in ppp line discipline.
- *
- * FIXME: Fixed in tty_io nowadays.
- */
 static DEFINE_RWLOCK(disc_data_lock);
 
 static struct syncppp *sp_get(struct tty_struct *tty)
@@ -201,9 +178,6 @@ static void sp_put(struct syncppp *ap)
 		complete(&ap->dead_cmp);
 }
 
-/*
- * Called when a tty is put into sync-PPP line discipline.
- */
 static int
 ppp_sync_open(struct tty_struct *tty)
 {
@@ -219,7 +193,7 @@ ppp_sync_open(struct tty_struct *tty)
 	if (!ap)
 		goto out;
 
-	/* initialize the syncppp structure */
+	
 	ap->tty = tty;
 	ap->mru = PPP_MRU;
 	spin_lock_init(&ap->xmit_lock);
@@ -237,7 +211,7 @@ ppp_sync_open(struct tty_struct *tty)
 	ap->chan.private = ap;
 	ap->chan.ops = &sync_ops;
 	ap->chan.mtu = PPP_MRU;
-	ap->chan.hdrlen = 2;	/* for A/C bytes */
+	ap->chan.hdrlen = 2;	
 	speed = tty_get_baud_rate(tty);
 	ap->chan.speed = speed;
 	err = ppp_register_channel(&ap->chan);
@@ -254,14 +228,6 @@ ppp_sync_open(struct tty_struct *tty)
 	return err;
 }
 
-/*
- * Called when the tty is put into another line discipline
- * or it hangs up.  We have to wait for any cpu currently
- * executing in any of the other ppp_synctty_* routines to
- * finish before we can call ppp_unregister_channel and free
- * the syncppp struct.  This routine must be called from
- * process context, not interrupt or softirq context.
- */
 static void
 ppp_sync_close(struct tty_struct *tty)
 {
@@ -274,13 +240,6 @@ ppp_sync_close(struct tty_struct *tty)
 	if (!ap)
 		return;
 
-	/*
-	 * We have now ensured that nobody can start using ap from now
-	 * on, but we have to wait for all existing users to finish.
-	 * Note that ppp_unregister_channel ensures that no calls to
-	 * our channel ops (i.e. ppp_sync_send/ioctl) are in progress
-	 * by the time it returns.
-	 */
 	if (!atomic_dec_and_test(&ap->refcnt))
 		wait_for_completion(&ap->dead_cmp);
 	tasklet_kill(&ap->tsk);
@@ -291,22 +250,12 @@ ppp_sync_close(struct tty_struct *tty)
 	kfree(ap);
 }
 
-/*
- * Called on tty hangup in process context.
- *
- * Wait for I/O to driver to complete and unregister PPP channel.
- * This is already done by the close routine, so just call that.
- */
 static int ppp_sync_hangup(struct tty_struct *tty)
 {
 	ppp_sync_close(tty);
 	return 0;
 }
 
-/*
- * Read does nothing - no data is ever available this way.
- * Pppd reads and writes packets via /dev/ppp instead.
- */
 static ssize_t
 ppp_sync_read(struct tty_struct *tty, struct file *file,
 	       unsigned char __user *buf, size_t count)
@@ -314,10 +263,6 @@ ppp_sync_read(struct tty_struct *tty, struct file *file,
 	return -EAGAIN;
 }
 
-/*
- * Write on the tty does nothing, the packets all come in
- * from the ppp generic stuff.
- */
 static ssize_t
 ppp_sync_write(struct tty_struct *tty, struct file *file,
 		const unsigned char *buf, size_t count)
@@ -352,7 +297,7 @@ ppp_synctty_ioctl(struct tty_struct *tty, struct file *file,
 		break;
 
 	case TCFLSH:
-		/* flush our buffers and the serial port's buffer */
+		
 		if (arg == TCIOFLUSH || arg == TCOFLUSH)
 			ppp_sync_flush_output(ap);
 		err = tty_perform_flush(tty, arg);
@@ -374,14 +319,12 @@ ppp_synctty_ioctl(struct tty_struct *tty, struct file *file,
 	return err;
 }
 
-/* No kernel lock - fine */
 static unsigned int
 ppp_sync_poll(struct tty_struct *tty, struct file *file, poll_table *wait)
 {
 	return 0;
 }
 
-/* May sleep, don't call from interrupt level or with interrupts disabled */
 static void
 ppp_sync_receive(struct tty_struct *tty, const unsigned char *buf,
 		  char *cflags, int count)
@@ -441,9 +384,6 @@ ppp_sync_init(void)
 	return err;
 }
 
-/*
- * The following routines provide the PPP channel interface.
- */
 static int
 ppp_sync_ioctl(struct ppp_channel *chan, unsigned int cmd, unsigned long arg)
 {
@@ -501,8 +441,8 @@ ppp_sync_ioctl(struct ppp_channel *chan, unsigned int cmd, unsigned long arg)
 	case PPPIOCSXASYNCMAP:
 		if (copy_from_user(accm, argp, sizeof(accm)))
 			break;
-		accm[2] &= ~0x40000000U;	/* can't escape 0x5e */
-		accm[3] |= 0x60000000U;		/* must escape 0x7d, 0x7e */
+		accm[2] &= ~0x40000000U;	
+		accm[3] |= 0x60000000U;		
 		memcpy(ap->xaccm, accm, sizeof(ap->xaccm));
 		err = 0;
 		break;
@@ -527,20 +467,15 @@ ppp_sync_ioctl(struct ppp_channel *chan, unsigned int cmd, unsigned long arg)
 	return err;
 }
 
-/*
- * This is called at softirq level to deliver received packets
- * to the ppp_generic code, and to tell the ppp_generic code
- * if we can accept more output now.
- */
 static void ppp_sync_process(unsigned long arg)
 {
 	struct syncppp *ap = (struct syncppp *) arg;
 	struct sk_buff *skb;
 
-	/* process received packets */
+	
 	while ((skb = skb_dequeue(&ap->rqueue)) != NULL) {
 		if (skb->len == 0) {
-			/* zero length buffers indicate error */
+			
 			ppp_input_error(&ap->chan, 0);
 			kfree_skb(skb);
 		}
@@ -548,14 +483,11 @@ static void ppp_sync_process(unsigned long arg)
 			ppp_input(&ap->chan, skb);
 	}
 
-	/* try to push more stuff out */
+	
 	if (test_bit(XMIT_WAKEUP, &ap->xmit_flags) && ppp_sync_push(ap))
 		ppp_output_wakeup(&ap->chan);
 }
 
-/*
- * Procedures for encapsulation and framing.
- */
 
 static struct sk_buff*
 ppp_sync_txmunge(struct syncppp *ap, struct sk_buff *skb)
@@ -567,17 +499,13 @@ ppp_sync_txmunge(struct syncppp *ap, struct sk_buff *skb)
 	data  = skb->data;
 	proto = get_unaligned_be16(data);
 
-	/* LCP packets with codes between 1 (configure-request)
-	 * and 7 (code-reject) must be sent as though no options
-	 * have been negotiated.
-	 */
 	islcp = proto == PPP_LCP && 1 <= data[2] && data[2] <= 7;
 
-	/* compress protocol field if option enabled */
+	
 	if (data[0] == 0 && (ap->flags & SC_COMP_PROT) && !islcp)
 		skb_pull(skb,1);
 
-	/* prepend address/control fields if necessary */
+	
 	if ((ap->flags & SC_COMP_AC) == 0 || islcp) {
 		if (skb_headroom(skb) < 2) {
 			struct sk_buff *npkt = dev_alloc_skb(skb->len + 2);
@@ -604,16 +532,7 @@ ppp_sync_txmunge(struct syncppp *ap, struct sk_buff *skb)
 	return skb;
 }
 
-/*
- * Transmit-side routines.
- */
 
-/*
- * Send a packet to the peer over an sync tty line.
- * Returns 1 iff the packet was accepted.
- * If the packet was not accepted, we will call ppp_output_wakeup
- * at some later time.
- */
 static int
 ppp_sync_send(struct ppp_channel *chan, struct sk_buff *skb)
 {
@@ -622,7 +541,7 @@ ppp_sync_send(struct ppp_channel *chan, struct sk_buff *skb)
 	ppp_sync_push(ap);
 
 	if (test_and_set_bit(XMIT_FULL, &ap->xmit_flags))
-		return 0;	/* already full */
+		return 0;	
 	skb = ppp_sync_txmunge(ap, skb);
 	if (skb != NULL)
 		ap->tpkt = skb;
@@ -633,9 +552,6 @@ ppp_sync_send(struct ppp_channel *chan, struct sk_buff *skb)
 	return 1;
 }
 
-/*
- * Push as much data as possible out to the tty.
- */
 static int
 ppp_sync_push(struct syncppp *ap)
 {
@@ -652,7 +568,7 @@ ppp_sync_push(struct syncppp *ap)
 			set_bit(TTY_DO_WRITE_WAKEUP, &tty->flags);
 			sent = tty->ops->write(tty, ap->tpkt->data, ap->tpkt->len);
 			if (sent < 0)
-				goto flush;	/* error, e.g. loss of CD */
+				goto flush;	
 			if (sent < ap->tpkt->len) {
 				tty_stuffed = 1;
 			} else {
@@ -663,7 +579,7 @@ ppp_sync_push(struct syncppp *ap)
 			}
 			continue;
 		}
-		/* haven't made any progress */
+		
 		spin_unlock_bh(&ap->xmit_lock);
 		if (!(test_bit(XMIT_WAKEUP, &ap->xmit_flags) ||
 		      (!tty_stuffed && ap->tpkt)))
@@ -684,10 +600,6 @@ flush:
 	return done;
 }
 
-/*
- * Flush output from our internal buffers.
- * Called for the TCFLSH ioctl.
- */
 static void
 ppp_sync_flush_output(struct syncppp *ap)
 {
@@ -705,16 +617,7 @@ ppp_sync_flush_output(struct syncppp *ap)
 		ppp_output_wakeup(&ap->chan);
 }
 
-/*
- * Receive-side routines.
- */
 
-/* called when the tty driver has data for us.
- *
- * Data is frame oriented: each call to ppp_sync_input is considered
- * a whole frame. If the 1st flag byte is non-zero then the whole
- * frame is considered to be in error and is tossed.
- */
 static void
 ppp_sync_input(struct syncppp *ap, const unsigned char *buf,
 		char *flags, int count)
@@ -728,49 +631,49 @@ ppp_sync_input(struct syncppp *ap, const unsigned char *buf,
 	if (ap->flags & SC_LOG_INPKT)
 		ppp_print_buffer ("receive buffer", buf, count);
 
-	/* stuff the chars in the skb */
+	
 	skb = dev_alloc_skb(ap->mru + PPP_HDRLEN + 2);
 	if (!skb) {
 		printk(KERN_ERR "PPPsync: no memory (input pkt)\n");
 		goto err;
 	}
-	/* Try to get the payload 4-byte aligned */
+	
 	if (buf[0] != PPP_ALLSTATIONS)
 		skb_reserve(skb, 2 + (buf[0] & 1));
 
 	if (flags && *flags) {
-		/* error flag set, ignore frame */
+		
 		goto err;
 	} else if (count > skb_tailroom(skb)) {
-		/* packet overflowed MRU */
+		
 		goto err;
 	}
 
 	p = skb_put(skb, count);
 	memcpy(p, buf, count);
 
-	/* strip address/control field if present */
+	
 	p = skb->data;
 	if (p[0] == PPP_ALLSTATIONS && p[1] == PPP_UI) {
-		/* chop off address/control */
+		
 		if (skb->len < 3)
 			goto err;
 		p = skb_pull(skb, 2);
 	}
 
-	/* decompress protocol field if compressed */
+	
 	if (p[0] & 1) {
-		/* protocol is compressed */
+		
 		skb_push(skb, 1)[0] = 0;
 	} else if (skb->len < 2)
 		goto err;
 
-	/* queue the frame to be processed */
+	
 	skb_queue_tail(&ap->rqueue, skb);
 	return;
 
 err:
-	/* queue zero length packet as error indication */
+	
 	if (skb || (skb = dev_alloc_skb(0))) {
 		skb_trim(skb, 0);
 		skb_queue_tail(&ap->rqueue, skb);

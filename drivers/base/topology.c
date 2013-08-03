@@ -142,7 +142,6 @@ static struct attribute_group topology_attr_group = {
 	.name = "topology"
 };
 
-/* Add/Remove cpu_topology interface for CPU device */
 static int __cpuinit topology_add_dev(unsigned int cpu)
 {
 	struct device *dev = get_cpu_device(cpu);

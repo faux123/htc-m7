@@ -12,9 +12,6 @@
 
 #include <linux/sched.h>
 
-/*
- * Returns true if the task does not share ->mm with another thread/process.
- */
 bool current_is_single_threaded(void)
 {
 	struct task_struct *task = current;
@@ -42,11 +39,6 @@ bool current_is_single_threaded(void)
 				goto found;
 			if (likely(t->mm))
 				break;
-			/*
-			 * t->mm == NULL. Make sure next_thread/next_task
-			 * will see other CLONE_VM tasks which might be
-			 * forked before exiting.
-			 */
 			smp_rmb();
 		} while_each_thread(p, t);
 	}

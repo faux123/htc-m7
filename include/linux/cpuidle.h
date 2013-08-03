@@ -27,15 +27,12 @@ struct cpuidle_device;
 struct cpuidle_driver;
 
 
-/****************************
- * CPUIDLE DEVICE INTERFACE *
- ****************************/
 
 struct cpuidle_state_usage {
 	void		*driver_data;
 
 	unsigned long long	usage;
-	unsigned long long	time; /* in US */
+	unsigned long long	time; 
 };
 
 struct cpuidle_state {
@@ -43,9 +40,9 @@ struct cpuidle_state {
 	char		desc[CPUIDLE_DESC_LEN];
 
 	unsigned int	flags;
-	unsigned int	exit_latency; /* in US */
-	int		power_usage; /* in mW */
-	unsigned int	target_residency; /* in US */
+	unsigned int	exit_latency; 
+	int		power_usage; 
+	unsigned int	target_residency; 
 	unsigned int    disable;
 
 	int (*enter)	(struct cpuidle_device *dev,
@@ -55,25 +52,15 @@ struct cpuidle_state {
 	int (*enter_dead) (struct cpuidle_device *dev, int index);
 };
 
-/* Idle State Flags */
-#define CPUIDLE_FLAG_TIME_VALID	(0x01) /* is residency time measurable? */
+#define CPUIDLE_FLAG_TIME_VALID	(0x01) 
 
 #define CPUIDLE_DRIVER_FLAGS_MASK (0xFFFF0000)
 
-/**
- * cpuidle_get_statedata - retrieves private driver state data
- * @st_usage: the state usage statistics
- */
 static inline void *cpuidle_get_statedata(struct cpuidle_state_usage *st_usage)
 {
 	return st_usage->driver_data;
 }
 
-/**
- * cpuidle_set_statedata - stores private driver state data
- * @st_usage: the state usage statistics
- * @data: the private data
- */
 static inline void
 cpuidle_set_statedata(struct cpuidle_state_usage *st_usage, void *data)
 {
@@ -104,28 +91,19 @@ struct cpuidle_device {
 
 DECLARE_PER_CPU(struct cpuidle_device *, cpuidle_devices);
 
-/**
- * cpuidle_get_last_residency - retrieves the last state's residency time
- * @dev: the target CPU
- *
- * NOTE: this value is invalid if CPUIDLE_FLAG_TIME_VALID isn't set
- */
 static inline int cpuidle_get_last_residency(struct cpuidle_device *dev)
 {
 	return dev->last_residency;
 }
 
 
-/****************************
- * CPUIDLE DRIVER INTERFACE *
- ****************************/
 
 struct cpuidle_driver {
 	const char		*name;
 	struct module 		*owner;
 
 	unsigned int		power_specified:1;
-	/* set to 1 to use the core cpuidle time keeping (for all states). */
+	
 	unsigned int		en_core_tk_irqen:1;
 	struct cpuidle_state	states[CPUIDLE_STATE_MAX];
 	int			state_count;
@@ -176,9 +154,6 @@ static inline int cpuidle_play_dead(void) {return -ENODEV; }
 
 #endif
 
-/******************************
- * CPUIDLE GOVERNOR INTERFACE *
- ******************************/
 
 struct cpuidle_governor {
 	char			name[CPUIDLE_NAME_LEN];
@@ -223,4 +198,4 @@ static inline void cpuidle_unregister_governor(struct cpuidle_governor *gov) { }
 #define CPUIDLE_DRIVER_STATE_START	0
 #endif
 
-#endif /* _LINUX_CPUIDLE_H */
+#endif 

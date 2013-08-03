@@ -9,10 +9,6 @@ typedef union sigval {
 	void __user *sival_ptr;
 } sigval_t;
 
-/*
- * This is the size (including padding) of the part of the
- * struct siginfo that is before the union.
- */
 #ifndef __ARCH_SI_PREAMBLE_SIZE
 #define __ARCH_SI_PREAMBLE_SIZE	(3 * sizeof(int))
 #endif
@@ -26,11 +22,6 @@ typedef union sigval {
 #define __ARCH_SI_UID_T	__kernel_uid32_t
 #endif
 
-/*
- * The default "si_band" type is "long", as specified by POSIX.
- * However, some architectures want to override this to "int"
- * for historical compatibility reasons, so we allow that.
- */
 #ifndef __ARCH_SI_BAND_T
 #define __ARCH_SI_BAND_T long
 #endif
@@ -53,49 +44,49 @@ typedef struct siginfo {
 	union {
 		int _pad[SI_PAD_SIZE];
 
-		/* kill() */
+		
 		struct {
-			__kernel_pid_t _pid;	/* sender's pid */
-			__ARCH_SI_UID_T _uid;	/* sender's uid */
+			__kernel_pid_t _pid;	
+			__ARCH_SI_UID_T _uid;	
 		} _kill;
 
-		/* POSIX.1b timers */
+		
 		struct {
-			__kernel_timer_t _tid;	/* timer id */
-			int _overrun;		/* overrun count */
+			__kernel_timer_t _tid;	
+			int _overrun;		
 			char _pad[sizeof( __ARCH_SI_UID_T) - sizeof(int)];
-			sigval_t _sigval;	/* same as below */
-			int _sys_private;       /* not to be passed to user */
+			sigval_t _sigval;	
+			int _sys_private;       
 		} _timer;
 
-		/* POSIX.1b signals */
+		
 		struct {
-			__kernel_pid_t _pid;	/* sender's pid */
-			__ARCH_SI_UID_T _uid;	/* sender's uid */
+			__kernel_pid_t _pid;	
+			__ARCH_SI_UID_T _uid;	
 			sigval_t _sigval;
 		} _rt;
 
-		/* SIGCHLD */
+		
 		struct {
-			__kernel_pid_t _pid;	/* which child */
-			__ARCH_SI_UID_T _uid;	/* sender's uid */
-			int _status;		/* exit code */
+			__kernel_pid_t _pid;	
+			__ARCH_SI_UID_T _uid;	
+			int _status;		
 			__ARCH_SI_CLOCK_T _utime;
 			__ARCH_SI_CLOCK_T _stime;
 		} _sigchld;
 
-		/* SIGILL, SIGFPE, SIGSEGV, SIGBUS */
+		
 		struct {
-			void __user *_addr; /* faulting insn/memory ref. */
+			void __user *_addr; 
 #ifdef __ARCH_SI_TRAPNO
-			int _trapno;	/* TRAP # which caused the signal */
+			int _trapno;	
 #endif
-			short _addr_lsb; /* LSB of the reported address */
+			short _addr_lsb; 
 		} _sigfault;
 
-		/* SIGPOLL */
+		
 		struct {
-			__ARCH_SI_BAND_T _band;	/* POLL_IN, POLL_OUT, POLL_MSG */
+			__ARCH_SI_BAND_T _band;	
 			int _fd;
 		} _sigpoll;
 	} _sifields;
@@ -103,9 +94,6 @@ typedef struct siginfo {
 
 #endif
 
-/*
- * How these fields are to be accessed.
- */
 #define si_pid		_sifields._kill._pid
 #define si_uid		_sifields._kill._uid
 #define si_tid		_sifields._timer._tid
@@ -146,97 +134,70 @@ typedef struct siginfo {
 #define __SI_CODE(T,N)	(N)
 #endif
 
-/*
- * si_code values
- * Digital reserves positive values for kernel-generated signals.
- */
-#define SI_USER		0		/* sent by kill, sigsend, raise */
-#define SI_KERNEL	0x80		/* sent by the kernel from somewhere */
-#define SI_QUEUE	-1		/* sent by sigqueue */
-#define SI_TIMER __SI_CODE(__SI_TIMER,-2) /* sent by timer expiration */
-#define SI_MESGQ __SI_CODE(__SI_MESGQ,-3) /* sent by real time mesq state change */
-#define SI_ASYNCIO	-4		/* sent by AIO completion */
-#define SI_SIGIO	-5		/* sent by queued SIGIO */
-#define SI_TKILL	-6		/* sent by tkill system call */
-#define SI_DETHREAD	-7		/* sent by execve() killing subsidiary threads */
+#define SI_USER		0		
+#define SI_KERNEL	0x80		
+#define SI_QUEUE	-1		
+#define SI_TIMER __SI_CODE(__SI_TIMER,-2) 
+#define SI_MESGQ __SI_CODE(__SI_MESGQ,-3) 
+#define SI_ASYNCIO	-4		
+#define SI_SIGIO	-5		
+#define SI_TKILL	-6		
+#define SI_DETHREAD	-7		
 
 #define SI_FROMUSER(siptr)	((siptr)->si_code <= 0)
 #define SI_FROMKERNEL(siptr)	((siptr)->si_code > 0)
 
-/*
- * SIGILL si_codes
- */
-#define ILL_ILLOPC	(__SI_FAULT|1)	/* illegal opcode */
-#define ILL_ILLOPN	(__SI_FAULT|2)	/* illegal operand */
-#define ILL_ILLADR	(__SI_FAULT|3)	/* illegal addressing mode */
-#define ILL_ILLTRP	(__SI_FAULT|4)	/* illegal trap */
-#define ILL_PRVOPC	(__SI_FAULT|5)	/* privileged opcode */
-#define ILL_PRVREG	(__SI_FAULT|6)	/* privileged register */
-#define ILL_COPROC	(__SI_FAULT|7)	/* coprocessor error */
-#define ILL_BADSTK	(__SI_FAULT|8)	/* internal stack error */
+#define ILL_ILLOPC	(__SI_FAULT|1)	
+#define ILL_ILLOPN	(__SI_FAULT|2)	
+#define ILL_ILLADR	(__SI_FAULT|3)	
+#define ILL_ILLTRP	(__SI_FAULT|4)	
+#define ILL_PRVOPC	(__SI_FAULT|5)	
+#define ILL_PRVREG	(__SI_FAULT|6)	
+#define ILL_COPROC	(__SI_FAULT|7)	
+#define ILL_BADSTK	(__SI_FAULT|8)	
 #define NSIGILL		8
 
-/*
- * SIGFPE si_codes
- */
-#define FPE_INTDIV	(__SI_FAULT|1)	/* integer divide by zero */
-#define FPE_INTOVF	(__SI_FAULT|2)	/* integer overflow */
-#define FPE_FLTDIV	(__SI_FAULT|3)	/* floating point divide by zero */
-#define FPE_FLTOVF	(__SI_FAULT|4)	/* floating point overflow */
-#define FPE_FLTUND	(__SI_FAULT|5)	/* floating point underflow */
-#define FPE_FLTRES	(__SI_FAULT|6)	/* floating point inexact result */
-#define FPE_FLTINV	(__SI_FAULT|7)	/* floating point invalid operation */
-#define FPE_FLTSUB	(__SI_FAULT|8)	/* subscript out of range */
+#define FPE_INTDIV	(__SI_FAULT|1)	
+#define FPE_INTOVF	(__SI_FAULT|2)	
+#define FPE_FLTDIV	(__SI_FAULT|3)	
+#define FPE_FLTOVF	(__SI_FAULT|4)	
+#define FPE_FLTUND	(__SI_FAULT|5)	
+#define FPE_FLTRES	(__SI_FAULT|6)	
+#define FPE_FLTINV	(__SI_FAULT|7)	
+#define FPE_FLTSUB	(__SI_FAULT|8)	
 #define NSIGFPE		8
 
-/*
- * SIGSEGV si_codes
- */
-#define SEGV_MAPERR	(__SI_FAULT|1)	/* address not mapped to object */
-#define SEGV_ACCERR	(__SI_FAULT|2)	/* invalid permissions for mapped object */
+#define SEGV_MAPERR	(__SI_FAULT|1)	
+#define SEGV_ACCERR	(__SI_FAULT|2)	
 #define NSIGSEGV	2
 
-/*
- * SIGBUS si_codes
- */
-#define BUS_ADRALN	(__SI_FAULT|1)	/* invalid address alignment */
-#define BUS_ADRERR	(__SI_FAULT|2)	/* non-existent physical address */
-#define BUS_OBJERR	(__SI_FAULT|3)	/* object specific hardware error */
-/* hardware memory error consumed on a machine check: action required */
+#define BUS_ADRALN	(__SI_FAULT|1)	
+#define BUS_ADRERR	(__SI_FAULT|2)	
+#define BUS_OBJERR	(__SI_FAULT|3)	
 #define BUS_MCEERR_AR	(__SI_FAULT|4)
-/* hardware memory error detected in process but not consumed: action optional*/
 #define BUS_MCEERR_AO	(__SI_FAULT|5)
 #define NSIGBUS		5
 
-/*
- * SIGTRAP si_codes
- */
-#define TRAP_BRKPT	(__SI_FAULT|1)	/* process breakpoint */
-#define TRAP_TRACE	(__SI_FAULT|2)	/* process trace trap */
-#define TRAP_BRANCH     (__SI_FAULT|3)  /* process taken branch trap */
-#define TRAP_HWBKPT     (__SI_FAULT|4)  /* hardware breakpoint/watchpoint */
+#define TRAP_BRKPT	(__SI_FAULT|1)	
+#define TRAP_TRACE	(__SI_FAULT|2)	
+#define TRAP_BRANCH     (__SI_FAULT|3)  
+#define TRAP_HWBKPT     (__SI_FAULT|4)  
 #define NSIGTRAP	4
 
-/*
- * SIGCHLD si_codes
- */
-#define CLD_EXITED	(__SI_CHLD|1)	/* child has exited */
-#define CLD_KILLED	(__SI_CHLD|2)	/* child was killed */
-#define CLD_DUMPED	(__SI_CHLD|3)	/* child terminated abnormally */
-#define CLD_TRAPPED	(__SI_CHLD|4)	/* traced child has trapped */
-#define CLD_STOPPED	(__SI_CHLD|5)	/* child has stopped */
-#define CLD_CONTINUED	(__SI_CHLD|6)	/* stopped child has continued */
+#define CLD_EXITED	(__SI_CHLD|1)	
+#define CLD_KILLED	(__SI_CHLD|2)	
+#define CLD_DUMPED	(__SI_CHLD|3)	
+#define CLD_TRAPPED	(__SI_CHLD|4)	
+#define CLD_STOPPED	(__SI_CHLD|5)	
+#define CLD_CONTINUED	(__SI_CHLD|6)	
 #define NSIGCHLD	6
 
-/*
- * SIGPOLL si_codes
- */
-#define POLL_IN		(__SI_POLL|1)	/* data input available */
-#define POLL_OUT	(__SI_POLL|2)	/* output buffers available */
-#define POLL_MSG	(__SI_POLL|3)	/* input message available */
-#define POLL_ERR	(__SI_POLL|4)	/* i/o error */
-#define POLL_PRI	(__SI_POLL|5)	/* high priority input available */
-#define POLL_HUP	(__SI_POLL|6)	/* device disconnected */
+#define POLL_IN		(__SI_POLL|1)	
+#define POLL_OUT	(__SI_POLL|2)	
+#define POLL_MSG	(__SI_POLL|3)	
+#define POLL_ERR	(__SI_POLL|4)	
+#define POLL_PRI	(__SI_POLL|5)	
+#define POLL_HUP	(__SI_POLL|6)	
 #define NSIGPOLL	6
 
 /*
@@ -247,15 +208,11 @@ typedef struct siginfo {
  * thread manager then catches and does the appropriate nonsense.
  * However, everything is written out here so as to not get lost.
  */
-#define SIGEV_SIGNAL	0	/* notify via signal */
-#define SIGEV_NONE	1	/* other notification: meaningless */
-#define SIGEV_THREAD	2	/* deliver via thread creation */
-#define SIGEV_THREAD_ID 4	/* deliver to thread */
+#define SIGEV_SIGNAL	0	
+#define SIGEV_NONE	1	
+#define SIGEV_THREAD	2	
+#define SIGEV_THREAD_ID 4	
 
-/*
- * This works because the alignment is ok on all current architectures
- * but we leave open this being overridden in the future
- */
 #ifndef __ARCH_SIGEV_PREAMBLE_SIZE
 #define __ARCH_SIGEV_PREAMBLE_SIZE	(sizeof(int) * 2 + sizeof(sigval_t))
 #endif
@@ -274,7 +231,7 @@ typedef struct sigevent {
 
 		struct {
 			void (*_function)(sigval_t);
-			void *_attribute;	/* really pthread_attr_t */
+			void *_attribute;	
 		} _sigev_thread;
 	} _sigev_un;
 } sigevent_t;
@@ -297,7 +254,7 @@ static inline void copy_siginfo(struct siginfo *to, struct siginfo *from)
 	if (from->si_code < 0)
 		memcpy(to, from, sizeof(*to));
 	else
-		/* _sigchld is currently the largest know union member */
+		
 		memcpy(to, from, __ARCH_SI_PREAMBLE_SIZE + sizeof(from->_sifields._sigchld));
 }
 
@@ -305,6 +262,6 @@ static inline void copy_siginfo(struct siginfo *to, struct siginfo *from)
 
 extern int copy_siginfo_to_user(struct siginfo __user *to, struct siginfo *from);
 
-#endif /* __KERNEL__ */
+#endif 
 
 #endif
