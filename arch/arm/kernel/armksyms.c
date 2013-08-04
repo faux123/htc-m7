@@ -83,13 +83,6 @@ EXPORT_SYMBOL(memmove);
 EXPORT_SYMBOL(memchr);
 EXPORT_SYMBOL(__memzero);
 
-<<<<<<< HEAD
-	/* user mem (segment) */
-EXPORT_SYMBOL(__strnlen_user);
-EXPORT_SYMBOL(__strncpy_from_user);
-
-=======
->>>>>>> f980deb... arch/arm/kernel/armksyms: fix merge derp
 #ifdef CONFIG_MMU
 EXPORT_SYMBOL(copy_page);
 
