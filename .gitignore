@@ -84,3 +84,13 @@ GTAGS
 *.orig
 *~
 \#*#
+
+#user files
+mkzip.sh
+out/
+out_ge/
+out_s/
+smkzip.sh
+ge422mkzip.sh
+ge43mkzip.sh
+
