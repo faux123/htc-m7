@@ -26,6 +26,7 @@
 #include <linux/slab.h>
 #include <linux/errno.h>
 #include <linux/iommu.h>
+#include <linux/scatterlist.h>
 
 static ssize_t show_iommu_group(struct device *dev,
 				struct device_attribute *attr, char *buf)
@@ -82,19 +83,6 @@ static void iommu_bus_init(struct bus_type *bus, struct iommu_ops *ops)
 	bus_for_each_dev(bus, NULL, NULL, add_iommu_group);
 }
 
-/**
- * bus_set_iommu - set iommu-callbacks for the bus
- * @bus: bus.
- * @ops: the callbacks provided by the iommu-driver
- *
- * This function is called by an iommu driver to set the iommu methods
- * used for a particular bus. Drivers for devices on that bus can use
- * the iommu-api after these ops are registered.
- * This special function is needed because IOMMUs are usually devices on
- * the bus itself, so the iommu drivers are not initialized when the bus
- * is set up. With this function the iommu-driver can set the iommu-ops
- * afterwards.
- */
 int bus_set_iommu(struct bus_type *bus, struct iommu_ops *ops)
 {
 	if (bus->iommu_ops != NULL)
@@ -102,7 +90,7 @@ int bus_set_iommu(struct bus_type *bus, struct iommu_ops *ops)
 
 	bus->iommu_ops = ops;
 
-	/* Do IOMMU specific setup for this bus-type */
+	
 	iommu_bus_init(bus, ops);
 
 	return 0;
@@ -115,17 +103,6 @@ bool iommu_present(struct bus_type *bus)
 }
 EXPORT_SYMBOL_GPL(iommu_present);
 
-/**
- * iommu_set_fault_handler() - set a fault handler for an iommu domain
- * @domain: iommu domain
- * @handler: fault handler
- *
- * This function should be used by IOMMU users which want to be notified
- * whenever an IOMMU fault happens.
- *
- * The fault handler itself should return 0 on success, and an appropriate
- * error code otherwise.
- */
 void iommu_set_fault_handler(struct iommu_domain *domain,
 					iommu_fault_handler_t handler)
 {
@@ -135,7 +112,7 @@ void iommu_set_fault_handler(struct iommu_domain *domain,
 }
 EXPORT_SYMBOL_GPL(iommu_set_fault_handler);
 
-struct iommu_domain *iommu_domain_alloc(struct bus_type *bus)
+struct iommu_domain *iommu_domain_alloc(struct bus_type *bus, int flags)
 {
 	struct iommu_domain *domain;
 	int ret;
@@ -149,7 +126,7 @@ struct iommu_domain *iommu_domain_alloc(struct bus_type *bus)
 
 	domain->ops = bus->iommu_ops;
 
-	ret = domain->ops->domain_init(domain);
+	ret = domain->ops->domain_init(domain, flags);
 	if (ret)
 		goto out_free;
 
@@ -220,14 +197,9 @@ int iommu_map(struct iommu_domain *domain, unsigned long iova,
 	if (unlikely(domain->ops->map == NULL))
 		return -ENODEV;
 
-	/* find out the minimum page size supported */
+	
 	min_pagesz = 1 << __ffs(domain->ops->pgsize_bitmap);
 
-	/*
-	 * both the virtual address and the physical one, as well as
-	 * the size of the mapping, must be aligned (at least) to the
-	 * size of the smallest page supported by the hardware
-	 */
 	if (!IS_ALIGNED(iova | paddr | size, min_pagesz)) {
 		pr_err("unaligned: iova 0x%lx pa 0x%lx size 0x%lx min_pagesz "
 			"0x%x\n", iova, (unsigned long)paddr,
@@ -242,27 +214,27 @@ int iommu_map(struct iommu_domain *domain, unsigned long iova,
 		unsigned long pgsize, addr_merge = iova | paddr;
 		unsigned int pgsize_idx;
 
-		/* Max page size that still fits into 'size' */
+		
 		pgsize_idx = __fls(size);
 
-		/* need to consider alignment requirements ? */
+		
 		if (likely(addr_merge)) {
-			/* Max page size allowed by both iova and paddr */
+			
 			unsigned int align_pgsize_idx = __ffs(addr_merge);
 
 			pgsize_idx = min(pgsize_idx, align_pgsize_idx);
 		}
 
-		/* build a mask of acceptable page sizes */
+		
 		pgsize = (1UL << (pgsize_idx + 1)) - 1;
 
-		/* throw away page sizes not supported by the hardware */
+		
 		pgsize &= domain->ops->pgsize_bitmap;
 
-		/* make sure we're still sane */
+		
 		BUG_ON(!pgsize);
 
-		/* pick the biggest page */
+		
 		pgsize_idx = __fls(pgsize);
 		pgsize = 1UL << pgsize_idx;
 
@@ -278,7 +250,7 @@ int iommu_map(struct iommu_domain *domain, unsigned long iova,
 		size -= pgsize;
 	}
 
-	/* unroll mapping in case something went wrong */
+	
 	if (ret)
 		iommu_unmap(domain, orig_iova, orig_size - size);
 
@@ -294,14 +266,9 @@ size_t iommu_unmap(struct iommu_domain *domain, unsigned long iova, size_t size)
 	if (unlikely(domain->ops->unmap == NULL))
 		return -ENODEV;
 
-	/* find out the minimum page size supported */
+	
 	min_pagesz = 1 << __ffs(domain->ops->pgsize_bitmap);
 
-	/*
-	 * The virtual address, as well as the size of the mapping, must be
-	 * aligned (at least) to the size of the smallest page supported
-	 * by the hardware
-	 */
 	if (!IS_ALIGNED(iova | size, min_pagesz)) {
 		pr_err("unaligned: iova 0x%lx size 0x%lx min_pagesz 0x%x\n",
 					iova, (unsigned long)size, min_pagesz);
@@ -311,10 +278,6 @@ size_t iommu_unmap(struct iommu_domain *domain, unsigned long iova, size_t size)
 	pr_debug("unmap this: iova 0x%lx size 0x%lx\n", iova,
 							(unsigned long)size);
 
-	/*
-	 * Keep iterating until we either unmap 'size' bytes (or more)
-	 * or we hit an area that isn't mapped.
-	 */
 	while (unmapped < size) {
 		size_t left = size - unmapped;
 
@@ -332,6 +295,39 @@ size_t iommu_unmap(struct iommu_domain *domain, unsigned long iova, size_t size)
 	return unmapped;
 }
 EXPORT_SYMBOL_GPL(iommu_unmap);
+
+int iommu_map_range(struct iommu_domain *domain, unsigned int iova,
+		    struct scatterlist *sg, unsigned int len, int prot)
+{
+	if (unlikely(domain->ops->map_range == NULL))
+		return -ENODEV;
+
+	BUG_ON(iova & (~PAGE_MASK));
+
+	return domain->ops->map_range(domain, iova, sg, len, prot);
+}
+EXPORT_SYMBOL_GPL(iommu_map_range);
+
+int iommu_unmap_range(struct iommu_domain *domain, unsigned int iova,
+		      unsigned int len)
+{
+	if (unlikely(domain->ops->unmap_range == NULL))
+		return -ENODEV;
+
+	BUG_ON(iova & (~PAGE_MASK));
+
+	return domain->ops->unmap_range(domain, iova, len);
+}
+EXPORT_SYMBOL_GPL(iommu_unmap_range);
+
+phys_addr_t iommu_get_pt_base_addr(struct iommu_domain *domain)
+{
+	if (unlikely(domain->ops->get_pt_base_addr == NULL))
+		return 0;
+
+	return domain->ops->get_pt_base_addr(domain);
+}
+EXPORT_SYMBOL_GPL(iommu_get_pt_base_addr);
 
 int iommu_device_group(struct device *dev, unsigned int *groupid)
 {

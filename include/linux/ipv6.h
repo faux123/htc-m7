@@ -5,15 +5,9 @@
 #include <linux/in6.h>
 #include <asm/byteorder.h>
 
-/* The latest drafts declared increase in minimal mtu up to 1280. */
 
 #define IPV6_MIN_MTU	1280
 
-/*
- *	Advanced API
- *	source interface/address selection, source routing, etc...
- *	*under construction*
- */
 
 
 struct in6_pktinfo {
@@ -32,33 +26,23 @@ struct in6_ifreq {
 	int		ifr6_ifindex; 
 };
 
-#define IPV6_SRCRT_STRICT	0x01	/* Deprecated; will be removed */
-#define IPV6_SRCRT_TYPE_0	0	/* Deprecated; will be removed */
-#define IPV6_SRCRT_TYPE_2	2	/* IPv6 type 2 Routing Header	*/
+#define IPV6_SRCRT_STRICT	0x01	
+#define IPV6_SRCRT_TYPE_0	0	
+#define IPV6_SRCRT_TYPE_2	2	
 
-/*
- *	routing header
- */
 struct ipv6_rt_hdr {
 	__u8		nexthdr;
 	__u8		hdrlen;
 	__u8		type;
 	__u8		segments_left;
 
-	/*
-	 *	type specific data
-	 *	variable length field
-	 */
 };
 
 
 struct ipv6_opt_hdr {
 	__u8 		nexthdr;
 	__u8 		hdrlen;
-	/* 
-	 * TLV encoded option data follows.
-	 */
-} __attribute__((packed));	/* required for some archs */
+} __attribute__((packed));	
 
 #define ipv6_destopt_hdr ipv6_opt_hdr
 #define ipv6_hopopt_hdr  ipv6_opt_hdr
@@ -67,9 +51,6 @@ struct ipv6_opt_hdr {
 #define ipv6_optlen(p)  (((p)->hdrlen+1) << 3)
 #endif
 
-/*
- *	routing header type 0 (used in cmsghdr struct)
- */
 
 struct rt0_hdr {
 	struct ipv6_rt_hdr	rt_hdr;
@@ -79,9 +60,6 @@ struct rt0_hdr {
 #define rt0_type		rt_hdr.type
 };
 
-/*
- *	routing header type 2
- */
 
 struct rt2_hdr {
 	struct ipv6_rt_hdr	rt_hdr;
@@ -91,9 +69,6 @@ struct rt2_hdr {
 #define rt2_type		rt_hdr.type
 };
 
-/*
- *	home address option in destination options header
- */
 
 struct ipv6_destopt_hao {
 	__u8			type;
@@ -101,12 +76,6 @@ struct ipv6_destopt_hao {
 	struct in6_addr		addr;
 } __attribute__((packed));
 
-/*
- *	IPv6 fixed header
- *
- *	BEWARE, it is incorrect. The first 4 bits of flow_lbl
- *	are glued to priority now, forming "class".
- */
 
 struct ipv6hdr {
 #if defined(__LITTLE_ENDIAN_BITFIELD)
@@ -129,9 +98,6 @@ struct ipv6hdr {
 };
 
 #ifdef __KERNEL__
-/*
- * This structure contains configuration options per IPv6 link.
- */
 struct ipv6_devconf {
 	__s32		forwarding;
 	__s32		hop_limit;
@@ -182,7 +148,6 @@ struct ipv6_params {
 extern struct ipv6_params ipv6_defaults;
 #endif
 
-/* index values for the variables in ipv6_devconf */
 enum {
 	DEVCONF_FORWARDING = 0,
 	DEVCONF_HOPLIMIT,
@@ -238,10 +203,6 @@ static inline __u8 ipv6_tclass(const struct ipv6hdr *iph)
 	return (ntohl(*(__be32 *)iph) >> 20) & 0xff;
 }
 
-/* 
-   This structure contains results of exthdrs parsing
-   as offsets from skb->nh.
- */
 
 struct inet6_skb_parm {
 	int			iif;
@@ -286,14 +247,6 @@ struct ipv6_mc_socklist;
 struct ipv6_ac_socklist;
 struct ipv6_fl_socklist;
 
-/**
- * struct ipv6_pinfo - ipv6 private area
- *
- * In the struct sock hierarchy (tcp6_sock, upd6_sock, etc)
- * this _must_ be the last member, so that inet6_sk_generic
- * is able to calculate its offset from the base struct sock
- * by using the struct proto->slab_obj_size member. -acme
- */
 struct ipv6_pinfo {
 	struct in6_addr 	saddr;
 	struct in6_addr 	rcv_saddr;
@@ -307,10 +260,6 @@ struct ipv6_pinfo {
 	__be32			flow_label;
 	__u32			frag_size;
 
-	/*
-	 * Packed in 16bits.
-	 * Omit one shift by by putting the signed field at MSB.
-	 */
 #if defined(__BIG_ENDIAN_BITFIELD)
 	__s16			hop_limit:9;
 	__u16			__unused_1:7;
@@ -320,7 +269,7 @@ struct ipv6_pinfo {
 #endif
 
 #if defined(__BIG_ENDIAN_BITFIELD)
-	/* Packed in 16bits. */
+	
 	__s16			mcast_hops:9;
 	__u16			__unused_2:6,
 				mc_loop:1;
@@ -332,7 +281,7 @@ struct ipv6_pinfo {
 	int			ucast_oif;
 	int			mcast_oif;
 
-	/* pktoption flags */
+	
 	union {
 		struct {
 			__u16	srcrt:1,
@@ -349,20 +298,17 @@ struct ipv6_pinfo {
 				rxtclass:1,
 				rxpmtu:1,
 				rxorigdstaddr:1;
-				/* 2 bits hole */
+				
 		} bits;
 		__u16		all;
 	} rxopt;
 
-	/* sockopt flags */
+	
 	__u16			recverr:1,
 	                        sndflow:1,
 				pmtudisc:2,
 				ipv6only:1,
-				srcprefs:3,	/* 001: prefer temporary address
-						 * 010: prefer public address
-						 * 100: prefer care-of address
-						 */
+				srcprefs:3,	
 				dontfrag:1;
 	__u8			min_hopcount;
 	__u8			tclass;
@@ -384,27 +330,26 @@ struct ipv6_pinfo {
 	} cork;
 };
 
-/* WARNING: don't change the layout of the members in {raw,udp,tcp}6_sock! */
 struct raw6_sock {
-	/* inet_sock has to be the first member of raw6_sock */
+	
 	struct inet_sock	inet;
-	__u32			checksum;	/* perform checksum */
-	__u32			offset;		/* checksum offset  */
+	__u32			checksum;	
+	__u32			offset;		
 	struct icmp6_filter	filter;
 	__u32			ip6mr_table;
-	/* ipv6_pinfo has to be the last member of raw6_sock, see inet6_sk_generic */
+	
 	struct ipv6_pinfo	inet6;
 };
 
 struct udp6_sock {
 	struct udp_sock	  udp;
-	/* ipv6_pinfo has to be the last member of udp6_sock, see inet6_sk_generic */
+	
 	struct ipv6_pinfo inet6;
 };
 
 struct tcp6_sock {
 	struct tcp_sock	  tcp;
-	/* ipv6_pinfo has to be the last member of tcp6_sock, see inet6_sk_generic */
+	
 	struct ipv6_pinfo inet6;
 };
 
@@ -521,7 +466,7 @@ static inline struct raw6_sock *raw6_sk(const struct sock *sk)
 #define inet6_rcv_saddr(__sk)	NULL
 #define tcp_twsk_ipv6only(__sk)		0
 #define inet_v6_ipv6only(__sk)		0
-#endif /* IS_ENABLED(CONFIG_IPV6) */
+#endif 
 
 #define INET6_MATCH(__sk, __net, __hash, __saddr, __daddr, __ports, __dif)\
 	(((__sk)->sk_hash == (__hash)) && sock_net((__sk)) == (__net)	&& \
@@ -539,6 +484,6 @@ static inline struct raw6_sock *raw6_sk(const struct sock *sk)
 	 (ipv6_addr_equal(&inet6_twsk(__sk)->tw_v6_rcv_saddr, (__daddr))) && \
 	 (!((__sk)->sk_bound_dev_if) || ((__sk)->sk_bound_dev_if == (__dif))))
 
-#endif /* __KERNEL__ */
+#endif 
 
-#endif /* _IPV6_H */
+#endif 

@@ -132,18 +132,12 @@ unsigned int nf_iterate(struct list_head *head,
 {
 	unsigned int verdict;
 
-	/*
-	 * The caller must not block between calls to this
-	 * function because of risk of continuing from deleted element.
-	 */
 	list_for_each_continue_rcu(*i, head) {
 		struct nf_hook_ops *elem = (struct nf_hook_ops *)*i;
 
 		if (hook_thresh > elem->priority)
 			continue;
 
-		/* Optimization: we don't need to hold module
-		   reference here, since function can't sleep. --RR */
 repeat:
 		verdict = elem->hook(hook, skb, indev, outdev, okfn);
 		if (verdict != NF_ACCEPT) {
@@ -164,8 +158,6 @@ repeat:
 }
 
 
-/* Returns 1 if okfn() needs to be executed by the caller,
- * -EPERM for NF_DROP, 0 otherwise. */
 int nf_hook_slow(u_int8_t pf, unsigned int hook, struct sk_buff *skb,
 		 struct net_device *indev,
 		 struct net_device *outdev,
@@ -176,7 +168,7 @@ int nf_hook_slow(u_int8_t pf, unsigned int hook, struct sk_buff *skb,
 	unsigned int verdict;
 	int ret = 0;
 
-	/* We may already have this, but read-locks nest anyway */
+	
 	rcu_read_lock();
 
 	elem = &nf_hooks[pf][hook];
@@ -213,7 +205,7 @@ int skb_make_writable(struct sk_buff *skb, unsigned int writable_len)
 	if (writable_len > skb->len)
 		return 0;
 
-	/* Not exclusive use of packet?  Must copy. */
+	
 	if (!skb_cloned(skb)) {
 		if (writable_len <= skb_headlen(skb))
 			return 1;
@@ -230,9 +222,6 @@ int skb_make_writable(struct sk_buff *skb, unsigned int writable_len)
 EXPORT_SYMBOL(skb_make_writable);
 
 #if IS_ENABLED(CONFIG_NF_CONNTRACK)
-/* This does not belong here, but locally generated errors need it if connection
-   tracking in use: without this, connection may not be in hash table, and hence
-   manufactured ICMP or RST packets will not be associated with it. */
 void (*ip_ct_attach)(struct sk_buff *, struct sk_buff *) __rcu __read_mostly;
 EXPORT_SYMBOL(ip_ct_attach);
 
@@ -264,7 +253,7 @@ void nf_conntrack_destroy(struct nf_conntrack *nfct)
 	rcu_read_unlock();
 }
 EXPORT_SYMBOL(nf_conntrack_destroy);
-#endif /* CONFIG_NF_CONNTRACK */
+#endif 
 
 #ifdef CONFIG_PROC_FS
 struct proc_dir_entry *proc_net_netfilter;
@@ -298,4 +287,4 @@ struct ctl_path nf_net_netfilter_sysctl_path[] = {
 	{ }
 };
 EXPORT_SYMBOL_GPL(nf_net_netfilter_sysctl_path);
-#endif /* CONFIG_SYSCTL */
+#endif 

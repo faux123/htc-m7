@@ -1,4 +1,3 @@
-/* Kernel module to match packet length. */
 /* (C) 1999-2001 James Morris <jmorros@intercode.com.au>
  *
  * This program is free software; you can redistribute it and/or modify

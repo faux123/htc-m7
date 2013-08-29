@@ -26,7 +26,6 @@ TRACE_EVENT(udp_fail_queue_rcv_skb,
 	TP_printk("rc=%d port=%hu", __entry->rc, __entry->lport)
 );
 
-#endif /* _TRACE_UDP_H */
+#endif 
 
-/* This part must be outside protection */
 #include <trace/define_trace.h>

@@ -46,4 +46,4 @@
 #define set_tls		set_tls_software
 #endif
 
-#endif	/* __ASMARM_TLS_H */
+#endif	

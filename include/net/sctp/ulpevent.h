@@ -49,10 +49,6 @@
 #ifndef __sctp_ulpevent_h__
 #define __sctp_ulpevent_h__
 
-/* A structure to carry information to the ULP (e.g. Sockets API) */
-/* Warning: This sits inside an skb.cb[] area.  Be very careful of
- * growing this structure as it is at the maximum limit now.
- */
 struct sctp_ulpevent {
 	struct sctp_association *asoc;
 	__u16 stream;
@@ -66,13 +62,11 @@ struct sctp_ulpevent {
 	unsigned int rmem_len;
 };
 
-/* Retrieve the skb this event sits inside of. */
 static inline struct sk_buff *sctp_event2skb(const struct sctp_ulpevent *ev)
 {
 	return container_of((void *)ev, struct sk_buff, cb);
 }
 
-/* Retrieve & cast the event sitting inside the skb. */
 static inline struct sctp_ulpevent *sctp_skb2event(struct sk_buff *skb)
 {
 	return (struct sctp_ulpevent *)skb->cb;
@@ -139,7 +133,6 @@ void sctp_ulpevent_read_sndrcvinfo(const struct sctp_ulpevent *event,
 	struct msghdr *);
 __u16 sctp_ulpevent_get_notification_type(const struct sctp_ulpevent *event);
 
-/* Is this event type enabled? */
 static inline int sctp_ulpevent_type_enabled(__u16 sn_type,
 					     struct sctp_event_subscribe *mask)
 {
@@ -147,7 +140,6 @@ static inline int sctp_ulpevent_type_enabled(__u16 sn_type,
 	return amask[sn_type - SCTP_SN_TYPE_BASE];
 }
 
-/* Given an event subscription, is this event enabled? */
 static inline int sctp_ulpevent_is_enabled(const struct sctp_ulpevent *event,
 					   struct sctp_event_subscribe *mask)
 {
@@ -161,7 +153,7 @@ static inline int sctp_ulpevent_is_enabled(const struct sctp_ulpevent *event,
 	return enabled;
 }
 
-#endif /* __sctp_ulpevent_h__ */
+#endif 
 
 
 

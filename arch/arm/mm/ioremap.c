@@ -46,6 +46,14 @@ int ioremap_page(unsigned long virt, unsigned long phys,
 }
 EXPORT_SYMBOL(ioremap_page);
 
+int ioremap_pages(unsigned long virt, unsigned long phys, unsigned long size,
+		 const struct mem_type *mtype)
+{
+	return ioremap_page_range(virt, virt + size, phys,
+				  __pgprot(mtype->prot_pte));
+}
+EXPORT_SYMBOL(ioremap_pages);
+
 void __check_kvm_seq(struct mm_struct *mm)
 {
 	unsigned int seq;
@@ -61,16 +69,6 @@ void __check_kvm_seq(struct mm_struct *mm)
 }
 
 #if !defined(CONFIG_SMP) && !defined(CONFIG_ARM_LPAE)
-/*
- * Section support is unsafe on SMP - If you iounmap and ioremap a region,
- * the other CPUs will not see this change until their next context switch.
- * Meanwhile, (eg) if an interrupt comes in on one of those other CPUs
- * which requires the new ioremap'd region to be referenced, the CPU will
- * reference the _old_ region.
- *
- * Note that get_vm_area_caller() allocates a guard 4K page, so we need to
- * mask the size back to 1MB aligned or we will overflow in the loop below.
- */
 static void unmap_area_sections(unsigned long virt, unsigned long size)
 {
 	unsigned long addr = virt, end = virt + (size & ~(SZ_1M - 1));
@@ -86,19 +84,9 @@ static void unmap_area_sections(unsigned long virt, unsigned long size)
 		pmd_t pmd = *pmdp;
 
 		if (!pmd_none(pmd)) {
-			/*
-			 * Clear the PMD from the page table, and
-			 * increment the kvm sequence so others
-			 * notice this change.
-			 *
-			 * Note: this is still racy on SMP machines.
-			 */
 			pmd_clear(pmdp);
 			init_mm.context.kvm_seq++;
 
-			/*
-			 * Free the page table, if there was one.
-			 */
 			if ((pmd_val(pmd) & PMD_TYPE_MASK) == PMD_TYPE_TABLE)
 				pte_free_kernel(&init_mm, pmd_page_vaddr(pmd));
 		}
@@ -107,10 +95,6 @@ static void unmap_area_sections(unsigned long virt, unsigned long size)
 		pmdp += 2;
 	} while (addr < end);
 
-	/*
-	 * Ensure that the active_mm is up to date - we want to
-	 * catch any use-after-iounmap cases.
-	 */
 	if (current->active_mm->context.kvm_seq != init_mm.context.kvm_seq)
 		__check_kvm_seq(current->active_mm);
 
@@ -126,10 +110,6 @@ remap_area_sections(unsigned long virt, unsigned long pfn,
 	pud_t *pud;
 	pmd_t *pmd;
 
-	/*
-	 * Remove and free any PTE-based mapping, and
-	 * sync the current kernel mapping.
-	 */
 	unmap_area_sections(virt, size);
 
 	pgd = pgd_offset_k(addr);
@@ -158,10 +138,6 @@ remap_area_supersections(unsigned long virt, unsigned long pfn,
 	pud_t *pud;
 	pmd_t *pmd;
 
-	/*
-	 * Remove and free any PTE-based mapping, and
-	 * sync the current kernel mapping.
-	 */
 	unmap_area_sections(virt, size);
 
 	pgd = pgd_offset_k(virt);
@@ -199,9 +175,6 @@ void __iomem * __arm_ioremap_pfn_caller(unsigned long pfn,
  	struct vm_struct * area;
 
 #ifndef CONFIG_ARM_LPAE
-	/*
-	 * High mappings must be supersection aligned
-	 */
 	if (pfn >= 0x100000 && (__pfn_to_phys(pfn) & ~SUPERSECTION_MASK))
 		return NULL;
 #endif
@@ -210,14 +183,8 @@ void __iomem * __arm_ioremap_pfn_caller(unsigned long pfn,
 	if (!type)
 		return NULL;
 
-	/*
-	 * Page align the mapping size, taking account of any offset.
-	 */
 	size = PAGE_ALIGN(offset + size);
 
-	/*
-	 * Try to reuse one of the static mapping whenever possible.
-	 */
 	read_lock(&vmlist_lock);
 	for (area = vmlist; area; area = area->next) {
 		if (!size || (sizeof(phys_addr_t) == 4 && pfn >= 0x100000))
@@ -229,7 +196,7 @@ void __iomem * __arm_ioremap_pfn_caller(unsigned long pfn,
 		if (__phys_to_pfn(area->phys_addr) > pfn ||
 		    __pfn_to_phys(pfn) + size-1 > area->phys_addr + area->size-1)
 			continue;
-		/* we can drop the lock here as we know *area is static */
+		
 		read_unlock(&vmlist_lock);
 		addr = (unsigned long)area->addr;
 		addr += __pfn_to_phys(pfn) - area->phys_addr;
@@ -237,9 +204,6 @@ void __iomem * __arm_ioremap_pfn_caller(unsigned long pfn,
 	}
 	read_unlock(&vmlist_lock);
 
-	/*
-	 * Don't allow RAM to be mapped - this causes problems with ARMv6+
-	 */
 	if (WARN_ON(pfn_valid(pfn)))
 		return NULL;
 
@@ -279,9 +243,6 @@ void __iomem *__arm_ioremap_caller(unsigned long phys_addr, size_t size,
  	unsigned long offset = phys_addr & ~PAGE_MASK;
  	unsigned long pfn = __phys_to_pfn(phys_addr);
 
- 	/*
- 	 * Don't allow wraparound or zero size
-	 */
 	last_addr = phys_addr + size - 1;
 	if (!size || last_addr < phys_addr)
 		return NULL;
@@ -290,15 +251,6 @@ void __iomem *__arm_ioremap_caller(unsigned long phys_addr, size_t size,
 			caller);
 }
 
-/*
- * Remap an arbitrary physical address space into the kernel virtual
- * address space. Needed when the kernel wants to access high addresses
- * directly.
- *
- * NOTE! We need to allow non-page-aligned mappings too: we will obviously
- * have to convert them into an offset in a page-aligned mapping, but the
- * caller shouldn't need to know that small detail.
- */
 void __iomem *
 __arm_ioremap_pfn(unsigned long pfn, unsigned long offset, size_t size,
 		  unsigned int mtype)
@@ -320,13 +272,6 @@ __arm_ioremap(unsigned long phys_addr, size_t size, unsigned int mtype)
 }
 EXPORT_SYMBOL(__arm_ioremap);
 
-/*
- * Remap an arbitrary physical address space into the kernel virtual
- * address space as memory. Needed when the kernel wants to execute
- * code in external memory. This is needed for reprogramming source
- * clocks that would affect normal memory for example. Please see
- * CONFIG_GENERIC_ALLOCATOR for allocating external memory.
- */
 void __iomem *
 __arm_ioremap_exec(unsigned long phys_addr, size_t size, bool cached)
 {
@@ -352,18 +297,13 @@ void __iounmap(volatile void __iomem *io_addr)
 			break;
 		if (!(vm->flags & VM_IOREMAP))
 			continue;
-		/* If this is a static mapping we must leave it alone */
+		
 		if ((vm->flags & VM_ARM_STATIC_MAPPING) &&
 		    (vm->addr <= addr) && (vm->addr + vm->size > addr)) {
 			read_unlock(&vmlist_lock);
 			return;
 		}
 #if !defined(CONFIG_SMP) && !defined(CONFIG_ARM_LPAE)
-		/*
-		 * If this is a section based mapping we need to handle it
-		 * specially as the VM subsystem does not know how to handle
-		 * such a beast.
-		 */
 		if ((vm->addr == addr) &&
 		    (vm->flags & VM_ARM_SECTION_MAPPING)) {
 			unmap_area_sections((unsigned long)vm->addr, vm->size);

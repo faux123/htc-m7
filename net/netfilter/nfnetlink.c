@@ -121,7 +121,6 @@ int nfnetlink_unicast(struct sk_buff *skb, struct net *net, u_int32_t pid, int f
 }
 EXPORT_SYMBOL_GPL(nfnetlink_unicast);
 
-/* Process one complete nfnetlink message. */
 static int nfnetlink_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 {
 	struct net *net = sock_net(skb->sk);
@@ -132,7 +131,7 @@ static int nfnetlink_rcv_msg(struct sk_buff *skb, struct nlmsghdr *nlh)
 	if (!capable(CAP_NET_ADMIN))
 		return -EPERM;
 
-	/* All the messages must at least contain nfgenmsg */
+	
 	if (nlh->nlmsg_len < NLMSG_LENGTH(sizeof(struct nfgenmsg)))
 		return 0;
 

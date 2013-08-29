@@ -13,7 +13,6 @@
 #include <media/rc-map.h>
 #include <linux/module.h>
 
-/* Cinergy 1400 DVB-T */
 
 static struct rc_map_table cinergy_1400[] = {
 	{ 0x01, KEY_POWER },
@@ -63,7 +62,7 @@ static struct rc_map_list cinergy_1400_map = {
 	.map = {
 		.scan    = cinergy_1400,
 		.size    = ARRAY_SIZE(cinergy_1400),
-		.rc_type = RC_TYPE_UNKNOWN,	/* Legacy IR type */
+		.rc_type = RC_TYPE_UNKNOWN,	
 		.name    = RC_MAP_CINERGY_1400,
 	}
 };

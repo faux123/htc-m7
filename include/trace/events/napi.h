@@ -32,7 +32,6 @@ TRACE_EVENT(napi_poll,
 
 #undef NO_DEV
 
-#endif /* _TRACE_NAPI_H_ */
+#endif 
 
-/* This part must be outside protection */
 #include <trace/define_trace.h>

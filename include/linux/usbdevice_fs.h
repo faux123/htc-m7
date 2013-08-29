@@ -1,4 +1,3 @@
-/*****************************************************************************/
 
 /*
  *	usbdevice_fs.h  --  USB device file system.
@@ -24,7 +23,6 @@
  *   0.1  04.01.2000  Created
  */
 
-/*****************************************************************************/
 
 #ifndef _LINUX_USBDEVICE_FS_H
 #define _LINUX_USBDEVICE_FS_H
@@ -32,9 +30,7 @@
 #include <linux/types.h>
 #include <linux/magic.h>
 
-/* --------------------------------------------------------------------- */
 
-/* usbdevfs ioctl codes */
 
 struct usbdevfs_ctrltransfer {
 	__u8 bRequestType;
@@ -42,14 +38,14 @@ struct usbdevfs_ctrltransfer {
 	__u16 wValue;
 	__u16 wIndex;
 	__u16 wLength;
-	__u32 timeout;  /* in milliseconds */
+	__u32 timeout;  
  	void __user *data;
 };
 
 struct usbdevfs_bulktransfer {
 	unsigned int ep;
 	unsigned int len;
-	unsigned int timeout; /* in milliseconds */
+	unsigned int timeout; 
 	void __user *data;
 };
 
@@ -104,25 +100,20 @@ struct usbdevfs_urb {
 	int start_frame;
 	int number_of_packets;
 	int error_count;
-	unsigned int signr;	/* signal to be sent on completion,
-				  or 0 if none should be sent. */
+	unsigned int signr;	
 	void __user *usercontext;
 	struct usbdevfs_iso_packet_desc iso_frame_desc[0];
 };
 
-/* ioctls for talking directly to drivers */
 struct usbdevfs_ioctl {
-	int	ifno;		/* interface 0..N ; negative numbers reserved */
-	int	ioctl_code;	/* MUST encode size + direction of data so the
-				 * macros in <asm/ioctl.h> give correct values */
-	void __user *data;	/* param buffer (in, or out) */
+	int	ifno;		
+	int	ioctl_code;	
+	void __user *data;	
 };
 
-/* You can do most things with hubs just through control messages,
- * except find out what device connects to what port. */
 struct usbdevfs_hub_portinfo {
-	char nports;		/* number of downstream ports in this hub */
-	char port [127];	/* e.g. port 3 connects to device 27 */
+	char nports;		
+	char port [127];	
 };
 
 #ifdef __KERNEL__
@@ -135,14 +126,14 @@ struct usbdevfs_ctrltransfer32 {
         u16 wValue;
         u16 wIndex;
         u16 wLength;
-        u32 timeout;  /* in milliseconds */
+        u32 timeout;  
         compat_caddr_t data;
 };
 
 struct usbdevfs_bulktransfer32 {
         compat_uint_t ep;
         compat_uint_t len;
-        compat_uint_t timeout; /* in milliseconds */
+        compat_uint_t timeout; 
         compat_caddr_t data;
 };
 
@@ -163,7 +154,7 @@ struct usbdevfs_urb32 {
 	compat_int_t number_of_packets;
 	compat_int_t error_count;
 	compat_uint_t signr;
-	compat_caddr_t usercontext; /* unused */
+	compat_caddr_t usercontext; 
 	struct usbdevfs_iso_packet_desc iso_frame_desc[0];
 };
 
@@ -173,7 +164,7 @@ struct usbdevfs_ioctl32 {
 	compat_caddr_t data;
 };
 #endif
-#endif /* __KERNEL__ */
+#endif 
 
 #define USBDEVFS_CONTROL           _IOWR('U', 0, struct usbdevfs_ctrltransfer)
 #define USBDEVFS_CONTROL32           _IOWR('U', 0, struct usbdevfs_ctrltransfer32)
@@ -204,4 +195,4 @@ struct usbdevfs_ioctl32 {
 #define USBDEVFS_CONNECT           _IO('U', 23)
 #define USBDEVFS_CLAIM_PORT        _IOR('U', 24, unsigned int)
 #define USBDEVFS_RELEASE_PORT      _IOR('U', 25, unsigned int)
-#endif /* _LINUX_USBDEVICE_FS_H */
+#endif 

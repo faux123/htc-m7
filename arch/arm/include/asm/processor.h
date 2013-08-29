@@ -11,10 +11,6 @@
 #ifndef __ASM_ARM_PROCESSOR_H
 #define __ASM_ARM_PROCESSOR_H
 
-/*
- * Default implementation of macro that returns current
- * instruction pointer ("program counter").
- */
 #define current_text_addr() ({ __label__ _l; _l: &&_l;})
 
 #ifdef __KERNEL__
@@ -29,6 +25,8 @@
 #define STACK_TOP_MAX	TASK_SIZE
 #endif
 
+extern unsigned int boot_reason;
+
 struct debug_info {
 #ifdef CONFIG_HAVE_HW_BREAKPOINT
 	struct perf_event	*hbp[ARM_MAX_HBP_SLOTS];
@@ -36,11 +34,11 @@ struct debug_info {
 };
 
 struct thread_struct {
-							/* fault info	  */
+							
 	unsigned long		address;
 	unsigned long		trap_no;
 	unsigned long		error_code;
-							/* debugging	  */
+							
 	struct debug_info	debug;
 };
 
@@ -63,21 +61,18 @@ struct thread_struct {
 	if (elf_hwcap & HWCAP_THUMB && pc & 1)				\
 		regs->ARM_cpsr |= PSR_T_BIT;				\
 	regs->ARM_cpsr |= PSR_ENDSTATE;					\
-	regs->ARM_pc = pc & ~1;		/* pc */			\
-	regs->ARM_sp = sp;		/* sp */			\
-	regs->ARM_r2 = stack[2];	/* r2 (envp) */			\
-	regs->ARM_r1 = stack[1];	/* r1 (argv) */			\
-	regs->ARM_r0 = stack[0];	/* r0 (argc) */			\
+	regs->ARM_pc = pc & ~1;					\
+	regs->ARM_sp = sp;					\
+	regs->ARM_r2 = stack[2];				\
+	regs->ARM_r1 = stack[1];				\
+	regs->ARM_r0 = stack[0];				\
 	nommu_start_thread(regs);					\
 })
 
-/* Forward declaration, a strange C thing */
 struct task_struct;
 
-/* Free all resources held by a thread. */
 extern void release_thread(struct task_struct *);
 
-/* Prepare to copy thread state - unlazy all lazy status */
 #define prepare_to_copy(tsk)	do { } while (0)
 
 unsigned long get_wchan(struct task_struct *p);
@@ -90,9 +85,6 @@ unsigned long get_wchan(struct task_struct *p);
 
 void cpu_idle_wait(void);
 
-/*
- * Create a new kernel thread
- */
 extern int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags);
 
 #define task_pt_regs(p) \
@@ -101,9 +93,6 @@ extern int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags);
 #define KSTK_EIP(tsk)	task_pt_regs(tsk)->ARM_pc
 #define KSTK_ESP(tsk)	task_pt_regs(tsk)->ARM_sp
 
-/*
- * Prefetching support - only ARMv5.
- */
 #if __LINUX_ARM_ARCH__ >= 5
 
 #define ARCH_HAS_PREFETCH
@@ -124,8 +113,6 @@ static inline void prefetch(const void *ptr)
 
 #endif
 
-#define HAVE_ARCH_PICK_MMAP_LAYOUT
-
 #endif
 
-#endif /* __ASM_ARM_PROCESSOR_H */
+#endif 

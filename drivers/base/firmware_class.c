@@ -28,7 +28,6 @@ MODULE_AUTHOR("Manuel Estrada Sainz");
 MODULE_DESCRIPTION("Multi purpose firmware loading support");
 MODULE_LICENSE("GPL");
 
-/* Builtin firmware support */
 
 #ifdef CONFIG_FW_LOADER
 
@@ -61,7 +60,7 @@ static bool fw_is_builtin_firmware(const struct firmware *fw)
 	return false;
 }
 
-#else /* Module case - no builtin firmware support */
+#else 
 
 static inline bool fw_get_builtin_firmware(struct firmware *fw, const char *name)
 {
@@ -80,15 +79,13 @@ enum {
 	FW_STATUS_ABORT,
 };
 
-static int loading_timeout = 60;	/* In seconds */
+static int loading_timeout = 60;	
 
 static inline long firmware_loading_timeout(void)
 {
 	return loading_timeout > 0 ? loading_timeout * HZ : MAX_SCHEDULE_TIMEOUT;
 }
 
-/* fw_lock could be moved to 'struct firmware_priv' but since it is just
- * guarding for corner cases a global lock should be OK */
 static DEFINE_MUTEX(fw_lock);
 
 struct firmware_priv {
@@ -123,19 +120,6 @@ static ssize_t firmware_timeout_show(struct class *class,
 	return sprintf(buf, "%d\n", loading_timeout);
 }
 
-/**
- * firmware_timeout_store - set number of seconds to wait for firmware
- * @class: device class pointer
- * @attr: device attribute pointer
- * @buf: buffer to scan for timeout value
- * @count: number of bytes in @buf
- *
- *	Sets the number of seconds to wait for the firmware.  Once
- *	this expires an error will be returned to the driver and no
- *	firmware will be provided.
- *
- *	Note: zero means 'wait forever'.
- **/
 static ssize_t firmware_timeout_store(struct class *class,
 				      struct class_attribute *attr,
 				      const char *buf, size_t count)
@@ -207,7 +191,6 @@ static void firmware_free_data(const struct firmware *fw)
 	}
 }
 
-/* Some architectures don't have PAGE_KERNEL_RO */
 #ifndef PAGE_KERNEL_RO
 #define PAGE_KERNEL_RO PAGE_KERNEL
 #endif
@@ -241,7 +224,7 @@ static ssize_t firmware_loading_store(struct device *dev,
 	case 1:
 		firmware_free_data(fw_priv->fw);
 		memset(fw_priv->fw, 0, sizeof(struct firmware));
-		/* If the pages are not owned by 'struct firmware' */
+		
 		for (i = 0; i < fw_priv->nr_pages; i++)
 			__free_page(fw_priv->pages[i]);
 		kfree(fw_priv->pages);
@@ -260,7 +243,7 @@ static ssize_t firmware_loading_store(struct device *dev,
 				dev_err(dev, "%s: vmap() failed\n", __func__);
 				goto err;
 			}
-			/* Pages are now owned by 'struct firmware' */
+			
 			fw_priv->fw->pages = fw_priv->pages;
 			fw_priv->pages = NULL;
 
@@ -270,10 +253,10 @@ static ssize_t firmware_loading_store(struct device *dev,
 			clear_bit(FW_STATUS_LOADING, &fw_priv->status);
 			break;
 		}
-		/* fallthrough */
+		
 	default:
 		dev_err(dev, "%s: unexpected value (%d)\n", __func__, loading);
-		/* fallthrough */
+		
 	case -1:
 	err:
 		fw_load_abort(fw_priv);
@@ -334,7 +317,7 @@ static int fw_realloc_buffer(struct firmware_priv *fw_priv, int min_size)
 {
 	int pages_needed = ALIGN(min_size, PAGE_SIZE) >> PAGE_SHIFT;
 
-	/* If the array of pages is too small, grow it... */
+	
 	if (fw_priv->page_array_size < pages_needed) {
 		int new_array_size = max(pages_needed,
 					 fw_priv->page_array_size * 2);
@@ -514,7 +497,7 @@ static int _request_firmware_load(struct firmware_priv *fw_priv, bool uevent,
 
 	dev_set_uevent_suppress(f_dev, true);
 
-	/* Need to pin this module until class device is destroyed */
+	
 	__module_get(THIS_MODULE);
 
 	retval = device_add(f_dev);
@@ -566,21 +549,6 @@ err_put_dev:
 	return retval;
 }
 
-/**
- * request_firmware: - send firmware request and wait for it
- * @firmware_p: pointer to firmware image
- * @name: name of firmware file
- * @device: device for which firmware is being loaded
- *
- *      @firmware_p will be used to return a firmware image by the name
- *      of @name for device @device.
- *
- *      Should be called from user context where sleeping is allowed.
- *
- *      @name will be used as $FIRMWARE in the uevent environment and
- *      should be distinctive enough not to be confused with any other
- *      firmware image for this or any other device.
- **/
 int
 request_firmware(const struct firmware **firmware_p, const char *name,
                  struct device *device)
@@ -607,10 +575,6 @@ request_firmware(const struct firmware **firmware_p, const char *name,
 	return ret;
 }
 
-/**
- * release_firmware: - release the resource associated with a firmware image
- * @fw: firmware resource to release
- **/
 void release_firmware(const struct firmware *fw)
 {
 	if (fw) {
@@ -620,7 +584,6 @@ void release_firmware(const struct firmware *fw)
 	}
 }
 
-/* Async support */
 struct firmware_work {
 	struct work_struct work;
 	struct module *module;
@@ -666,23 +629,6 @@ static void request_firmware_work_func(struct work_struct *work)
 	kfree(fw_work);
 }
 
-/**
- * request_firmware_nowait - asynchronous version of request_firmware
- * @module: module requesting the firmware
- * @uevent: sends uevent to copy the firmware image if this flag
- *	is non-zero else the firmware copy must be done manually.
- * @name: name of firmware file
- * @device: device for which firmware is being loaded
- * @gfp: allocation flags
- * @context: will be passed over to @cont, and
- *	@fw may be %NULL if firmware request fails.
- * @cont: function will be called asynchronously when the firmware
- *	request is over.
- *
- *	Asynchronous variant of request_firmware() for user contexts where
- *	it is not possible to sleep for long time. It can't be called
- *	in atomic contexts.
- **/
 int
 request_firmware_nowait(
 	struct module *module, bool uevent,

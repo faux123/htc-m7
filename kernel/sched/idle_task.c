@@ -1,22 +1,13 @@
 #include "sched.h"
 
-/*
- * idle-task scheduling class.
- *
- * (NOTE: these are not related to SCHED_IDLE tasks which are
- *  handled in sched_fair.c)
- */
 
 #ifdef CONFIG_SMP
 static int
 select_task_rq_idle(struct task_struct *p, int sd_flag, int flags)
 {
-	return task_cpu(p); /* IDLE tasks as never migrated */
+	return task_cpu(p); 
 }
-#endif /* CONFIG_SMP */
-/*
- * Idle tasks are unconditionally rescheduled:
- */
+#endif 
 static void check_preempt_curr_idle(struct rq *rq, struct task_struct *p, int flags)
 {
 	resched_task(rq->idle);
@@ -28,10 +19,6 @@ static struct task_struct *pick_next_task_idle(struct rq *rq)
 	return rq->idle;
 }
 
-/*
- * It is not legal to sleep in the idle task - print a warning
- * message if some code attempts to do it:
- */
 static void
 dequeue_task_idle(struct rq *rq, struct task_struct *p, int flags)
 {
@@ -69,14 +56,11 @@ static unsigned int get_rr_interval_idle(struct rq *rq, struct task_struct *task
 	return 0;
 }
 
-/*
- * Simple, special scheduling class for the per-CPU idle tasks:
- */
 const struct sched_class idle_sched_class = {
-	/* .next is NULL */
-	/* no enqueue/yield_task for idle tasks */
+	
+	
 
-	/* dequeue is not valid, we print a debug message there: */
+	
 	.dequeue_task		= dequeue_task_idle,
 
 	.check_preempt_curr	= check_preempt_curr_idle,

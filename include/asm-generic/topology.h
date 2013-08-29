@@ -29,8 +29,6 @@
 
 #ifndef	CONFIG_NUMA
 
-/* Other architectures wishing to use this simple topology API should fill
-   in the below functions as appropriate in their own <asm/topology.h> file. */
 #ifndef cpu_to_node
 #define cpu_to_node(cpu)	((void)(cpu),0)
 #endif
@@ -60,7 +58,7 @@
 				 cpumask_of_node(pcibus_to_node(bus)))
 #endif
 
-#endif	/* CONFIG_NUMA */
+#endif	
 
 #if !defined(CONFIG_NUMA) || !defined(CONFIG_HAVE_MEMORYLESS_NODES)
 
@@ -71,6 +69,6 @@
 #define set_cpu_numa_mem(cpu, node)
 #endif
 
-#endif	/* !CONFIG_NUMA || !CONFIG_HAVE_MEMORYLESS_NODES */
+#endif	
 
-#endif /* _ASM_GENERIC_TOPOLOGY_H */
+#endif 

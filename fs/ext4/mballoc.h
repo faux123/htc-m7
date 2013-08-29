@@ -22,20 +22,10 @@
 #include "ext4_jbd2.h"
 #include "ext4.h"
 
-/*
- * with AGGRESSIVE_CHECK allocator runs consistency checks over
- * structures. these checks slow things down a lot
- */
 #define AGGRESSIVE_CHECK__
 
-/*
- * with DOUBLE_CHECK defined mballoc creates persistent in-core
- * bitmaps, maintains and uses them to check for double allocations
- */
 #define DOUBLE_CHECK__
 
-/*
- */
 #ifdef CONFIG_EXT4_DEBUG
 extern u8 mb_enable_debug;
 
@@ -51,67 +41,41 @@ extern u8 mb_enable_debug;
 #define mb_debug(n, fmt, a...)
 #endif
 
-#define EXT4_MB_HISTORY_ALLOC		1	/* allocation */
-#define EXT4_MB_HISTORY_PREALLOC	2	/* preallocated blocks used */
+#define EXT4_MB_HISTORY_ALLOC		1	
+#define EXT4_MB_HISTORY_PREALLOC	2	
 
-/*
- * How long mballoc can look for a best extent (in found extents)
- */
 #define MB_DEFAULT_MAX_TO_SCAN		200
 
-/*
- * How long mballoc must look for a best extent
- */
 #define MB_DEFAULT_MIN_TO_SCAN		10
 
-/*
- * How many groups mballoc will scan looking for the best chunk
- */
 #define MB_DEFAULT_MAX_GROUPS_TO_SCAN	5
 
-/*
- * with 'ext4_mb_stats' allocator will collect stats that will be
- * shown at umount. The collecting costs though!
- */
 #define MB_DEFAULT_STATS		0
 
-/*
- * files smaller than MB_DEFAULT_STREAM_THRESHOLD are served
- * by the stream allocator, which purpose is to pack requests
- * as close each to other as possible to produce smooth I/O traffic
- * We use locality group prealloc space for stream request.
- * We can tune the same via /proc/fs/ext4/<parition>/stream_req
- */
-#define MB_DEFAULT_STREAM_THRESHOLD	16	/* 64K */
+#define MB_DEFAULT_STREAM_THRESHOLD	16	
 
-/*
- * for which requests use 2^N search using buddies
- */
 #define MB_DEFAULT_ORDER2_REQS		2
 
-/*
- * default group prealloc size 512 blocks
- */
 #define MB_DEFAULT_GROUP_PREALLOC	512
 
 
 struct ext4_free_data {
-	/* MUST be the first member */
+	
 	struct ext4_journal_cb_entry	efd_jce;
 
-	/* ext4_free_data private data starts from here */
+	
 
-	/* this links the free block information from group_info */
+	
 	struct rb_node			efd_node;
 
-	/* group which free block extent belongs */
+	
 	ext4_group_t			efd_group;
 
-	/* free block extent */
+	
 	ext4_grpblk_t			efd_start_cluster;
 	ext4_grpblk_t			efd_count;
 
-	/* transaction which freed this extent */
+	
 	tid_t				efd_tid;
 };
 
@@ -125,13 +89,13 @@ struct ext4_prealloc_space {
 	spinlock_t		pa_lock;
 	atomic_t		pa_count;
 	unsigned		pa_deleted;
-	ext4_fsblk_t		pa_pstart;	/* phys. block */
-	ext4_lblk_t		pa_lstart;	/* log. block */
-	ext4_grpblk_t		pa_len;		/* len of preallocated chunk */
-	ext4_grpblk_t		pa_free;	/* how many blocks are free */
-	unsigned short		pa_type;	/* pa type. inode or group */
+	ext4_fsblk_t		pa_pstart;	
+	ext4_lblk_t		pa_lstart;	
+	ext4_grpblk_t		pa_len;		
+	ext4_grpblk_t		pa_free;	
+	unsigned short		pa_type;	
 	spinlock_t		*pa_obj_lock;
-	struct inode		*pa_inode;	/* hack, for history only */
+	struct inode		*pa_inode;	
 };
 
 enum {
@@ -141,25 +105,17 @@ enum {
 
 struct ext4_free_extent {
 	ext4_lblk_t fe_logical;
-	ext4_grpblk_t fe_start;	/* In cluster units */
+	ext4_grpblk_t fe_start;	
 	ext4_group_t fe_group;
-	ext4_grpblk_t fe_len;	/* In cluster units */
+	ext4_grpblk_t fe_len;	
 };
 
-/*
- * Locality group:
- *   we try to group all related changes together
- *   so that writeback can flush/allocate them together as well
- *   Size of lg_prealloc_list hash is determined by MB_DEFAULT_GROUP_PREALLOC
- *   (512). We store prealloc space into the hash based on the pa_free blocks
- *   order value.ie, fls(pa_free)-1;
- */
 #define PREALLOC_TB_SIZE 10
 struct ext4_locality_group {
-	/* for allocator */
-	/* to serialize allocates */
+	
+	
 	struct mutex		lg_mutex;
-	/* list of preallocations */
+	
 	struct list_head	lg_prealloc_list[PREALLOC_TB_SIZE];
 	spinlock_t		lg_prealloc_lock;
 };
@@ -168,30 +124,29 @@ struct ext4_allocation_context {
 	struct inode *ac_inode;
 	struct super_block *ac_sb;
 
-	/* original request */
+	
 	struct ext4_free_extent ac_o_ex;
 
-	/* goal request (normalized ac_o_ex) */
+	
 	struct ext4_free_extent ac_g_ex;
 
-	/* the best found extent */
+	
 	struct ext4_free_extent ac_b_ex;
 
-	/* copy of the best found extent taken before preallocation efforts */
+	
 	struct ext4_free_extent ac_f_ex;
 
-	/* number of iterations done. we have to track to limit searching */
+	
 	unsigned long ac_ex_scanned;
 	__u16 ac_groups_scanned;
 	__u16 ac_found;
 	__u16 ac_tail;
 	__u16 ac_buddy;
-	__u16 ac_flags;		/* allocation hints */
+	__u16 ac_flags;		
 	__u8 ac_status;
 	__u8 ac_criteria;
-	__u8 ac_2order;		/* if request is to allocate 2^N blocks and
-				 * N > 0, the field stores N, otherwise 0 */
-	__u8 ac_op;		/* operation, for history only */
+	__u8 ac_2order;		
+	__u8 ac_op;		
 	struct page *ac_bitmap_page;
 	struct page *ac_buddy_page;
 	struct ext4_prealloc_space *ac_pa;
@@ -220,3 +175,5 @@ static inline ext4_fsblk_t ext4_grp_offs_to_block(struct super_block *sb,
 		(fex->fe_start << EXT4_SB(sb)->s_cluster_bits);
 }
 #endif
+
+extern atomic_t vfs_emergency_remount;
