@@ -103,9 +103,7 @@ static uint32_t minimum_interval_time = MIN_CSWAP_INTERVAL;
 #ifdef LMK_COUNT_READ
 static uint32_t lmk_count = 0;
 #endif
-
-extern void show_meminfo(void);
-static uint32_t lowmem_debug_level = 2;
+static uint32_t lowmem_debug_level = 1;
 static int lowmem_adj[6] = {
 	0,
 	1,
@@ -114,86 +112,20 @@ static int lowmem_adj[6] = {
 };
 static int lowmem_adj_size = 4;
 static int lowmem_minfree[6] = {
-	3 * 512,	
-	2 * 1024,	
-	4 * 1024,	
-	16 * 1024,	
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
 };
 static int lowmem_minfree_size = 4;
 
-static size_t lowmem_fork_boost_minfree[6] = {
-	0,
-	0,
-	0,
-	5120,
-	6177,
-	6177,
-};
-static int lowmem_fork_boost_minfree_size = 6;
-static size_t minfree_tmp[6] = {0, 0, 0, 0, 0, 0};
-
 static unsigned long lowmem_deathpending_timeout;
-static unsigned long lowmem_fork_boost_timeout;
-static uint32_t lowmem_fork_boost = 1;
 
 #define lowmem_print(level, x...)			\
 	do {						\
 		if (lowmem_debug_level >= (level))	\
 			printk(x);			\
 	} while (0)
-
-static int test_task_flag(struct task_struct *p, int flag)
-{
-	struct task_struct *t = p;
-
-	do {
-		task_lock(t);
-		if (test_tsk_thread_flag(t, flag)) {
-			task_unlock(t);
-			return 1;
-		}
-		task_unlock(t);
-	} while_each_thread(p, t);
-
-	return 0;
-}
-
-static int
-task_fork_notify_func(struct notifier_block *self, unsigned long val, void *data);
-
-static struct notifier_block task_fork_nb = {
-	.notifier_call = task_fork_notify_func,
-};
-
-static int
-task_fork_notify_func(struct notifier_block *self, unsigned long val, void *data)
-{
-	lowmem_fork_boost_timeout = jiffies + (HZ << 1);
-
-	return NOTIFY_OK;
-}
-
-#ifndef ENHANCED_LMK_ROUTINE 
-static void dump_tasks(void)
-{
-	struct task_struct *p;
-	struct task_struct *task;
-
-	pr_info("[ pid ]   uid  total_vm      rss cpu oom_adj  name\n");
-	for_each_process(p) {
-		task = find_lock_task_mm(p);
-		if (!task) {
-			continue;
-		}
-
-		pr_info("[%5d] %5d  %8lu %8lu %3u     %3d  %s\n",
-				task->pid, task_uid(task),
-				task->mm->total_vm, get_mm_rss(task->mm),
-				task_cpu(task), task->signal->oom_adj, task->comm);
-		task_unlock(task);
-	}
-}
-#endif
 
 static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 {
@@ -215,42 +147,24 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #else
 	int selected_tasksize = 0;
 	int selected_oom_score_adj;
-	int selected_oom_adj = 0;
 #endif
 	int array_size = ARRAY_SIZE(lowmem_adj);
 	int other_free = global_page_state(NR_FREE_PAGES);
-	int other_file = global_page_state(NR_FILE_PAGES) -
-		global_page_state(NR_SHMEM) - global_page_state(NR_MLOCK);
-	int fork_boost = 0;
-	size_t *min_array;
-
+	int other_file = global_page_state(NR_FILE_PAGES) - global_page_state(NR_SHMEM);
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 	other_file -= total_swapcache_pages;
 #endif
- 
-	if (lowmem_fork_boost &&
-		time_before_eq(jiffies, lowmem_fork_boost_timeout)) {
-		for (i = 0; i < lowmem_minfree_size; i++)
-			minfree_tmp[i] = lowmem_minfree[i] + lowmem_fork_boost_minfree[i];
-		min_array = minfree_tmp;
-	}
-	else
-		min_array = lowmem_minfree;
-
 	if (lowmem_adj_size < array_size)
 		array_size = lowmem_adj_size;
 	if (lowmem_minfree_size < array_size)
 		array_size = lowmem_minfree_size;
-
 	for (i = 0; i < array_size; i++) {
-		if (other_free < min_array[i] &&
-		    other_file < min_array[i]) {
+		if (other_free < lowmem_minfree[i] &&
+		    other_file < lowmem_minfree[i]) {
 			min_score_adj = lowmem_adj[i];
-			fork_boost = lowmem_fork_boost_minfree[i];
 			break;
 		}
 	}
-
 	if (sc->nr_to_scan > 0)
 		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, ma %d\n",
 				sc->nr_to_scan, sc->gfp_mask, other_free,
@@ -286,19 +200,19 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		if (tsk->flags & PF_KTHREAD)
 			continue;
 
-		if (time_before_eq(jiffies, lowmem_deathpending_timeout)) {
-			if (test_task_flag(tsk, TIF_MEMDIE)) {
-				rcu_read_unlock();
+		p = find_lock_task_mm(tsk);
+		if (!p)
+			continue;
+
+		if (test_tsk_thread_flag(p, TIF_MEMDIE) &&
+			time_before_eq(jiffies, lowmem_deathpending_timeout)) {
+				task_unlock(p);
+				read_unlock(&tasklist_lock);
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 				atomic_set(&s_reclaim.lmk_running, 0);
 #endif
 				return 0;
-			}
 		}
-
-		p = find_lock_task_mm(tsk);
-		if (!p)
-			continue;
 
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
@@ -358,12 +272,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 		selected = p;
 		selected_tasksize = tasksize;
 		selected_oom_score_adj = oom_score_adj;
-		selected_oom_adj = p->signal->oom_adj;
-		lowmem_print(2, "select %d (%s), oom_adj %d score_adj %d, size %d, to kill\n",
-			     p->pid, p->comm, selected_oom_adj, oom_score_adj, tasksize);
+		lowmem_print(2, "select %d (%s), adj %d, size %d, to kill\n",
+			     p->pid, p->comm, oom_score_adj, tasksize);
 #endif
 	}
-
 #ifdef ENHANCED_LMK_ROUTINE
 	for (i = 0; i < LOWMEM_DEATHPENDING_DEPTH; i++) {
 		if (selected[i]) {
@@ -383,18 +295,10 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	}
 #else
 	if (selected) {
-		lowmem_print(1, "[%s] send sigkill to %d (%s), oom_adj %d, score_adj %d,"
-			" min_score_adj %d, size %dK, free %dK, file %dK, fork_boost %dK\n",
-			     current->comm, selected->pid, selected->comm,
-			     selected_oom_adj, selected_oom_score_adj,
-			     min_score_adj, selected_tasksize << 2,
-			     other_free << 2, other_file << 2, fork_boost << 2);
+		lowmem_print(1, "send sigkill to %d (%s), adj %d, size %d\n",
+			     selected->pid, selected->comm,
+			     selected_oom_score_adj, selected_tasksize);
 		lowmem_deathpending_timeout = jiffies + HZ;
-		if (selected_oom_adj < 7)
-		{
-			show_meminfo();
-			dump_tasks();
-		}
 		send_sig(SIGKILL, selected, 0);
 		set_tsk_thread_flag(selected, TIF_MEMDIE);
 		rem -= selected_tasksize;
@@ -579,7 +483,6 @@ static struct shrinker lowmem_shrinker = {
 
 static int __init lowmem_init(void)
 {
-	task_fork_register(&task_fork_nb);
 	register_shrinker(&lowmem_shrinker);
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 	kcompcache_class = class_create(THIS_MODULE, "kcompcache");
@@ -615,7 +518,6 @@ error_create_kcompcache_class:
 static void __exit lowmem_exit(void)
 {
 	unregister_shrinker(&lowmem_shrinker);
-	task_fork_unregister(&task_fork_nb);
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 	if (s_reclaim.kcompcached) {
 		cancel_soft_reclaim();
@@ -675,7 +577,7 @@ static int lowmem_adj_array_set(const char *val, const struct kernel_param *kp)
 
 	ret = param_array_ops.set(val, kp);
 
-	
+	/* HACK: Autodetect oom_adj values in lowmem_adj array */
 	lowmem_autodetect_oom_adj_values();
 
 	return ret;
@@ -720,10 +622,6 @@ module_param_array_named(adj, lowmem_adj, int, &lowmem_adj_size,
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
-module_param_named(fork_boost, lowmem_fork_boost, uint, S_IRUGO | S_IWUSR);
-module_param_array_named(fork_boost_minfree, lowmem_fork_boost_minfree, uint,
-			 &lowmem_fork_boost_minfree_size, S_IRUGO | S_IWUSR);
-
 #ifdef LMK_COUNT_READ
 module_param_named(lmkcount, lmk_count, uint, S_IRUGO);
 #endif
