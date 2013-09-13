@@ -15,7 +15,6 @@
 #include <linux/compiler.h>
 #include <linux/sysctl.h>
 
-/* Responses from hook functions. */
 #define NF_DROP 0
 #define NF_ACCEPT 1
 #define NF_STOLEN 2
@@ -24,15 +23,10 @@
 #define NF_STOP 5
 #define NF_MAX_VERDICT NF_STOP
 
-/* we overload the higher bits for encoding auxiliary data such as the queue
- * number or errno values. Not nice, but better than additional function
- * arguments. */
 #define NF_VERDICT_MASK 0x000000ff
 
-/* extra verdict flags have mask 0x0000ff00 */
 #define NF_VERDICT_FLAG_QUEUE_BYPASS	0x00008000
 
-/* queue number (NF_QUEUE) or errno (NF_DROP) */
 #define NF_VERDICT_QMASK 0xffff0000
 #define NF_VERDICT_QBITS 16
 
@@ -40,14 +34,10 @@
 
 #define NF_DROP_ERR(x) (((-x) << 16) | NF_DROP)
 
-/* only for userspace compatibility */
 #ifndef __KERNEL__
-/* Generic cache responses from hook functions.
-   <= 0x2000 is used for protocol-flags. */
 #define NFC_UNKNOWN 0x4000
 #define NFC_ALTERED 0x8000
 
-/* NF_VERDICT_BITS should be 8 now, but userspace might break if this changes */
 #define NF_VERDICT_BITS 16
 #endif
 
@@ -96,7 +86,6 @@ static inline int nf_inet_addr_cmp(const union nf_inet_addr *a1,
 
 extern void netfilter_init(void);
 
-/* Largest hook number + 1 */
 #define NF_MAX_HOOKS 8
 
 struct sk_buff;
@@ -110,12 +99,12 @@ typedef unsigned int nf_hookfn(unsigned int hooknum,
 struct nf_hook_ops {
 	struct list_head list;
 
-	/* User fills in from here down. */
+	
 	nf_hookfn *hook;
 	struct module *owner;
 	u_int8_t pf;
 	unsigned int hooknum;
-	/* Hooks are ordered in ascending priority. */
+	
 	int priority;
 };
 
@@ -124,7 +113,7 @@ struct nf_sockopt_ops {
 
 	u_int8_t pf;
 
-	/* Non-inclusive ranges: use 0/0/NULL to never get called. */
+	
 	int set_optmin;
 	int set_optmax;
 	int (*set)(struct sock *sk, int optval, void __user *user, unsigned int len);
@@ -139,26 +128,22 @@ struct nf_sockopt_ops {
 	int (*compat_get)(struct sock *sk, int optval,
 			void __user *user, int *len);
 #endif
-	/* Use the module struct to lock set/get code in place */
+	
 	struct module *owner;
 };
 
-/* Function to register/unregister hook points. */
 int nf_register_hook(struct nf_hook_ops *reg);
 void nf_unregister_hook(struct nf_hook_ops *reg);
 int nf_register_hooks(struct nf_hook_ops *reg, unsigned int n);
 void nf_unregister_hooks(struct nf_hook_ops *reg, unsigned int n);
 
-/* Functions to register get/setsockopt ranges (non-inclusive).  You
-   need to check permissions yourself! */
 int nf_register_sockopt(struct nf_sockopt_ops *reg);
 void nf_unregister_sockopt(struct nf_sockopt_ops *reg);
 
 #ifdef CONFIG_SYSCTL
-/* Sysctl registration */
 extern struct ctl_path nf_net_netfilter_sysctl_path[];
 extern struct ctl_path nf_net_ipv4_netfilter_sysctl_path[];
-#endif /* CONFIG_SYSCTL */
+#endif 
 
 extern struct list_head nf_hooks[NFPROTO_NUMPROTO][NF_MAX_HOOKS];
 
@@ -184,13 +169,6 @@ int nf_hook_slow(u_int8_t pf, unsigned int hook, struct sk_buff *skb,
 		 struct net_device *indev, struct net_device *outdev,
 		 int (*okfn)(struct sk_buff *), int thresh);
 
-/**
- *	nf_hook_thresh - call a netfilter hook
- *	
- *	Returns 1 if the hook has allowed the packet to pass.  The function
- *	okfn must be invoked by the caller in this case.  Any other return
- *	value indicates the packet has been consumed by the hook.
- */
 static inline int nf_hook_thresh(u_int8_t pf, unsigned int hook,
 				 struct sk_buff *skb,
 				 struct net_device *indev,
@@ -209,22 +187,7 @@ static inline int nf_hook(u_int8_t pf, unsigned int hook, struct sk_buff *skb,
 	return nf_hook_thresh(pf, hook, skb, indev, outdev, okfn, INT_MIN);
 }
                    
-/* Activate hook; either okfn or kfree_skb called, unless a hook
-   returns NF_STOLEN (in which case, it's up to the hook to deal with
-   the consequences).
 
-   Returns -ERRNO if packet dropped.  Zero means queued, stolen or
-   accepted.
-*/
-
-/* RR:
-   > I don't want nf_hook to return anything because people might forget
-   > about async and trust the return value to mean "packet was ok".
-
-   AK:
-   Just document it clearly, then you can expect some sense from kernel
-   coders :)
-*/
 
 static inline int
 NF_HOOK_THRESH(uint8_t pf, unsigned int hook, struct sk_buff *skb,
@@ -258,7 +221,6 @@ NF_HOOK(uint8_t pf, unsigned int hook, struct sk_buff *skb,
 	return NF_HOOK_THRESH(pf, hook, skb, in, out, okfn, INT_MIN);
 }
 
-/* Call setsockopt() */
 int nf_setsockopt(struct sock *sk, u_int8_t pf, int optval, char __user *opt,
 		  unsigned int len);
 int nf_getsockopt(struct sock *sk, u_int8_t pf, int optval, char __user *opt,
@@ -270,9 +232,6 @@ int compat_nf_getsockopt(struct sock *sk, u_int8_t pf, int optval,
 		char __user *opt, int *len);
 #endif
 
-/* Call this before modifying an existing packet: ensures it is
-   modifiable and linear to the point you care about (writable_len).
-   Returns true or false. */
 extern int skb_make_writable(struct sk_buff *skb, unsigned int writable_len);
 
 struct flowi;
@@ -361,7 +320,7 @@ nf_nat_decode_session(struct sk_buff *skb, struct flowi *fl, u_int8_t family)
 extern struct proc_dir_entry *proc_net_netfilter;
 #endif
 
-#else /* !CONFIG_NETFILTER */
+#else 
 #define NF_HOOK(pf, hook, skb, indev, outdev, okfn) (okfn)(skb)
 #define NF_HOOK_COND(pf, hook, skb, indev, outdev, okfn, cond) (okfn)(skb)
 static inline int nf_hook_thresh(u_int8_t pf, unsigned int hook,
@@ -383,7 +342,7 @@ static inline void
 nf_nat_decode_session(struct sk_buff *skb, struct flowi *fl, u_int8_t family)
 {
 }
-#endif /*CONFIG_NETFILTER*/
+#endif 
 
 #if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
 extern void (*ip_ct_attach)(struct sk_buff *, struct sk_buff *) __rcu;
@@ -393,5 +352,5 @@ extern void (*nf_ct_destroy)(struct nf_conntrack *) __rcu;
 static inline void nf_ct_attach(struct sk_buff *new, struct sk_buff *skb) {}
 #endif
 
-#endif /*__KERNEL__*/
-#endif /*__LINUX_NETFILTER_H*/
+#endif 
+#endif 

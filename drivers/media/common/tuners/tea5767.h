@@ -63,4 +63,4 @@ static inline struct dvb_frontend *tea5767_attach(struct dvb_frontend *fe,
 }
 #endif
 
-#endif /* __TEA5767_H__ */
+#endif 

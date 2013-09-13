@@ -7,7 +7,6 @@
 #ifdef CONFIG_KMEMCHECK
 extern int kmemcheck_enabled;
 
-/* The slab-related functions. */
 void kmemcheck_alloc_shadow(struct page *page, int order, gfp_t flags, int node);
 void kmemcheck_free_shadow(struct page *page, int order);
 void kmemcheck_slab_alloc(struct kmem_cache *s, gfp_t gfpflags, void *object,
@@ -166,6 +165,6 @@ static inline bool kmemcheck_is_obj_initialized(unsigned long addr, size_t size)
 	do {					\
 	} while (0)
 
-#endif /* CONFIG_KMEMCHECK */
+#endif 
 
-#endif /* LINUX_KMEMCHECK_H */
+#endif 

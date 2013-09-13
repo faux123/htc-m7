@@ -25,28 +25,10 @@
 
 #ifdef CONFIG_RCU_TRACE
 #define RCU_TRACE(stmt) stmt
-#else /* #ifdef CONFIG_RCU_TRACE */
+#else 
 #define RCU_TRACE(stmt)
-#endif /* #else #ifdef CONFIG_RCU_TRACE */
+#endif 
 
-/*
- * Process-level increment to ->dynticks_nesting field.  This allows for
- * architectures that use half-interrupts and half-exceptions from
- * process context.
- *
- * DYNTICK_TASK_NEST_MASK defines a field of width DYNTICK_TASK_NEST_WIDTH
- * that counts the number of process-based reasons why RCU cannot
- * consider the corresponding CPU to be idle, and DYNTICK_TASK_NEST_VALUE
- * is the value used to increment or decrement this field.
- *
- * The rest of the bits could in principle be used to count interrupts,
- * but this would mean that a negative-one value in the interrupt
- * field could incorrectly zero out the DYNTICK_TASK_NEST_MASK field.
- * We therefore provide a two-bit guard field defined by DYNTICK_TASK_MASK
- * that is set to DYNTICK_TASK_FLAG upon initial exit from idle.
- * The DYNTICK_TASK_EXIT_IDLE value is thus the combined value used upon
- * initial exit from idle.
- */
 #define DYNTICK_TASK_NEST_WIDTH 7
 #define DYNTICK_TASK_NEST_VALUE ((LLONG_MAX >> DYNTICK_TASK_NEST_WIDTH) + 1)
 #define DYNTICK_TASK_NEST_MASK  (LLONG_MAX - DYNTICK_TASK_NEST_VALUE + 1)
@@ -55,11 +37,6 @@
 #define DYNTICK_TASK_EXIT_IDLE	   (DYNTICK_TASK_NEST_VALUE + \
 				    DYNTICK_TASK_FLAG)
 
-/*
- * debug_rcu_head_queue()/debug_rcu_head_unqueue() are used internally
- * by call_rcu() and rcu callback execution, and are therefore not part of the
- * RCU API. Leaving in rcupdate.h because they are used by all RCU flavors.
- */
 
 #ifdef CONFIG_DEBUG_OBJECTS_RCU_HEAD
 # define STATE_RCU_HEAD_READY	0
@@ -82,7 +59,7 @@ static inline void debug_rcu_head_unqueue(struct rcu_head *head)
 				  STATE_RCU_HEAD_READY);
 	debug_object_deactivate(head, &rcuhead_debug_descr);
 }
-#else	/* !CONFIG_DEBUG_OBJECTS_RCU_HEAD */
+#else	
 static inline void debug_rcu_head_queue(struct rcu_head *head)
 {
 }
@@ -90,7 +67,7 @@ static inline void debug_rcu_head_queue(struct rcu_head *head)
 static inline void debug_rcu_head_unqueue(struct rcu_head *head)
 {
 }
-#endif	/* #else !CONFIG_DEBUG_OBJECTS_RCU_HEAD */
+#endif	
 
 extern void kfree(const void *);
 
@@ -109,4 +86,4 @@ static inline bool __rcu_reclaim(char *rn, struct rcu_head *head)
 	}
 }
 
-#endif /* __LINUX_RCU_H */
+#endif 

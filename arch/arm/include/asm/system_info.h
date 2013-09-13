@@ -14,7 +14,6 @@
 
 #ifndef __ASSEMBLY__
 
-/* information about the system we're running on */
 extern unsigned int system_rev;
 extern unsigned int system_serial_low;
 extern unsigned int system_serial_high;
@@ -22,6 +21,6 @@ extern unsigned int mem_fclk_21285;
 
 extern int __pure cpu_architecture(void);
 
-#endif /* !__ASSEMBLY__ */
+#endif 
 
-#endif /* __ASM_ARM_SYSTEM_INFO_H */
+#endif 

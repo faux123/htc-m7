@@ -16,7 +16,6 @@
  * Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* this file is part of ehci-hcd.c */
 
 #define ehci_dbg(ehci, fmt, args...) \
 	dev_dbg (ehci_to_hcd(ehci)->self.controller , fmt , ## args )
@@ -35,11 +34,7 @@
 
 #ifdef	DEBUG
 
-/* check the values in the HCSPARAMS register
- * (host controller _Structural_ parameters)
- * see EHCI spec, Table 2-4 for each value
- */
-static void dbg_hcs_params (struct ehci_hcd *ehci, char *label)
+static void __maybe_unused dbg_hcs_params (struct ehci_hcd *ehci, char *label)
 {
 	u32	params = ehci_readl(ehci, &ehci->caps->hcs_params);
 
@@ -54,14 +49,14 @@ static void dbg_hcs_params (struct ehci_hcd *ehci, char *label)
 		HCS_PPC (params) ? "" : " !ppc",
 		HCS_N_PORTS (params)
 		);
-	/* Port routing, per EHCI 0.95 Spec, Section 2.2.5 */
+	
 	if (HCS_PORTROUTED (params)) {
 		int i;
 		char buf [46], tmp [7], byte;
 
 		buf[0] = 0;
 		for (i = 0; i < HCS_N_PORTS (params); i++) {
-			// FIXME MIPS won't readb() ...
+			
 			byte = readb (&ehci->caps->portroute[(i>>1)]);
 			sprintf(tmp, "%d ",
 				((i & 0x1) ? ((byte)&0xf) : ((byte>>4)&0xf)));
@@ -79,11 +74,7 @@ static inline void dbg_hcs_params (struct ehci_hcd *ehci, char *label) {}
 
 #ifdef	DEBUG
 
-/* check the values in the HCCPARAMS register
- * (host controller _Capability_ parameters)
- * see EHCI Spec, Table 2-5 for each value
- * */
-static void dbg_hcc_params (struct ehci_hcd *ehci, char *label)
+static void __maybe_unused dbg_hcc_params (struct ehci_hcd *ehci, char *label)
 {
 	u32	params = ehci_readl(ehci, &ehci->caps->hcc_params);
 
@@ -259,10 +250,10 @@ dbg_port_buf (char *buf, unsigned len, const char *label, int port, u32 status)
 {
 	char	*sig;
 
-	/* signaling state */
+	
 	switch (status & (3 << 10)) {
 	case 0 << 10: sig = "se0"; break;
-	case 1 << 10: sig = "k"; break;		/* low speed */
+	case 1 << 10: sig = "k"; break;		
 	case 2 << 10: sig = "j"; break;
 	default: sig = "?"; break;
 	}
@@ -271,7 +262,7 @@ dbg_port_buf (char *buf, unsigned len, const char *label, int port, u32 status)
 		"%s%sport:%d status %06x %d %s%s%s%s%s%s "
 		"sig=%s%s%s%s%s%s%s%s%s%s%s",
 		label, label [0] ? " " : "", port, status,
-		status>>25,/*device address */
+		status>>25,
 		(status & PORT_SSTS)>>23 == PORTSC_SUSPEND_STS_ACK ?
 						" ACK" : "",
 		(status & PORT_SSTS)>>23 == PORTSC_SUSPEND_STS_NYET ?
@@ -316,9 +307,8 @@ static inline int __maybe_unused
 dbg_port_buf (char *buf, unsigned len, const char *label, int port, u32 status)
 { return 0; }
 
-#endif	/* DEBUG */
+#endif	
 
-/* functions have the "wrong" filename when they're output... */
 #define dbg_status(ehci, label, status) { \
 	char _buf [80]; \
 	dbg_status_buf (_buf, sizeof _buf, label, status); \
@@ -337,7 +327,6 @@ dbg_port_buf (char *buf, unsigned len, const char *label, int port, u32 status)
 	ehci_dbg (ehci, "%s\n", _buf); \
 }
 
-/*-------------------------------------------------------------------------*/
 
 #ifdef STUB_DEBUG_FILES
 
@@ -346,7 +335,6 @@ static inline void remove_debug_files (struct ehci_hcd *bus) { }
 
 #else
 
-/* troubleshooting help: expose state in debugfs */
 
 static int debug_async_open(struct inode *, struct file *);
 static int debug_periodic_open(struct inode *, struct file *);
@@ -394,10 +382,10 @@ static const struct file_operations debug_lpm_fops = {
 static struct dentry *ehci_debug_root;
 
 struct debug_buffer {
-	ssize_t (*fill_func)(struct debug_buffer *);	/* fill method */
+	ssize_t (*fill_func)(struct debug_buffer *);	
 	struct usb_bus *bus;
-	struct mutex mutex;	/* protect filling of buffer */
-	size_t count;		/* number of characters filled into buffer */
+	struct mutex mutex;	
+	size_t count;		
 	char *output_buf;
 	size_t alloc_size;
 };
@@ -420,7 +408,7 @@ static inline char token_mark(struct ehci_hcd *ehci, __hc32 token)
 		return '-';
 	if (!IS_SHORT_READ (v))
 		return ' ';
-	/* tries to advance through hw_alt_next */
+	
 	return '/';
 }
 
@@ -442,17 +430,17 @@ static void qh_lines (
 	__le32			list_end = EHCI_LIST_END(ehci);
 	struct ehci_qh_hw	*hw = qh->hw;
 
-	if (hw->hw_qtd_next == list_end)	/* NEC does this */
+	if (hw->hw_qtd_next == list_end)	
 		mark = '@';
 	else
 		mark = token_mark(ehci, hw->hw_token);
-	if (mark == '/') {	/* qh_alt_next controls qh advance? */
+	if (mark == '/') {	
 		if ((hw->hw_alt_next & QTD_MASK(ehci))
 				== ehci->async->hw->hw_alt_next)
-			mark = '#';	/* blocked */
+			mark = '#';	
 		else if (hw->hw_alt_next == list_end)
-			mark = '.';	/* use hw_qtd_next */
-		/* else alt_next points to some other qtd */
+			mark = '.';	
+		
 	}
 	scratch = hc32_to_cpup(ehci, &hw->hw_info1);
 	hw_curr = (mark == '*') ? hc32_to_cpup(ehci, &hw->hw_current) : 0;
@@ -469,7 +457,7 @@ static void qh_lines (
 	size -= temp;
 	next += temp;
 
-	/* hc may be modifying the list as we read it ... */
+	
 	list_for_each (entry, &qh->qtd_list) {
 		td = list_entry (entry, struct ehci_qtd, qtd_list);
 		scratch = hc32_to_cpup(ehci, &td->hw_token);
@@ -531,10 +519,6 @@ static ssize_t fill_async_buffer(struct debug_buffer *buf)
 
 	*next = 0;
 
-	/* dumps a snapshot of the async schedule.
-	 * usually empty except for long-term bulk reads, or head.
-	 * one QH per line, and TDs we know about
-	 */
 	spin_lock_irqsave (&ehci->lock, flags);
 	for (qh = ehci->async->qh_next.qh; size > 0 && qh; qh = qh->qh_next.qh)
 		qh_lines (ehci, qh, &next, &size);
@@ -576,9 +560,6 @@ static ssize_t fill_periodic_buffer(struct debug_buffer *buf)
 	size -= temp;
 	next += temp;
 
-	/* dump a snapshot of the periodic schedule.
-	 * iso changes, interrupt usually doesn't.
-	 */
 	spin_lock_irqsave (&ehci->lock, flags);
 	for (i = 0; i < ehci->periodic_size; i++) {
 		p = ehci->pshadow [i];
@@ -600,12 +581,12 @@ static ssize_t fill_periodic_buffer(struct debug_buffer *buf)
 						p.qh->period,
 						hc32_to_cpup(ehci,
 							&hw->hw_info2)
-							/* uframe masks */
+							
 							& (QH_CMASK | QH_SMASK),
 						p.qh);
 				size -= temp;
 				next += temp;
-				/* don't repeat what follows this qh */
+				
 				for (temp = 0; temp < seen_count; temp++) {
 					if (seen [temp].ptr != p.ptr)
 						continue;
@@ -617,14 +598,14 @@ static ssize_t fill_periodic_buffer(struct debug_buffer *buf)
 					}
 					break;
 				}
-				/* show more info the first time around */
+				
 				if (temp == seen_count) {
 					u32	scratch = hc32_to_cpup(ehci,
 							&hw->hw_info1);
 					struct ehci_qtd	*qtd;
 					char		*type = "";
 
-					/* count tds, get ep direction */
+					
 					temp = 0;
 					list_for_each_entry (qtd,
 							&p.qh->qtd_list,
@@ -737,7 +718,7 @@ static ssize_t fill_registers_buffer(struct debug_buffer *buf)
 		goto done;
 	}
 
-	/* Capability Registers */
+	
 	i = HC_VERSION(ehci, ehci_readl(ehci, &ehci->caps->hc_capbase));
 	temp = scnprintf (next, size,
 		"bus %s, device %s\n"
@@ -751,7 +732,7 @@ static ssize_t fill_registers_buffer(struct debug_buffer *buf)
 	next += temp;
 
 #ifdef	CONFIG_PCI
-	/* EHCI 0.96 and later may have "extended capabilities" */
+	
 	if (hcd->self.controller->bus == &pci_bus_type) {
 		struct pci_dev	*pdev;
 		u32		offset, cap, cap2;
@@ -778,10 +759,10 @@ static ssize_t fill_registers_buffer(struct debug_buffer *buf)
 				size -= temp;
 				next += temp;
 				break;
-			case 0:		/* illegal reserved capability */
+			case 0:		
 				cap = 0;
-				/* FALLTHROUGH */
-			default:		/* unknown */
+				
+			default:		
 				break;
 			}
 			temp = (cap >> 8) & 0xff;
@@ -789,7 +770,7 @@ static ssize_t fill_registers_buffer(struct debug_buffer *buf)
 	}
 #endif
 
-	// FIXME interpret both types of params
+	
 	i = ehci_readl(ehci, &ehci->caps->hcs_params);
 	temp = scnprintf (next, size, "structural params 0x%08x\n", i);
 	size -= temp;
@@ -800,7 +781,7 @@ static ssize_t fill_registers_buffer(struct debug_buffer *buf)
 	size -= temp;
 	next += temp;
 
-	/* Operational Registers */
+	
 	temp = dbg_status_buf (scratch, sizeof scratch, label,
 			ehci_readl(ehci, &ehci->regs->status));
 	temp = scnprintf (next, size, fmt, temp, scratch);
@@ -977,7 +958,7 @@ static int debug_lpm_close(struct inode *inode, struct file *file)
 static ssize_t debug_lpm_read(struct file *file, char __user *user_buf,
 				   size_t count, loff_t *ppos)
 {
-	/* TODO: show lpm stats */
+	
 	return 0;
 }
 
@@ -1086,4 +1067,4 @@ static inline void remove_debug_files (struct ehci_hcd *ehci)
 	debugfs_remove_recursive(ehci->debug_dir);
 }
 
-#endif /* STUB_DEBUG_FILES */
+#endif 

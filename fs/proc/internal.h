@@ -28,6 +28,11 @@ static inline int proc_net_init(void) { return 0; }
 
 struct vmalloc_info {
 	unsigned long	used;
+	unsigned long	ioremap;
+	unsigned long	alloc;
+	unsigned long	map;
+	unsigned long	usermap;
+	unsigned long	vpages;
 	unsigned long	largest_chunk;
 };
 
@@ -42,6 +47,11 @@ extern void get_vmalloc_info(struct vmalloc_info *vmi);
 #define get_vmalloc_info(vmi)			\
 do {						\
 	(vmi)->used = 0;			\
+	(vmi)->ioremap = 0;		\
+	(vmi)->alloc = 0;		\
+	(vmi)->map = 0;		\
+	(vmi)->usermap = 0;		\
+	(vmi)->vpages = 0;		\
 	(vmi)->largest_chunk = 0;		\
 } while(0)
 #endif
@@ -125,19 +135,11 @@ int proc_fill_super(struct super_block *);
 struct inode *proc_get_inode(struct super_block *, struct proc_dir_entry *);
 int proc_remount(struct super_block *sb, int *flags, char *data);
 
-/*
- * These are generic /proc routines that use the internal
- * "struct proc_dir_entry" tree to traverse the filesystem.
- *
- * The /proc root directory has extended versions to take care
- * of the /proc/<pid> subdirectories.
- */
 int proc_readdir(struct file *, void *, filldir_t);
 struct dentry *proc_lookup(struct inode *, struct dentry *, struct nameidata *);
 
 
 
-/* Lookups */
 typedef struct dentry *instantiate_t(struct inode *, struct dentry *,
 				struct task_struct *, const void *);
 int proc_fill_cache(struct file *filp, void *dirent, filldir_t filldir,

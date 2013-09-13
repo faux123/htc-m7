@@ -40,30 +40,26 @@ struct cpu_context_save {
 	__u32	fp;
 	__u32	sp;
 	__u32	pc;
-	__u32	extra[2];		/* Xscale 'acc' register, etc */
+	__u32	extra[2];		
 };
 
-/*
- * low level task data that entry.S needs immediate access to.
- * __switch_to() assumes cpu_context follows immediately after cpu_domain.
- */
 struct thread_info {
-	unsigned long		flags;		/* low level flags */
-	int			preempt_count;	/* 0 => preemptable, <0 => bug */
-	mm_segment_t		addr_limit;	/* address limit */
-	struct task_struct	*task;		/* main task structure */
-	struct exec_domain	*exec_domain;	/* execution domain */
-	__u32			cpu;		/* cpu */
-	__u32			cpu_domain;	/* cpu domain */
-	struct cpu_context_save	cpu_context;	/* cpu context */
-	__u32			syscall;	/* syscall number */
-	__u8			used_cp[16];	/* thread used copro */
+	unsigned long		flags;		
+	int			preempt_count;	
+	mm_segment_t		addr_limit;	
+	struct task_struct	*task;		
+	struct exec_domain	*exec_domain;	
+	__u32			cpu;		
+	__u32			cpu_domain;	
+	struct cpu_context_save	cpu_context;	
+	__u32			syscall;	
+	__u8			used_cp[16];	
 	unsigned long		tp_value;
 	struct crunch_state	crunchstate;
 	union fp_state		fpstate __attribute__((aligned(8)));
 	union vfp_state		vfpstate;
 #ifdef CONFIG_ARM_THUMBEE
-	unsigned long		thumbee_state;	/* ThumbEE Handler Base register */
+	unsigned long		thumbee_state;	
 #endif
 	struct restart_block	restart_block;
 };
@@ -86,9 +82,6 @@ struct thread_info {
 #define init_thread_info	(init_thread_union.thread_info)
 #define init_stack		(init_thread_union.stack)
 
-/*
- * how to get the thread information struct from C
- */
 static inline struct thread_info *current_thread_info(void) __attribute_const__;
 
 static inline struct thread_info *current_thread_info(void)
@@ -127,30 +120,16 @@ extern int vfp_restore_user_hwstate(struct user_vfp __user *,
 				    struct user_vfp_exc __user *);
 #endif
 
-/*
- * We use bit 30 of the preempt_count to indicate that kernel
- * preemption is occurring.  See <asm/hardirq.h>.
- */
 #define PREEMPT_ACTIVE	0x40000000
 
-/*
- * thread information flags:
- *  TIF_SYSCALL_TRACE	- syscall trace active
- *  TIF_SYSCAL_AUDIT	- syscall auditing active
- *  TIF_SIGPENDING	- signal pending
- *  TIF_NEED_RESCHED	- rescheduling necessary
- *  TIF_NOTIFY_RESUME	- callback before returning to user
- *  TIF_USEDFPU		- FPU was used by this task this quantum (SMP)
- *  TIF_POLLING_NRFLAG	- true if poll_idle() is polling TIF_NEED_RESCHED
- */
 #define TIF_SIGPENDING		0
 #define TIF_NEED_RESCHED	1
-#define TIF_NOTIFY_RESUME	2	/* callback before returning to user */
+#define TIF_NOTIFY_RESUME	2	
 #define TIF_SYSCALL_TRACE	8
 #define TIF_SYSCALL_AUDIT	9
 #define TIF_POLLING_NRFLAG	16
 #define TIF_USING_IWMMXT	17
-#define TIF_MEMDIE		18	/* is terminating due to OOM killer */
+#define TIF_MEMDIE		18	
 #define TIF_RESTORE_SIGMASK	20
 #define TIF_SECCOMP		21
 
@@ -164,13 +143,9 @@ extern int vfp_restore_user_hwstate(struct user_vfp __user *,
 #define _TIF_RESTORE_SIGMASK	(1 << TIF_RESTORE_SIGMASK)
 #define _TIF_SECCOMP		(1 << TIF_SECCOMP)
 
-/* Checks for any syscall work in entry-common.S */
 #define _TIF_SYSCALL_WORK (_TIF_SYSCALL_TRACE | _TIF_SYSCALL_AUDIT)
 
-/*
- * Change these and you break ASM code in entry-common.S
- */
 #define _TIF_WORK_MASK		0x000000ff
 
-#endif /* __KERNEL__ */
-#endif /* __ASM_ARM_THREAD_INFO_H */
+#endif 
+#endif 

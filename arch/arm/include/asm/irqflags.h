@@ -5,9 +5,6 @@
 
 #include <asm/ptrace.h>
 
-/*
- * CPU interrupt mask handling.
- */
 #if __LINUX_ARM_ARCH__ >= 6
 
 static inline unsigned long arch_local_irq_save(void)
@@ -43,9 +40,6 @@ static inline void arch_local_irq_disable(void)
 #define local_fiq_disable() __asm__("cpsid f	@ __clf" : : : "memory", "cc")
 #else
 
-/*
- * Save the current interrupt enable state & disable IRQs
- */
 static inline unsigned long arch_local_irq_save(void)
 {
 	unsigned long flags, temp;
@@ -60,9 +54,6 @@ static inline unsigned long arch_local_irq_save(void)
 	return flags;
 }
 
-/*
- * Enable IRQs
- */
 static inline void arch_local_irq_enable(void)
 {
 	unsigned long temp;
@@ -75,9 +66,6 @@ static inline void arch_local_irq_enable(void)
 		: "memory", "cc");
 }
 
-/*
- * Disable IRQs
- */
 static inline void arch_local_irq_disable(void)
 {
 	unsigned long temp;
@@ -90,9 +78,6 @@ static inline void arch_local_irq_disable(void)
 		: "memory", "cc");
 }
 
-/*
- * Enable FIQs
- */
 #define local_fiq_enable()					\
 	({							\
 		unsigned long temp;				\
@@ -105,9 +90,6 @@ static inline void arch_local_irq_disable(void)
 	: "memory", "cc");					\
 	})
 
-/*
- * Disable FIQs
- */
 #define local_fiq_disable()					\
 	({							\
 		unsigned long temp;				\
@@ -122,9 +104,6 @@ static inline void arch_local_irq_disable(void)
 
 #endif
 
-/*
- * Save the current interrupt enable state.
- */
 static inline unsigned long arch_local_save_flags(void)
 {
 	unsigned long flags;
@@ -134,9 +113,6 @@ static inline unsigned long arch_local_save_flags(void)
 	return flags;
 }
 
-/*
- * restore saved IRQ & FIQ state
- */
 static inline void arch_local_irq_restore(unsigned long flags)
 {
 	asm volatile(

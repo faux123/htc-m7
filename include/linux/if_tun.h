@@ -20,10 +20,8 @@
 #include <linux/if_ether.h>
 #include <linux/filter.h>
 
-/* Read queue size */
 #define TUN_READQ_SIZE	500
 
-/* TUN device flags */
 #define TUN_TUN_DEV 	0x0001	
 #define TUN_TAP_DEV	0x0002
 #define TUN_TYPE_MASK   0x000f
@@ -35,7 +33,6 @@
 #define TUN_PERSIST 	0x0100	
 #define TUN_VNET_HDR 	0x0200
 
-/* Ioctl defines */
 #define TUNSETNOCSUM  _IOW('T', 200, int) 
 #define TUNSETDEBUG   _IOW('T', 201, int) 
 #define TUNSETIFF     _IOW('T', 202, int) 
@@ -54,7 +51,6 @@
 #define TUNGETVNETHDRSZ _IOR('T', 215, int)
 #define TUNSETVNETHDRSZ _IOW('T', 216, int)
 
-/* TUNSETIFF ifr flags */
 #define IFF_TUN		0x0001
 #define IFF_TAP		0x0002
 #define IFF_NO_PI	0x1000
@@ -62,32 +58,22 @@
 #define IFF_VNET_HDR	0x4000
 #define IFF_TUN_EXCL	0x8000
 
-/* Features for GSO (TUNSETOFFLOAD). */
-#define TUN_F_CSUM	0x01	/* You can hand me unchecksummed packets. */
-#define TUN_F_TSO4	0x02	/* I can handle TSO for IPv4 packets */
-#define TUN_F_TSO6	0x04	/* I can handle TSO for IPv6 packets */
-#define TUN_F_TSO_ECN	0x08	/* I can handle TSO with ECN bits. */
-#define TUN_F_UFO	0x10	/* I can handle UFO packets */
+#define TUN_F_CSUM	0x01	
+#define TUN_F_TSO4	0x02	
+#define TUN_F_TSO6	0x04	
+#define TUN_F_TSO_ECN	0x08	
+#define TUN_F_UFO	0x10	
 
-/* Protocol info prepended to the packets (when IFF_NO_PI is not set) */
 #define TUN_PKT_STRIP	0x0001
 struct tun_pi {
 	__u16  flags;
 	__be16 proto;
 };
 
-/*
- * Filter spec (used for SETXXFILTER ioctls)
- * This stuff is applicable only to the TAP (Ethernet) devices.
- * If the count is zero the filter is disabled and the driver accepts
- * all packets (promisc mode).
- * If the filter is enabled in order to accept broadcast packets
- * broadcast addr must be explicitly included in the addr list.
- */
-#define TUN_FLT_ALLMULTI 0x0001 /* Accept all multicast packets */
+#define TUN_FLT_ALLMULTI 0x0001 
 struct tun_filter {
-	__u16  flags; /* TUN_FLT_ flags see above */
-	__u16  count; /* Number of addresses */
+	__u16  flags; 
+	__u16  count; 
 	__u8   addr[0][ETH_ALEN];
 };
 
@@ -103,6 +89,6 @@ static inline struct socket *tun_get_socket(struct file *f)
 {
 	return ERR_PTR(-EINVAL);
 }
-#endif /* CONFIG_TUN */
-#endif /* __KERNEL__ */
-#endif /* __IF_TUN_H */
+#endif 
+#endif 
+#endif 

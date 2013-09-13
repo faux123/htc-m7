@@ -77,7 +77,7 @@ static inline int cfq_blkiocg_del_blkio_group(struct blkio_group *blkg)
 	return blkiocg_del_blkio_group(blkg);
 }
 
-#else /* CFQ_GROUP_IOSCHED */
+#else 
 static inline void cfq_blkiocg_update_io_add_stats(struct blkio_group *blkg,
 	struct blkio_group *curr_blkg, bool direction, bool sync) {}
 
@@ -111,5 +111,5 @@ static inline int cfq_blkiocg_del_blkio_group(struct blkio_group *blkg)
 	return 0;
 }
 
-#endif /* CFQ_GROUP_IOSCHED */
+#endif 
 #endif

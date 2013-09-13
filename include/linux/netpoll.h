@@ -1,8 +1,3 @@
-/*
- * Common code for low-level network console, dump, and debugger code
- *
- * Derived from netconsole, kgdb-over-ethernet, and netdump patches
- */
 
 #ifndef _LINUX_NETPOLL_H
 #define _LINUX_NETPOLL_H
@@ -22,7 +17,7 @@ struct netpoll {
 	u16 local_port, remote_port;
 	u8 remote_mac[ETH_ALEN];
 
-	struct list_head rx; /* rx_np list element */
+	struct list_head rx; 
 };
 
 struct netpoll_info {
@@ -30,9 +25,9 @@ struct netpoll_info {
 
 	int rx_flags;
 	spinlock_t rx_lock;
-	struct list_head rx_np; /* netpolls that registered an rx_hook */
+	struct list_head rx_np; 
 
-	struct sk_buff_head arp_tx; /* list of arp requests to reply to */
+	struct sk_buff_head arp_tx; 
 	struct sk_buff_head txq;
 
 	struct delayed_work tx_work;
@@ -73,7 +68,7 @@ static inline bool netpoll_rx(struct sk_buff *skb)
 		goto out;
 
 	spin_lock(&npinfo->rx_lock);
-	/* check rx_flags again with the lock held */
+	
 	if (npinfo->rx_flags && __netpoll_rx(skb))
 		ret = true;
 	spin_unlock(&npinfo->rx_lock);

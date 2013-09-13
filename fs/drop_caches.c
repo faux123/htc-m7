@@ -1,6 +1,3 @@
-/*
- * Implement the manual drop-all-pagecache function
- */
 
 #include <linux/kernel.h>
 #include <linux/mm.h>
@@ -10,7 +7,6 @@
 #include <linux/gfp.h>
 #include "internal.h"
 
-/* A global variable is a bit ugly, but it keeps the code simple */
 int sysctl_drop_caches;
 
 static void drop_pagecache_sb(struct super_block *sb, void *unused)

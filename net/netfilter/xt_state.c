@@ -1,4 +1,3 @@
-/* Kernel module to match connection tracking information. */
 
 /* (C) 1999-2001 Paul `Rusty' Russell
  * (C) 2002-2005 Netfilter Core Team <coreteam@netfilter.org>

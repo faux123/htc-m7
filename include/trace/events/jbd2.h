@@ -256,7 +256,6 @@ TRACE_EVENT(jbd2_write_superblock,
 		  MINOR(__entry->dev), __entry->write_op)
 );
 
-#endif /* _TRACE_JBD2_H */
+#endif 
 
-/* This part must be outside protection */
 #include <trace/define_trace.h>

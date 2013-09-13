@@ -38,7 +38,6 @@
 #define IPTOS_PREC_ROUTINE              0x00
 
 
-/* IP options */
 #define IPOPT_COPY		0x80
 #define IPOPT_CLASS_MASK	0x60
 #define IPOPT_NUMBER_MASK	0x1f
@@ -76,9 +75,9 @@
 #define IPOPT_EOL IPOPT_END
 #define IPOPT_TS  IPOPT_TIMESTAMP
 
-#define	IPOPT_TS_TSONLY		0		/* timestamps only */
-#define	IPOPT_TS_TSANDADDR	1		/* timestamps and addresses */
-#define	IPOPT_TS_PRESPEC	3		/* specified modules only */
+#define	IPOPT_TS_TSONLY		0		
+#define	IPOPT_TS_TSANDADDR	1		
+#define	IPOPT_TS_PRESPEC	3		
 
 #define IPV4_BEET_PHMAXLEN 8
 
@@ -101,7 +100,7 @@ struct iphdr {
 	__sum16	check;
 	__be32	saddr;
 	__be32	daddr;
-	/*The options start here. */
+	
 };
 
 #ifdef __KERNEL__
@@ -120,17 +119,17 @@ static inline struct iphdr *ipip_hdr(const struct sk_buff *skb)
 
 struct ip_auth_hdr {
 	__u8  nexthdr;
-	__u8  hdrlen;		/* This one is measured in 32 bit units! */
+	__u8  hdrlen;		
 	__be16 reserved;
 	__be32 spi;
-	__be32 seq_no;		/* Sequence number */
-	__u8  auth_data[0];	/* Variable len but >=4. Mind the 64 bit alignment! */
+	__be32 seq_no;		
+	__u8  auth_data[0];	
 };
 
 struct ip_esp_hdr {
 	__be32 spi;
-	__be32 seq_no;		/* Sequence number */
-	__u8  enc_data[0];	/* Variable len but >=8. Mind the 64 bit alignment! */
+	__be32 seq_no;		
+	__u8  enc_data[0];	
 };
 
 struct ip_comp_hdr {
@@ -146,4 +145,4 @@ struct ip_beet_phdr {
 	__u8 reserved;
 };
 
-#endif	/* _LINUX_IP_H */
+#endif	

@@ -156,7 +156,7 @@ static int ext4_sync_parent(struct inode *inode)
 			break;
 		memset(&wbc, 0, sizeof(wbc));
 		wbc.sync_mode = WB_SYNC_ALL;
-		wbc.nr_to_write = 0;         /* only write out the inode */
+		wbc.nr_to_write = 0;         
 		ret = sync_inode(inode, &wbc);
 		if (ret)
 			break;
@@ -165,15 +165,6 @@ static int ext4_sync_parent(struct inode *inode)
 	return ret;
 }
 
-/**
- * __sync_file - generic_file_fsync without the locking and filemap_write
- * @inode:	inode to sync
- * @datasync:	only sync essential metadata if true
- *
- * This is just generic_file_fsync without the locking.  This is needed for
- * nojournal mode to make sure this inodes data/metadata makes it to disk
- * properly.  The i_mutex should be held already.
- */
 static int __sync_inode(struct inode *inode, int datasync)
 {
 	int err;
@@ -191,19 +182,6 @@ static int __sync_inode(struct inode *inode, int datasync)
 	return ret;
 }
 
-/*
- * akpm: A new design for ext4_sync_file().
- *
- * This is only called from sys_fsync(), sys_fdatasync() and sys_msync().
- * There cannot be a transaction open by this task.
- * Another task could have dirtied this inode.  Its data can be in any
- * state in the journalling system.
- *
- * What we do is just kick off a commit and wait on it.  This will snapshot the
- * inode to disk.
- *
- * i_mutex lock is held when entering and exiting this function
- */
 
 int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 {
@@ -213,14 +191,27 @@ int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 	int ret;
 	tid_t commit_tid;
 	bool needs_barrier = false;
+#ifdef CONFIG_FSYNC_DEBUG
+	ktime_t fsync_t, fsync_diff;
+#endif
 
 	J_ASSERT(ext4_journal_current_handle() == NULL);
 
 	trace_ext4_sync_file_enter(file, datasync);
 
+#ifdef CONFIG_FSYNC_DEBUG
+	fsync_t = ktime_get();
+	ret = filemap_write_and_wait_range(inode->i_mapping, start, end);
+	fsync_diff = ktime_sub(ktime_get(), fsync_t);
+	if (ktime_to_ns(fsync_diff) >= 5000000000LL)
+		printk("%s: filemap_write_and_wait_range() takes %lld nsec\n", __func__, ktime_to_ns(fsync_diff));
+	if (ret)
+		return ret;
+#else
 	ret = filemap_write_and_wait_range(inode->i_mapping, start, end);
 	if (ret)
 		return ret;
+#endif
 	mutex_lock(&inode->i_mutex);
 
 	if (inode->i_sb->s_flags & MS_RDONLY)
@@ -237,20 +228,6 @@ int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 		goto out;
 	}
 
-	/*
-	 * data=writeback,ordered:
-	 *  The caller's filemap_fdatawrite()/wait will sync the data.
-	 *  Metadata is in the journal, we wait for proper transaction to
-	 *  commit here.
-	 *
-	 * data=journal:
-	 *  filemap_fdatawrite won't do anything (the buffers are clean).
-	 *  ext4_force_commit will write the file data into the journal and
-	 *  will wait on that.
-	 *  filemap_fdatawait() will encounter a ton of newly-dirtied pages
-	 *  (they were dirtied by commit).  But that's OK - the blocks are
-	 *  safe in-journal, which is all fsync() needs to ensure.
-	 */
 	if (ext4_should_journal_data(inode)) {
 		ret = ext4_force_commit(inode->i_sb);
 		goto out;
@@ -261,9 +238,27 @@ int ext4_sync_file(struct file *file, loff_t start, loff_t end, int datasync)
 	    !jbd2_trans_will_send_data_barrier(journal, commit_tid))
 		needs_barrier = true;
 	jbd2_log_start_commit(journal, commit_tid);
+#ifdef CONFIG_FSYNC_DEBUG
+	fsync_t = ktime_get();
 	ret = jbd2_log_wait_commit(journal, commit_tid);
-	if (needs_barrier)
+	fsync_diff = ktime_sub(ktime_get(), fsync_t);
+	if (ktime_to_ns(fsync_diff) >= 5000000000LL)
+		printk("%s: jbd2_log_wait_commit() takes %lld nsec\n", __func__, ktime_to_ns(fsync_diff));
+#else
+	ret = jbd2_log_wait_commit(journal, commit_tid);
+#endif
+
+	if (needs_barrier) {
+#ifdef CONFIG_FSYNC_DEBUG
+		fsync_t = ktime_get();
 		blkdev_issue_flush(inode->i_sb->s_bdev, GFP_KERNEL, NULL);
+		fsync_diff = ktime_sub(ktime_get(), fsync_t);
+		if (ktime_to_ns(fsync_diff) >= 5000000000LL)
+			printk("%s: blkdev_issue_flush() takes %lld nsec\n", __func__, ktime_to_ns(fsync_diff));
+#else
+	blkdev_issue_flush(inode->i_sb->s_bdev, GFP_KERNEL, NULL);
+#endif
+	}
  out:
 	mutex_unlock(&inode->i_mutex);
 	trace_ext4_sync_file_exit(inode, ret);

@@ -20,7 +20,6 @@ MODULE_ALIAS("ipt_tcp");
 MODULE_ALIAS("ip6t_udp");
 MODULE_ALIAS("ip6t_tcp");
 
-/* Returns 1 if the port is matched by the range, 0 otherwise */
 static inline bool
 port_match(u_int16_t min, u_int16_t max, u_int16_t port, bool invert)
 {
@@ -35,7 +34,7 @@ tcp_find_option(u_int8_t option,
 		bool invert,
 		bool *hotdrop)
 {
-	/* tcp.doff is only 4 bits, ie. max 15 * 4 bytes */
+	
 	const u_int8_t *op;
 	u_int8_t _opt[60 - sizeof(struct tcphdr)];
 	unsigned int i;
@@ -45,7 +44,7 @@ tcp_find_option(u_int8_t option,
 	if (!optlen)
 		return invert;
 
-	/* If we don't have the whole header, drop packet. */
+	
 	op = skb_header_pointer(skb, protoff + sizeof(struct tcphdr),
 				optlen, _opt);
 	if (op == NULL) {
@@ -69,17 +68,11 @@ static bool tcp_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	const struct xt_tcp *tcpinfo = par->matchinfo;
 
 	if (par->fragoff != 0) {
-		/* To quote Alan:
-
-		   Don't allow a fragment of TCP 8 bytes in. Nobody normal
-		   causes this. Its a cracker trying to break in by doing a
-		   flag overwrite to pass the direction checks.
-		*/
 		if (par->fragoff == 1) {
 			pr_debug("Dropping evil TCP offset=1 frag.\n");
 			par->hotdrop = true;
 		}
-		/* Must not be a fragment. */
+		
 		return false;
 	}
 
@@ -87,8 +80,6 @@ static bool tcp_mt(const struct sk_buff *skb, struct xt_action_param *par)
 
 	th = skb_header_pointer(skb, par->thoff, sizeof(_tcph), &_tcph);
 	if (th == NULL) {
-		/* We've been asked to examine this packet, and we
-		   can't.  Hence, no choice but to drop. */
 		pr_debug("Dropping evil TCP offset=0 tinygram.\n");
 		par->hotdrop = true;
 		return false;
@@ -124,7 +115,7 @@ static int tcp_mt_check(const struct xt_mtchk_param *par)
 {
 	const struct xt_tcp *tcpinfo = par->matchinfo;
 
-	/* Must specify no unknown invflags */
+	
 	return (tcpinfo->invflags & ~XT_TCP_INV_MASK) ? -EINVAL : 0;
 }
 
@@ -134,14 +125,12 @@ static bool udp_mt(const struct sk_buff *skb, struct xt_action_param *par)
 	struct udphdr _udph;
 	const struct xt_udp *udpinfo = par->matchinfo;
 
-	/* Must not be a fragment. */
+	
 	if (par->fragoff != 0)
 		return false;
 
 	uh = skb_header_pointer(skb, par->thoff, sizeof(_udph), &_udph);
 	if (uh == NULL) {
-		/* We've been asked to examine this packet, and we
-		   can't.  Hence, no choice but to drop. */
 		pr_debug("Dropping evil UDP tinygram.\n");
 		par->hotdrop = true;
 		return false;
@@ -159,7 +148,7 @@ static int udp_mt_check(const struct xt_mtchk_param *par)
 {
 	const struct xt_udp *udpinfo = par->matchinfo;
 
-	/* Must specify no unknown invflags */
+	
 	return (udpinfo->invflags & ~XT_UDP_INV_MASK) ? -EINVAL : 0;
 }
 

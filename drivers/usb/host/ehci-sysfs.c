@@ -16,10 +16,8 @@
  * Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-/* this file is part of ehci-hcd.c */
 
 
-/* Display the ports dedicated to the companion controller */
 static ssize_t show_companion(struct device *dev,
 			      struct device_attribute *attr,
 			      char *buf)
@@ -42,11 +40,6 @@ static ssize_t show_companion(struct device *dev,
 	return ptr - buf;
 }
 
-/*
- * Dedicate or undedicate a port to the companion controller.
- * Syntax is "[-]portnum", where a leading '-' sign means
- * return control of the port to the EHCI controller.
- */
 static ssize_t store_companion(struct device *dev,
 			       struct device_attribute *attr,
 			       const char *buf, size_t count)
@@ -55,12 +48,12 @@ static ssize_t store_companion(struct device *dev,
 	int			portnum, new_owner;
 
 	ehci = hcd_to_ehci(bus_to_hcd(dev_get_drvdata(dev)));
-	new_owner = PORT_OWNER;		/* Owned by companion */
+	new_owner = PORT_OWNER;		
 	if (sscanf(buf, "%d", &portnum) != 1)
 		return -EINVAL;
 	if (portnum < 0) {
 		portnum = - portnum;
-		new_owner = 0;		/* Owned by EHCI */
+		new_owner = 0;		
 	}
 	if (portnum <= 0 || portnum > HCS_N_PORTS(ehci->hcs_params))
 		return -ENOENT;
@@ -75,9 +68,6 @@ static ssize_t store_companion(struct device *dev,
 static DEVICE_ATTR(companion, 0644, show_companion, store_companion);
 
 
-/*
- * Display / Set uframe_periodic_max
- */
 static ssize_t show_uframe_periodic_max(struct device *dev,
 					struct device_attribute *attr,
 					char *buf)
@@ -114,17 +104,8 @@ static ssize_t store_uframe_periodic_max(struct device *dev,
 
 	ret = -EINVAL;
 
-	/*
-	 * lock, so that our checking does not race with possible periodic
-	 * bandwidth allocation through submitting new urbs.
-	 */
 	spin_lock_irqsave (&ehci->lock, flags);
 
-	/*
-	 * for request to decrease max periodic bandwidth, we have to check
-	 * every microframe in the schedule to see whether the decrease is
-	 * possible.
-	 */
 	if (uframe_periodic_max < ehci->uframe_periodic_max) {
 		allocated_max = 0;
 
@@ -143,7 +124,7 @@ static ssize_t store_uframe_periodic_max(struct device *dev,
 		}
 	}
 
-	/* increasing is always ok */
+	
 
 	ehci_info(ehci, "setting max periodic bandwidth to %u%% "
 			"(== %u usec/uframe)\n",
@@ -167,7 +148,7 @@ static inline int create_sysfs_files(struct ehci_hcd *ehci)
 	struct device	*controller = ehci_to_hcd(ehci)->self.controller;
 	int	i = 0;
 
-	/* with integrated TT there is no companion! */
+	
 	if (!ehci_is_TDI(ehci))
 		i = device_create_file(controller, &dev_attr_companion);
 	if (i)
@@ -182,7 +163,7 @@ static inline void remove_sysfs_files(struct ehci_hcd *ehci)
 {
 	struct device	*controller = ehci_to_hcd(ehci)->self.controller;
 
-	/* with integrated TT there is no companion! */
+	
 	if (!ehci_is_TDI(ehci))
 		device_remove_file(controller, &dev_attr_companion);
 
