@@ -106,3 +106,11 @@ config MSM_KGSL_KILL_HANG_PROCESS
 config MSM_KGSL_GPU_USAGE
 	bool "Enable sysfs node of GPU usage per process"
 	default n
+
+config MSM_KGSL_SIMPLE_GOV
+	bool "Simple KGSL GPU govenor for Qualcomm Adreno xxx devices"
+	default n
+	depends on MSM_KGSL
+	---help---
+	  A simple KGSL GPU govenor for Qualcom Adreno XXX devices
+
