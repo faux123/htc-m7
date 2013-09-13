@@ -44,8 +44,8 @@
 #include <linux/mfd/pm8xxx/vibrator.h>
 #include <linux/pl_sensor.h>
 #endif
-
 #define SYN_I2C_RETRY_TIMES 10
+#define SYN_UPDATE_RETRY_TIMES 5
 #define SHIFT_BITS 10
 #define SYN_WIRELESS_DEBUG
 #define SYN_CALIBRATION_CONTROL
@@ -179,7 +179,7 @@ extern uint8_t touchscreen_is_on(void)
 #define HOME_BUTTON		818
 #define MENU_BUTTON		1335
 
-int pwp_switch = 1; // 1 -> pocket wake protection on, 0 - off
+int pwp_switch = 1; // 1 -> pocket wake protection on, 2 -> pocket wake protection with only near check , no dark check ;  0 - off
 
 int l2m_2_phase = 0; // 0 -> logo used as power off on long tap, and short tap syncs input on/off at same time,  1 -> logo used as full menu button, sync on/off events separately
 
@@ -269,7 +269,7 @@ EXPORT_SYMBOL(sweep2wake_setleddev);
 static int break_longtap_count = 0;
 
 static void sweep2wake_presspwr(struct work_struct * sweep2wake_presspwr_work) {
-	if (scr_suspended == true && pwp_switch == 1 && power_key_check_in_pocket()) return; // don't wake if in pocket
+	if ( scr_suspended == true && pwp_switch >= 1 && power_key_check_in_pocket((pwp_switch == 1)?1:0) ) return; // don't wake if in pocket
 
 	if (!mutex_trylock(&pwrlock))
 	    return;
@@ -386,7 +386,7 @@ static void sweep2wake_longtap_count(struct work_struct * sweep2wake_longtap_cou
 		else
 		if ( scr_suspended == true || ( is_wake_option_set() && ( l2m_switch == 0 || (l2m_switch == 1 && l2m_2_phase == 0) ) ) ) // screen is off, or wake option is set with logo2menu is not used, or logo2menu is set but not 2_phase
 		{
-			if (scr_suspended == false || pwp_switch == 0 || (pwp_switch == 1 && !power_key_check_in_pocket())) {
+			if (scr_suspended == false || pwp_switch == 0 || (pwp_switch >= 1 && !power_key_check_in_pocket((pwp_switch==1)?1:0))) {
 				if (sleep_wake_vibration_time)
 				{
 					vibrate(sleep_wake_vibration_time * 5);
@@ -2168,7 +2168,7 @@ static ssize_t synaptics_pocket_detect_show(struct device *dev,
 static ssize_t synaptics_pocket_detect_dump(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	if (buf[0] >= '0' && buf[0] <= '1' && buf[1] == '\n')
+	if (buf[0] >= '0' && buf[0] <= '2' && buf[1] == '\n')
 		if (pwp_switch != buf[0] - '0') {
 			pwp_switch = buf[0] - '0';
 		}
@@ -2176,7 +2176,9 @@ static ssize_t synaptics_pocket_detect_dump(struct device *dev,
 	if (pwp_switch == 0) 
 		printk(KERN_INFO "[POCKETWAKEPROT]: Disabled.\n");
 	else if (pwp_switch == 1)
-		printk(KERN_INFO "[POCKETWAKEPROT]: Enabled.\n");
+		printk(KERN_INFO "[POCKETWAKEPROT]: Enabled with Dark + Near detection.\n");
+	else if (pwp_switch == 2)
+		printk(KERN_INFO "[POCKETWAKEPROT]: Enabled with only Near detection.\n");
 
 	return count;
 }
@@ -2309,7 +2311,6 @@ static DEVICE_ATTR(sleep_wake_vibration_time, (S_IWUSR|S_IRUGO),
 	synaptics_sleep_wake_vibration_time_show, synaptics_sleep_wake_vibration_time_dump);
 
 #endif
-
 static struct kobject *android_touch_kobj;
 
 static int synaptics_touch_sysfs_init(void)
@@ -2396,7 +2397,7 @@ static int synaptics_touch_sysfs_init(void)
 		printk(KERN_INFO "[TP]%s: Failed to obtain touchpad IRQ %d. Code: %d.", __func__, ts->gpio_irq, ret);
 		return ret;
 	}
-	if (ts->gpio_reset) {
+	if (ts->gpio_reset && !ts->i2c_err_handler_en) {
 		ret = gpio_request(ts->gpio_reset, "synaptics_reset");
 		if (ret)
 			printk(KERN_INFO "[TP]%s: Failed to obtain reset pin: %d. Code: %d.", __func__, ts->gpio_reset, ret);
@@ -4134,6 +4135,16 @@ static int syn_probe_init(void *arg)
 		wait_event_interruptible_timeout(ts->syn_fw_wait, atomic_read(&ts->syn_fw_condition),
 							msecs_to_jiffies(wait_time));
 	}
+	ts->i2c_err_handler_en = pdata->i2c_err_handler_en;
+	if (ts->i2c_err_handler_en) {
+		ts->gpio_reset = pdata->gpio_reset;
+		ts->use_irq = 1;
+		if (ts->gpio_reset) {
+			ret = gpio_request(ts->gpio_reset, "synaptics_reset");
+			if (ret)
+				printk(KERN_INFO "[TP]%s: Failed to obtain reset pin: %d. Code: %d.", __func__, ts->gpio_reset, ret);
+		}
+	}
 
 	for (i = 0; i < 10; i++) {
 		ret = i2c_syn_read(ts->client, get_address_base(ts, 0x01, DATA_BASE), &data, 1);
@@ -4208,7 +4219,11 @@ static int syn_probe_init(void *arg)
 		}
 		if (pdata->tw_pin_mask) {
 			ts->tw_pin_mask = pdata->tw_pin_mask;
-			ret = syn_get_tw_vendor(ts, pdata->gpio_irq);
+			for (i=0; i<SYN_UPDATE_RETRY_TIMES; i++) {
+				ret = syn_get_tw_vendor(ts, pdata->gpio_irq);
+				if (ret == 0)
+					break;
+			}
 			if (ret < 0) {
 				printk(KERN_ERR "[TP] TOUCH_ERR: syn_get_tw_vendor fail\n");
 				goto err_init_failed;
@@ -4254,7 +4269,11 @@ static int syn_probe_init(void *arg)
 	}
 
 #ifndef SYN_DISABLE_CONFIG_UPDATE
-	ret = syn_config_update(ts, pdata->gpio_irq);
+	for (i=0; i<SYN_UPDATE_RETRY_TIMES; i++) {
+		ret = syn_config_update(ts, pdata->gpio_irq);
+		if (ret >= 0)
+			break;
+	}
 	if (ret < 0) {
 		printk(KERN_ERR "[TP] TOUCH_ERR: syn_config_update fail\n");
 		goto err_init_failed;
@@ -4782,7 +4801,7 @@ static int synaptics_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 
 static int synaptics_ts_resume(struct i2c_client *client)
 {
-	int ret;
+	int ret, i;
 	struct synaptics_ts_data *ts = i2c_get_clientdata(client);
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
         if (is_wake_option_set()) {
@@ -4825,6 +4844,17 @@ static int synaptics_ts_resume(struct i2c_client *client)
 		}
 		input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0);
 		input_sync(ts->input_dev);
+	} else if (ts->htc_event == SYN_AND_REPORT_TYPE_B) {
+		if (ts->package_id >= 3400) {
+			for (i = 0; i < ts->finger_support; i++) {
+				input_mt_slot(ts->input_dev, i);
+				input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 0);
+				input_sync(ts->input_dev);
+
+			}
+			ts->tap_suppression = 0;
+			ts->finger_pressed = 0;
+		}
 	} else if (ts->htc_event == SYN_AND_REPORT_TYPE_HTC) {
 		input_report_abs(ts->input_dev, ABS_MT_AMPLITUDE, 0);
 		input_report_abs(ts->input_dev, ABS_MT_POSITION, 1 << 31);
