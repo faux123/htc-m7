@@ -84,3 +84,15 @@ GTAGS
 *.orig
 *~
 \#*#
+
+#add user ignores
+ge422mkzip.sh
+ge43mkzip.sh
+mkzip.sh
+out/
+out_43/
+out_ge/
+out_s/
+sense43mkzip.sh
+smkzip.sh
+
