@@ -1,6 +1,3 @@
-/* 
- * DES & Triple DES EDE Cipher Algorithms.
- */
 
 #ifndef __CRYPTO_DES_H
 #define __CRYPTO_DES_H
@@ -16,4 +13,4 @@
 
 extern unsigned long des_ekey(u32 *pe, const u8 *k);
 
-#endif /* __CRYPTO_DES_H */
+#endif 

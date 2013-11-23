@@ -37,12 +37,9 @@
 
 #include <asm/uaccess.h>
 
-#define FL_MIN_LINGER	6	/* Minimal linger. It is set to 6sec specified
-				   in old IPv6 RFC. Well, it was reasonable value.
-				 */
-#define FL_MAX_LINGER	60	/* Maximal linger timeout */
+#define FL_MIN_LINGER	6	
+#define FL_MAX_LINGER	60	
 
-/* FL hash table */
 
 #define FL_MAX_PER_SOCK	32
 #define FL_MAX_SIZE	4096
@@ -55,11 +52,9 @@ static struct ip6_flowlabel *fl_ht[FL_HASH_MASK+1];
 static void ip6_fl_gc(unsigned long dummy);
 static DEFINE_TIMER(ip6_fl_gc_timer, ip6_fl_gc, 0, 0);
 
-/* FL hash table lock: it protects only of GC */
 
 static DEFINE_RWLOCK(ip6_fl_lock);
 
-/* Big socket sock */
 
 static DEFINE_RWLOCK(ip6_sk_fl_lock);
 
@@ -196,14 +191,6 @@ static struct ip6_flowlabel *fl_intern(struct net *net,
 			}
 		}
 	} else {
-		/*
-		 * we dropper the ip6_fl_lock, so this entry could reappear
-		 * and we need to recheck with it.
-		 *
-		 * OTOH no need to search the active socket first, like it is
-		 * done in ipv6_flowlabel_opt - sock is locked, so new entry
-		 * with the same label can only appear on another sock
-		 */
 		lfl = __fl_lookup(net, fl->label);
 		if (lfl != NULL) {
 			atomic_inc(&lfl->users);
@@ -222,7 +209,6 @@ static struct ip6_flowlabel *fl_intern(struct net *net,
 
 
 
-/* Socket flowlabel lists */
 
 struct ip6_flowlabel * fl6_sock_lookup(struct sock *sk, __be32 label)
 {
@@ -259,14 +245,8 @@ void fl6_free_socklist(struct sock *sk)
 	}
 }
 
-/* Service routines */
 
 
-/*
-   It is the only difficult place. flowlabel enforces equal headers
-   before and including routing header, however user may supply options
-   following rthdr.
- */
 
 struct ipv6_txoptions *fl6_merge_options(struct ipv6_txoptions * opt_space,
 					 struct ip6_flowlabel * fl,
@@ -599,7 +579,7 @@ release:
 		if (!freq.flr_label) {
 			if (copy_to_user(&((struct in6_flowlabel_req __user *) optval)->flr_label,
 					 &fl->label, sizeof(fl->label))) {
-				/* Intentionally ignore fault. */
+				
 			}
 		}
 

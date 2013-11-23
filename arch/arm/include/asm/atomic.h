@@ -21,21 +21,11 @@
 
 #ifdef __KERNEL__
 
-/*
- * On ARM, ordinary assignment (str instruction) doesn't clear the local
- * strex/ldrex monitor on some implementations. The reason we can use it for
- * atomic_set() is the clrex or dummy strex done on every exception return.
- */
 #define atomic_read(v)	(*(volatile int *)&(v)->counter)
 #define atomic_set(v,i)	(((v)->counter) = (i))
 
 #if __LINUX_ARM_ARCH__ >= 6
 
-/*
- * ARMv6 UP and SMP safe atomic ops.  We use load exclusive and
- * store exclusive to ensure that these are atomic.  We may loop
- * to ensure that the update happens.
- */
 static inline void atomic_add(int i, atomic_t *v)
 {
 	unsigned long tmp;
@@ -149,7 +139,7 @@ static inline void atomic_clear_mask(unsigned long mask, unsigned long *addr)
 	: "cc");
 }
 
-#else /* ARM_ARCH_6 */
+#else 
 
 #ifdef CONFIG_SMP
 #error SMP not supported on pre-ARMv6 CPUs
@@ -206,7 +196,7 @@ static inline void atomic_clear_mask(unsigned long mask, unsigned long *addr)
 	raw_local_irq_restore(flags);
 }
 
-#endif /* __LINUX_ARM_ARCH__ */
+#endif 
 
 #define atomic_xchg(v, new) (xchg(&((v)->counter), new))
 
@@ -461,6 +451,6 @@ static inline int atomic64_add_unless(atomic64_t *v, u64 a, u64 u)
 #define atomic64_dec_and_test(v)	(atomic64_dec_return((v)) == 0)
 #define atomic64_inc_not_zero(v)	atomic64_add_unless((v), 1LL, 0LL)
 
-#endif /* !CONFIG_GENERIC_ATOMIC64 */
+#endif 
 #endif
 #endif

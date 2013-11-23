@@ -49,7 +49,7 @@ static int mq_init(struct Qdisc *sch, struct nlattr *opt)
 	if (!netif_is_multiqueue(dev))
 		return -EOPNOTSUPP;
 
-	/* pre-allocate qdiscs, attachment can't fail */
+	
 	priv->qdiscs = kcalloc(dev->num_tx_queues, sizeof(priv->qdiscs[0]),
 			       GFP_KERNEL);
 	if (priv->qdiscs == NULL)
@@ -149,6 +149,11 @@ static int mq_graft(struct Qdisc *sch, unsigned long cl, struct Qdisc *new,
 	if (dev->flags & IFF_UP)
 		dev_deactivate(dev);
 
+#ifdef CONFIG_HTC_NETWORK_MODIFY
+	if (IS_ERR(dev_queue))
+		printk(KERN_ERR "[NET] dev_queue is NULL in %s!\n", __func__);
+#endif
+
 	*old = dev_graft_qdisc(dev_queue, new);
 
 	if (dev->flags & IFF_UP)
@@ -159,6 +164,11 @@ static int mq_graft(struct Qdisc *sch, unsigned long cl, struct Qdisc *new,
 static struct Qdisc *mq_leaf(struct Qdisc *sch, unsigned long cl)
 {
 	struct netdev_queue *dev_queue = mq_queue_get(sch, cl);
+
+#ifdef CONFIG_HTC_NETWORK_MODIFY
+	if (IS_ERR(dev_queue))
+		printk(KERN_ERR "[NET] dev_queue is NULL in %s!\n", __func__);
+#endif
 
 	return dev_queue->qdisc_sleeping;
 }
@@ -181,6 +191,11 @@ static int mq_dump_class(struct Qdisc *sch, unsigned long cl,
 {
 	struct netdev_queue *dev_queue = mq_queue_get(sch, cl);
 
+#ifdef CONFIG_HTC_NETWORK_MODIFY
+	if (IS_ERR(dev_queue))
+		printk(KERN_ERR "[NET] dev_queue is NULL in %s!\n", __func__);
+#endif
+
 	tcm->tcm_parent = TC_H_ROOT;
 	tcm->tcm_handle |= TC_H_MIN(cl);
 	tcm->tcm_info = dev_queue->qdisc_sleeping->handle;
@@ -191,6 +206,11 @@ static int mq_dump_class_stats(struct Qdisc *sch, unsigned long cl,
 			       struct gnet_dump *d)
 {
 	struct netdev_queue *dev_queue = mq_queue_get(sch, cl);
+
+#ifdef CONFIG_HTC_NETWORK_MODIFY
+	if (IS_ERR(dev_queue))
+		printk(KERN_ERR "[NET] dev_queue is NULL in %s!\n", __func__);
+#endif
 
 	sch = dev_queue->qdisc_sleeping;
 	sch->qstats.qlen = sch->q.qlen;

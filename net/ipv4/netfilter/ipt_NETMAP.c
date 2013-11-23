@@ -1,7 +1,3 @@
-/* NETMAP - static NAT mapping of IP network addresses (1:1).
- * The mapping can be applied to source (POSTROUTING),
- * destination (PREROUTING), or both (with separate rules).
- */
 
 /* (C) 2000-2001 Svenning Soerensen <svenning@post5.tele.dk>
  *
@@ -66,7 +62,7 @@ netmap_tg(struct sk_buff *skb, const struct xt_action_param *par)
 		  new_ip, new_ip,
 		  mr->range[0].min, mr->range[0].max });
 
-	/* Hand modified range to generic setup. */
+	
 	return nf_nat_setup_info(ct, &newrange, HOOK2MANIP(par->hooknum));
 }
 

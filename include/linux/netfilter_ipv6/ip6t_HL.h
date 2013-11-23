@@ -1,6 +1,3 @@
-/* Hop Limit modification module for ip6tables
- * Maciej Soltysiak <solt@dns.toxicfilms.tv>
- * Based on HW's TTL module */
 
 #ifndef _IP6T_HL_H
 #define _IP6T_HL_H

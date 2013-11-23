@@ -342,6 +342,19 @@ config VMXNET3
 	  To compile this driver as a module, choose M here: the
 	  module will be called vmxnet3.
 
+config HTC_TCP_SYN_FAIL
+	tristate "Belong to HTC TCP SYN FAIL calculation feature"
+
 source "drivers/net/hyperv/Kconfig"
+
+config HTC_NETWORK_MODIFY
+	tristate "Belong to HTC Netowrking modifications"
+
+config KINETO_GAN
+        tristate "Kineto GAN virtual network interface"
+        depends on ARM
+        default n
+        help
+          Virtual ethernet interface for Kineto GAN transport.
 
 endif # NETDEVICES

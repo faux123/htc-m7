@@ -24,7 +24,6 @@
 #include <linux/cryptohash.h>
 #include <asm/byteorder.h>
 
-/* XXX: this stuff can be optimized */
 static inline void le32_to_cpu_array(u32 *buf, unsigned int words)
 {
 	while (words--) {

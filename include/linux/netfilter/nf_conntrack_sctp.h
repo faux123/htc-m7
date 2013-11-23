@@ -1,6 +1,5 @@
 #ifndef _NF_CONNTRACK_SCTP_H
 #define _NF_CONNTRACK_SCTP_H
-/* SCTP tracking. */
 
 #include <linux/netfilter/nf_conntrack_tuple_common.h>
 
@@ -22,4 +21,4 @@ struct ip_ct_sctp {
 	__be32 vtag[IP_CT_DIR_MAX];
 };
 
-#endif /* _NF_CONNTRACK_SCTP_H */
+#endif 

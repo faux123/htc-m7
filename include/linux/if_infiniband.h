@@ -24,6 +24,6 @@
 #ifndef _LINUX_IF_INFINIBAND_H
 #define _LINUX_IF_INFINIBAND_H
 
-#define INFINIBAND_ALEN		20	/* Octets in IPoIB HW addr	*/
+#define INFINIBAND_ALEN		20	
 
-#endif /* _LINUX_IF_INFINIBAND_H */
+#endif 

@@ -8,7 +8,6 @@
 #define CPUPRI_INVALID -1
 #define CPUPRI_IDLE     0
 #define CPUPRI_NORMAL   1
-/* values 2-101 are RT priorities 0-99 */
 
 struct cpupri_vec {
 	atomic_t	count;
@@ -31,4 +30,4 @@ void cpupri_cleanup(struct cpupri *cp);
 #define cpupri_init() do { } while (0)
 #endif
 
-#endif /* _LINUX_CPUPRI_H */
+#endif 

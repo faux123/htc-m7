@@ -30,8 +30,8 @@ struct srcfile_state {
 	struct srcfile_state *prev;
 };
 
-extern FILE *depfile; /* = NULL */
-extern struct srcfile_state *current_srcfile; /* = NULL */
+extern FILE *depfile; 
+extern struct srcfile_state *current_srcfile; 
 
 FILE *srcfile_relative_open(const char *fname, char **fullnamep);
 void srcfile_push(const char *fname);
@@ -65,11 +65,6 @@ struct srcpos {
 	} while (0)
 
 
-/*
- * Fictional source position used for IR nodes that are
- * created without otherwise knowing a true source position.
- * For example,constant definitions from the command line.
- */
 extern struct srcpos srcpos_empty;
 
 extern void srcpos_update(struct srcpos *pos, const char *text, int len);
@@ -84,4 +79,4 @@ extern void srcpos_error(struct srcpos *pos, char const *, ...)
 extern void srcpos_warn(struct srcpos *pos, char const *, ...)
      __attribute__((format(printf, 2, 3)));
 
-#endif /* _SRCPOS_H_ */
+#endif 

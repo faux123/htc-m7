@@ -58,13 +58,13 @@
 int fdt_check_header(const void *fdt)
 {
 	if (fdt_magic(fdt) == FDT_MAGIC) {
-		/* Complete tree */
+		
 		if (fdt_version(fdt) < FDT_FIRST_SUPPORTED_VERSION)
 			return -FDT_ERR_BADVERSION;
 		if (fdt_last_comp_version(fdt) > FDT_LAST_SUPPORTED_VERSION)
 			return -FDT_ERR_BADVERSION;
 	} else if (fdt_magic(fdt) == FDT_SW_MAGIC) {
-		/* Unfinished sequential-write blob */
+		
 		if (fdt_size_dt_struct(fdt) == 0)
 			return -FDT_ERR_BADSTATE;
 	} else {
@@ -101,13 +101,13 @@ uint32_t fdt_next_tag(const void *fdt, int offset, int *nextoffset)
 
 	tagp = fdt_offset_ptr(fdt, offset, FDT_TAGSIZE);
 	if (! tagp)
-		return FDT_END; /* premature end */
+		return FDT_END; 
 	tag = fdt32_to_cpu(*tagp);
 	offset += FDT_TAGSIZE;
 
 	switch (tag) {
 	case FDT_BEGIN_NODE:
-		/* skip name */
+		
 		do {
 			p = fdt_offset_ptr(fdt, offset++, 1);
 		} while (p && (*p != '\0'));
@@ -118,7 +118,7 @@ uint32_t fdt_next_tag(const void *fdt, int offset, int *nextoffset)
 		lenp = fdt_offset_ptr(fdt, offset, sizeof(*lenp));
 		if (! lenp)
 			return FDT_END;
-		/* skip name offset, length and value */
+		
 		offset += 2*FDT_TAGSIZE + fdt32_to_cpu(*lenp);
 		break;
 	}

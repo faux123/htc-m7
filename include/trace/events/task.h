@@ -57,5 +57,4 @@ TRACE_EVENT(task_rename,
 
 #endif
 
-/* This part must be outside protection */
 #include <trace/define_trace.h>

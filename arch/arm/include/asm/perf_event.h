@@ -12,7 +12,6 @@
 #ifndef __ARM_PERF_EVENT_H__
 #define __ARM_PERF_EVENT_H__
 
-/* ARM perf PMU IDs for use by internal perf clients. */
 enum arm_perf_pmu_ids {
 	ARM_PERF_PMU_ID_XSCALE1	= 0,
 	ARM_PERF_PMU_ID_XSCALE2,
@@ -23,10 +22,15 @@ enum arm_perf_pmu_ids {
 	ARM_PERF_PMU_ID_CA5,
 	ARM_PERF_PMU_ID_CA15,
 	ARM_PERF_PMU_ID_CA7,
+	ARM_PERF_PMU_ID_SCORPION,
+	ARM_PERF_PMU_ID_SCORPIONMP,
+	ARM_PERF_PMU_ID_SCORPIONMP_L2,
+	ARM_PERF_PMU_ID_KRAIT,
+	ARM_PERF_PMU_ID_KRAIT_L2,
 	ARM_NUM_PMU_IDS,
 };
 
 extern enum arm_perf_pmu_ids
 armpmu_get_pmu_id(void);
 
-#endif /* __ARM_PERF_EVENT_H__ */
+#endif 

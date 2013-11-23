@@ -50,7 +50,6 @@ TRACE_EVENT(gpio_value,
 		__entry->get ? "get" : "set", __entry->value)
 );
 
-#endif /* if !defined(_TRACE_GPIO_H) || defined(TRACE_HEADER_MULTI_READ) */
+#endif 
 
-/* This part must be outside protection */
 #include <trace/define_trace.h>

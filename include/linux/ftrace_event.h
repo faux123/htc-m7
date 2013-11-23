@@ -38,12 +38,6 @@ const char *ftrace_print_symbols_seq_u64(struct trace_seq *p,
 const char *ftrace_print_hex_seq(struct trace_seq *p,
 				 const unsigned char *buf, int len);
 
-/*
- * The trace entry - the most basic unit of tracing. This is what
- * is printed in the end as a single line in the trace output, such as:
- *
- *     bash-15816 [01]   235.197585: idle_cpu <- irq_enter
- */
 struct trace_entry {
 	unsigned short		type;
 	unsigned char		flags;
@@ -55,10 +49,6 @@ struct trace_entry {
 #define FTRACE_MAX_EVENT						\
 	((1 << (sizeof(((struct trace_entry *)0)->type) * 8)) - 1)
 
-/*
- * Trace iterator - used by printout routines who present trace
- * results to users and which routines might sleep, etc:
- */
 struct trace_iterator {
 	struct trace_array	*tr;
 	struct tracer		*trace;
@@ -68,10 +58,10 @@ struct trace_iterator {
 	struct ring_buffer_iter	*buffer_iter[NR_CPUS];
 	unsigned long		iter_flags;
 
-	/* trace_seq for __print_flags() and __print_symbolic() etc. */
+	
 	struct trace_seq	tmp_seq;
 
-	/* The below is zeroed out in pipe_read */
+	
 	struct trace_seq	seq;
 	struct trace_entry	*ent;
 	unsigned long		lost_events;
@@ -109,12 +99,11 @@ struct trace_event {
 extern int register_ftrace_event(struct trace_event *event);
 extern int unregister_ftrace_event(struct trace_event *event);
 
-/* Return values for print_line callback */
 enum print_line_t {
-	TRACE_TYPE_PARTIAL_LINE	= 0,	/* Retry after flushing the seq */
+	TRACE_TYPE_PARTIAL_LINE	= 0,	
 	TRACE_TYPE_HANDLED	= 1,
-	TRACE_TYPE_UNHANDLED	= 2,	/* Relay to other output functions */
-	TRACE_TYPE_NO_CONSUME	= 3	/* Handled but ask to not consume */
+	TRACE_TYPE_UNHANDLED	= 2,	
+	TRACE_TYPE_NO_CONSUME	= 3	
 };
 
 void tracing_generic_entry_update(struct trace_entry *entry,
@@ -202,21 +191,6 @@ struct ftrace_event_call {
 	void			*mod;
 	void			*data;
 
-	/*
-	 * 32 bit flags:
-	 *   bit 1:		enabled
-	 *   bit 2:		filter_active
-	 *   bit 3:		enabled cmd record
-	 *
-	 * Changes to flags must hold the event_mutex.
-	 *
-	 * Note: Reads of flags do not hold the event_mutex since
-	 * they occur in critical sections. But the way flags
-	 * is currently used, these changes do no affect the code
-	 * except that when a change is made, it may have a slight
-	 * delay in propagating the changes to other CPUs due to
-	 * caching and such.
-	 */
 	unsigned int		flags;
 
 #ifdef CONFIG_PERF_EVENTS
@@ -235,7 +209,7 @@ struct ftrace_event_call {
 
 #define PERF_MAX_TRACE_SIZE	2048
 
-#define MAX_FILTER_STR_VAL	256	/* Should handle KSYM_SYMBOL_LEN */
+#define MAX_FILTER_STR_VAL	256	
 
 extern void destroy_preds(struct ftrace_event_call *call);
 extern int filter_match_preds(struct event_filter *filter, void *rec);
@@ -267,11 +241,6 @@ extern void trace_remove_event_call(struct ftrace_event_call *call);
 
 int trace_set_clr_event(const char *system, const char *event, int set);
 
-/*
- * The double __builtin_constant_p is because gcc will give us an error
- * if we try to allocate the static variable to fmt if it is not a
- * constant. Even with the outer if statement optimizing out.
- */
 #define event_trace_printk(ip, fmt, args...)				\
 do {									\
 	__trace_printk_check_format(fmt, ##args);			\
@@ -309,4 +278,4 @@ perf_trace_buf_submit(void *raw_data, int size, int rctx, u64 addr,
 }
 #endif
 
-#endif /* _LINUX_FTRACE_EVENT_H */
+#endif 
