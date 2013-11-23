@@ -64,6 +64,9 @@ static int chg_dis_control_mask = HTC_BATT_CHG_DIS_BIT_ID
 static int chg_dis_pj_mask = HTC_BATT_CHG_DIS_BIT_ID
 								| HTC_BATT_CHG_DIS_BIT_TMR;
 
+#ifdef CONFIG_FORCE_FAST_CHARGE
+#include <linux/fastchg.h>
+#endif
 
 #define HTC_BATT_PWRSRC_DIS_BIT_MFG		(1)
 #define HTC_BATT_PWRSRC_DIS_BIT_API		(1<<1)
@@ -395,7 +398,13 @@ int htc_charger_event_notify(enum htc_charger_event event)
 		htc_batt_schedule_batt_info_update();
 		break;
 	case HTC_CHARGER_EVENT_SRC_USB: 
-		latest_chg_src = CHARGER_USB;
+		if (force_fast_charge == 1) {
+			printk("[FASTCHARGE] Forcing CHARGER_AC");
+			latest_chg_src = CHARGER_AC;
+		} else {
+			printk("[FASTCHARGE] NOT set, using normal CHARGER_USB");
+			latest_chg_src = CHARGER_USB;
+		}
 		htc_batt_schedule_batt_info_update();
 		break;
 	case HTC_CHARGER_EVENT_SRC_AC: 
