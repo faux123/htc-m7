@@ -158,7 +158,6 @@ struct cm3629_info {
 	uint32_t ws_kadc;
 	uint32_t ws_gadc;
 	uint16_t w_golden_adc;
-
 	uint16_t *correction_table;
 };
 
@@ -180,6 +179,7 @@ static void psensor_initial_cmd(struct cm3629_info *lpi);
 static int ps_near;
 static int pocket_mode_flag, psensor_enable_by_touch;
 static int phone_status;
+
 static int oncall = 0;
 int get_lightsensoradc(void)
 {
@@ -384,6 +384,7 @@ static int get_ls_adc_value(uint32_t *als_step, int resume)
 	*als_step = (uint32_t)msb;
 	*als_step <<= 8;
 	*als_step |= (uint32_t)lsb;
+
 	if (resume != 2)
 		D("[LS][cm3629] %s: raw adc = 0x%X, ls_calibrate = %d\n",
 			__func__, *als_step, lpi->ls_calibrate);
@@ -771,6 +772,7 @@ static void sensor_irq_do_work(struct work_struct *work)
 	struct cm3629_info *lpi = lp_info;
 	uint8_t cmd[3];
 	uint8_t add = 0;
+
 	
 	_cm3629_I2C_Read2(lpi->cm3629_slave_address, INT_FLAG, cmd, 2);
 	add = cmd[1];
@@ -897,7 +899,6 @@ static void polling_do_work(struct work_struct *w)
 	uint32_t ls_adc = 0;
 	uint8_t light_sensor_correction = 0;
 	
-
 	lpi->j_end = jiffies;
 	if (time_after(lpi->j_end, (lpi->j_start + 3* HZ))){
 		lpi->ps_pocket_mode = 0;
@@ -1184,6 +1185,7 @@ static int psensor_disable(struct cm3629_info *lpi)
 	lpi->ps_conf1_val = lpi->ps_conf1_val_from_board;
 	lpi->ps_conf2_val = lpi->ps_conf2_val_from_board;
 	lpi->ps_pocket_mode = 0;
+
 	ret = irq_set_irq_wake(lpi->irq, 0);
 	if (ret < 0) {
 		pr_err(
@@ -1244,11 +1246,13 @@ static int psensor_open(struct inode *inode, struct file *file)
 
 	D("[PS][cm3629] %s, calibration:%d\n", __func__, psensor_cali);
 
+
 	if (lpi->psensor_opened)
 		return -EBUSY;
 
 	lpi->psensor_opened = 1;
 	psensor_disable(lpi);
+
 	return 0;
 }
 
@@ -2357,6 +2361,7 @@ static ssize_t phone_status_store(struct device *dev,
 		lpi->ps_base_index = (lpi->mapping_size - 1);
 	}
 
+
 	return count;
 #if 0
 	if (phone_status == 2 && ps_hal_enable == 1 && lpi->dynamical_threshold == 1
@@ -2503,7 +2508,7 @@ err_free_ps_input_device:
 	return ret;
 }
 
-int power_key_check_in_pocket(void)
+int power_key_check_in_pocket(int check_dark)
 {
 	struct cm3629_info *lpi = lp_info;
 	int ls_dark;
@@ -2514,7 +2519,6 @@ int power_key_check_in_pocket(void)
 	uint8_t ps1_adc = 0;
 	uint8_t ps2_adc = 0;
 	int ret = 0;
-
 	if (!is_probe_success) {
 		D("[cm3629] %s return by cm3629 probe fail\n", __func__);
 		return 0;
@@ -2548,7 +2552,7 @@ int power_key_check_in_pocket(void)
 	D("[cm3629] %s ps1_adc = %d, pocket_thd = %d, ps_near = %d\n", __func__, ps1_adc, pocket_thd, ps_near);
 	psensor_disable(lpi);
 	pocket_mode_flag = 0;
-	return (ls_dark && ps_near);
+	return ((check_dark && ls_dark && ps_near) || (!check_dark && ps_near));
 }
 
 int psensor_enable_by_touch_driver(int on)

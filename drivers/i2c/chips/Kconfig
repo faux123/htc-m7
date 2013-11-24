@@ -76,7 +76,6 @@ config SENSORS_LSM330_GYRO
 
           Say Y here if you have a device containing LSM330 chip.
 
-
 config TPS65200
         tristate "tps65200 Driver"
         depends on I2C
@@ -95,18 +94,25 @@ config BOSCH_BMA250
 	  If you say yes here you get support for Bosch Sensortec's
 	  acceleration sensors BMA250.
 
-config BOSCH_BMA250_ENABLE_INT1
+config BMA250_ENABLE_INT1
 	tristate "BMA250 acceleration sensor interrupt INT1 support"
 	depends on BOSCH_BMA250=y
         help
 	  If you say yes here you get INT1 support for Bosch Sensortec's
 	  acceleration sensors BMA250.
 
-config BOSCH_BMA250_ENABLE_INT2
+config BMA250_ENABLE_INT2
 	tristate "BMA250 acceleration sensor interrupt INT2 support"
 	depends on BOSCH_BMA250=y
 	help
 	  If you say yes here you get INT2 support for Bosch Sensortec's
+	  acceleration sensors BMA250.
+
+config BMA250_WAKE_OPTIONS
+	tristate "BMA250 acceleration sensor wake options support"
+	depends on BOSCH_BMA250=y
+	help
+	  If you say yes here you get Wake option support for
 	  acceleration sensors BMA250.
 
 config SENSORS_BMA250
@@ -239,4 +245,9 @@ config CIR_ALWAYS_READY
 	help
 	  Enable CIR Always Ready
 
+config SIG_MOTION
+        bool "BMA250 Significant Motion"
+	default n
+	help
+	  Enable BMA250 Significant Motion feature
 endmenu
