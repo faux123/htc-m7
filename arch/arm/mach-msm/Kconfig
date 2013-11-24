@@ -2959,6 +2959,12 @@ config IOEXTENDER
 	help
 	 To support IOEXTENDER feature
 
+config UPDATE_LCDC_LUT
+	default y
+	bool "enable LCDC LUT"
+	help
+	  enable LCDC LUT
+
 config FORCE_FAST_CHARGE
 	bool "Force AC charge mode at will"
 	default y
