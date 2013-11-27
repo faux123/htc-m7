@@ -183,9 +183,6 @@ static u32 flow_hash_code(struct flow_cache *fc,
 		& (flow_cache_hash_size(fc) - 1);
 }
 
-/* I hear what you're saying, use memcmp.  But memcmp cannot make
- * important assumptions that we can here, such as alignment.
- */
 static int flow_key_compare(const struct flowi *key1, const struct flowi *key2,
 			    size_t keysize)
 {
@@ -226,8 +223,6 @@ flow_cache_lookup(struct net *net, const struct flowi *key, u16 family, u8 dir,
 	if (!keysize)
 		goto nocache;
 
-	/* Packet really early in init?  Making flow_cache_init a
-	 * pre-smp initcall would solve this.  --RR */
 	if (!fcp->hash_table)
 		goto nocache;
 
@@ -244,6 +239,11 @@ flow_cache_lookup(struct net *net, const struct flowi *key, u16 family, u8 dir,
 			break;
 		}
 	}
+
+#ifdef CONFIG_HTC_NETWORK_MODIFY
+	if (IS_ERR(fle))
+		printk(KERN_ERR "[CORE] fle is NULL in %s!\n", __func__);
+#endif
 
 	if (unlikely(!fle)) {
 		if (fcp->hash_count > fc->high_watermark)
@@ -341,7 +341,7 @@ void flow_cache_flush(void)
 	struct flow_flush_info info;
 	static DEFINE_MUTEX(flow_flush_sem);
 
-	/* Don't want cpus going down or up during this. */
+	
 	get_online_cpus();
 	mutex_lock(&flow_flush_sem);
 	info.cache = &flow_cache_global;
@@ -374,6 +374,11 @@ static int __cpuinit flow_cache_cpu_prepare(struct flow_cache *fc, int cpu)
 {
 	struct flow_cache_percpu *fcp = per_cpu_ptr(fc->percpu, cpu);
 	size_t sz = sizeof(struct hlist_head) * flow_cache_hash_size(fc);
+
+#ifdef CONFIG_HTC_NETWORK_MODIFY
+	if (IS_ERR(fcp) || (!fcp))
+		printk(KERN_ERR "[CORE] fcp is NULL in %s!\n", __func__);
+#endif
 
 	if (!fcp->hash_table) {
 		fcp->hash_table = kzalloc_node(sz, GFP_KERNEL, cpu_to_node(cpu));

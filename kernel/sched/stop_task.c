@@ -1,34 +1,28 @@
 #include "sched.h"
 
-/*
- * stop-task scheduling class.
- *
- * The stop task is the highest priority task in the system, it preempts
- * everything and will be preempted by nothing.
- *
- * See kernel/stop_machine.c
- */
 
 #ifdef CONFIG_SMP
 static int
 select_task_rq_stop(struct task_struct *p, int sd_flag, int flags)
 {
-	return task_cpu(p); /* stop tasks as never migrate */
+	return task_cpu(p); 
 }
-#endif /* CONFIG_SMP */
+#endif 
 
 static void
 check_preempt_curr_stop(struct rq *rq, struct task_struct *p, int flags)
 {
-	/* we're never preempted */
+	
 }
 
 static struct task_struct *pick_next_task_stop(struct rq *rq)
 {
 	struct task_struct *stop = rq->stop;
 
-	if (stop && stop->on_rq)
+	if (stop && stop->on_rq) {
+		stop->se.exec_start = rq->clock_task;
 		return stop;
+	}
 
 	return NULL;
 }
@@ -47,11 +41,26 @@ dequeue_task_stop(struct rq *rq, struct task_struct *p, int flags)
 
 static void yield_task_stop(struct rq *rq)
 {
-	BUG(); /* the stop task should never yield, its pointless. */
+	BUG(); 
 }
 
 static void put_prev_task_stop(struct rq *rq, struct task_struct *prev)
 {
+	struct task_struct *curr = rq->curr;
+	u64 delta_exec;
+
+	delta_exec = rq->clock_task - curr->se.exec_start;
+	if (unlikely((s64)delta_exec < 0))
+		delta_exec = 0;
+
+	schedstat_set(curr->se.statistics.exec_max,
+			max(curr->se.statistics.exec_max, delta_exec));
+
+	curr->se.sum_exec_runtime += delta_exec;
+	account_group_exec_runtime(curr, delta_exec);
+
+	curr->se.exec_start = rq->clock_task;
+	cpuacct_charge(curr, delta_exec);
 }
 
 static void task_tick_stop(struct rq *rq, struct task_struct *curr, int queued)
@@ -60,17 +69,20 @@ static void task_tick_stop(struct rq *rq, struct task_struct *curr, int queued)
 
 static void set_curr_task_stop(struct rq *rq)
 {
+	struct task_struct *stop = rq->stop;
+
+	stop->se.exec_start = rq->clock_task;
 }
 
 static void switched_to_stop(struct rq *rq, struct task_struct *p)
 {
-	BUG(); /* its impossible to change to this class */
+	BUG(); 
 }
 
 static void
 prio_changed_stop(struct rq *rq, struct task_struct *p, int oldprio)
 {
-	BUG(); /* how!?, what priority? */
+	BUG(); 
 }
 
 static unsigned int
@@ -79,9 +91,6 @@ get_rr_interval_stop(struct rq *rq, struct task_struct *task)
 	return 0;
 }
 
-/*
- * Simple, special scheduling class for the per-CPU stop tasks:
- */
 const struct sched_class stop_sched_class = {
 	.next			= &rt_sched_class,
 

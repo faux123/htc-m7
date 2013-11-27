@@ -20,7 +20,6 @@
 #include <linux/i2c.h>
 #include "dvb_frontend.h"
 
-/* ------------------------------------------------------------------------ */
 #if defined(CONFIG_MEDIA_TUNER_TDA9887) || (defined(CONFIG_MEDIA_TUNER_TDA9887_MODULE) && defined(MODULE))
 extern struct dvb_frontend *tda9887_attach(struct dvb_frontend *fe,
 					   struct i2c_adapter *i2c_adap,
@@ -35,4 +34,4 @@ static inline struct dvb_frontend *tda9887_attach(struct dvb_frontend *fe,
 }
 #endif
 
-#endif /* __TDA9887_H__ */
+#endif 

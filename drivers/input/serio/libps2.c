@@ -27,13 +27,6 @@ MODULE_AUTHOR("Dmitry Torokhov <dtor@mail.ru>");
 MODULE_DESCRIPTION("PS/2 driver library");
 MODULE_LICENSE("GPL");
 
-/*
- * ps2_sendbyte() sends a byte to the device and waits for acknowledge.
- * It doesn't handle retransmission, though it could - because if there
- * is a need for retransmissions device has to be replaced anyway.
- *
- * ps2_sendbyte() can only be called from a process context.
- */
 
 int ps2_sendbyte(struct ps2dev *ps2dev, unsigned char byte, int timeout)
 {
@@ -73,10 +66,6 @@ void ps2_end_command(struct ps2dev *ps2dev)
 }
 EXPORT_SYMBOL(ps2_end_command);
 
-/*
- * ps2_drain() waits for device to transmit requested number of bytes
- * and discards them.
- */
 
 void ps2_drain(struct ps2dev *ps2dev, int maxbytes, int timeout)
 {
@@ -100,54 +89,32 @@ void ps2_drain(struct ps2dev *ps2dev, int maxbytes, int timeout)
 }
 EXPORT_SYMBOL(ps2_drain);
 
-/*
- * ps2_is_keyboard_id() checks received ID byte against the list of
- * known keyboard IDs.
- */
 
 int ps2_is_keyboard_id(char id_byte)
 {
 	static const char keyboard_ids[] = {
-		0xab,	/* Regular keyboards		*/
-		0xac,	/* NCD Sun keyboard		*/
-		0x2b,	/* Trust keyboard, translated	*/
-		0x5d,	/* Trust keyboard		*/
-		0x60,	/* NMB SGI keyboard, translated */
-		0x47,	/* NMB SGI keyboard		*/
+		0xab,	
+		0xac,	
+		0x2b,	
+		0x5d,	
+		0x60,	
+		0x47,	
 	};
 
 	return memchr(keyboard_ids, id_byte, sizeof(keyboard_ids)) != NULL;
 }
 EXPORT_SYMBOL(ps2_is_keyboard_id);
 
-/*
- * ps2_adjust_timeout() is called after receiving 1st byte of command
- * response and tries to reduce remaining timeout to speed up command
- * completion.
- */
 
 static int ps2_adjust_timeout(struct ps2dev *ps2dev, int command, int timeout)
 {
 	switch (command) {
 		case PS2_CMD_RESET_BAT:
-			/*
-			 * Device has sent the first response byte after
-			 * reset command, reset is thus done, so we can
-			 * shorten the timeout.
-			 * The next byte will come soon (keyboard) or not
-			 * at all (mouse).
-			 */
 			if (timeout > msecs_to_jiffies(100))
 				timeout = msecs_to_jiffies(100);
 			break;
 
 		case PS2_CMD_GETID:
-			/*
-			 * Microsoft Natural Elite keyboard responds to
-			 * the GET ID command as it were a mouse, with
-			 * a single byte. Fail the command so atkbd will
-			 * use alternative probe to detect it.
-			 */
 			if (ps2dev->cmdbuf[1] == 0xaa) {
 				serio_pause_rx(ps2dev->serio);
 				ps2dev->flags = 0;
@@ -155,10 +122,6 @@ static int ps2_adjust_timeout(struct ps2dev *ps2dev, int command, int timeout)
 				timeout = 0;
 			}
 
-			/*
-			 * If device behind the port is not a keyboard there
-			 * won't be 2nd byte of ID response.
-			 */
 			if (!ps2_is_keyboard_id(ps2dev->cmdbuf[1])) {
 				serio_pause_rx(ps2dev->serio);
 				ps2dev->flags = ps2dev->cmdcnt = 0;
@@ -174,12 +137,6 @@ static int ps2_adjust_timeout(struct ps2dev *ps2dev, int command, int timeout)
 	return timeout;
 }
 
-/*
- * ps2_command() sends a command and its parameters to the mouse,
- * then waits for the response and puts it in the param array.
- *
- * ps2_command() can only be called from a process context
- */
 
 int __ps2_command(struct ps2dev *ps2dev, unsigned char *param, int command)
 {
@@ -207,11 +164,6 @@ int __ps2_command(struct ps2dev *ps2dev, unsigned char *param, int command)
 			ps2dev->cmdbuf[(receive - 1) - i] = param[i];
 	serio_continue_rx(ps2dev->serio);
 
-	/*
-	 * Some devices (Synaptics) peform the reset before
-	 * ACKing the reset command, and so it can take a long
-	 * time before the ACK arrives.
-	 */
 	if (ps2_sendbyte(ps2dev, command & 0xff,
 			 command == PS2_CMD_RESET_BAT ? 1000 : 200))
 		goto out;
@@ -220,9 +172,6 @@ int __ps2_command(struct ps2dev *ps2dev, unsigned char *param, int command)
 		if (ps2_sendbyte(ps2dev, param[i], 200))
 			goto out;
 
-	/*
-	 * The reset command takes a long time to execute.
-	 */
 	timeout = msecs_to_jiffies(command == PS2_CMD_RESET_BAT ? 4000 : 500);
 
 	timeout = wait_event_timeout(ps2dev->wait,
@@ -265,9 +214,6 @@ int ps2_command(struct ps2dev *ps2dev, unsigned char *param, int command)
 }
 EXPORT_SYMBOL(ps2_command);
 
-/*
- * ps2_init() initializes ps2dev structure
- */
 
 void ps2_init(struct ps2dev *ps2dev, struct serio *serio)
 {
@@ -278,10 +224,6 @@ void ps2_init(struct ps2dev *ps2dev, struct serio *serio)
 }
 EXPORT_SYMBOL(ps2_init);
 
-/*
- * ps2_handle_ack() is supposed to be used in interrupt handler
- * to properly process ACK/NAK of a command from a PS/2 device.
- */
 
 int ps2_handle_ack(struct ps2dev *ps2dev, unsigned char data)
 {
@@ -302,10 +244,6 @@ int ps2_handle_ack(struct ps2dev *ps2dev, unsigned char data)
 				break;
 			}
 
-		/*
-		 * Workaround for mice which don't ACK the Get ID command.
-		 * These are valid mouse IDs that we recognize.
-		 */
 		case 0x00:
 		case 0x03:
 		case 0x04:
@@ -313,7 +251,7 @@ int ps2_handle_ack(struct ps2dev *ps2dev, unsigned char data)
 				ps2dev->nak = 0;
 				break;
 			}
-			/* Fall through */
+			
 		default:
 			return 0;
 	}
@@ -335,11 +273,6 @@ int ps2_handle_ack(struct ps2dev *ps2dev, unsigned char data)
 }
 EXPORT_SYMBOL(ps2_handle_ack);
 
-/*
- * ps2_handle_response() is supposed to be used in interrupt handler
- * to properly store device's response to a command and notify process
- * waiting for completion of the command.
- */
 
 int ps2_handle_response(struct ps2dev *ps2dev, unsigned char data)
 {
@@ -369,7 +302,7 @@ void ps2_cmd_aborted(struct ps2dev *ps2dev)
 	if (ps2dev->flags & (PS2_FLAG_ACK | PS2_FLAG_CMD))
 		wake_up(&ps2dev->wait);
 
-	/* reset all flags except last nack */
+	
 	ps2dev->flags &= PS2_FLAG_NAK;
 }
 EXPORT_SYMBOL(ps2_cmd_aborted);

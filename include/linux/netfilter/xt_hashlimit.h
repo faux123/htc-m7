@@ -3,12 +3,8 @@
 
 #include <linux/types.h>
 
-/* timings are in milliseconds. */
 #define XT_HASHLIMIT_SCALE 10000
-/* 1/10,000 sec period => max of 10,000/sec.  Min rate is then 429490
-   seconds, or one every 59 hours. */
 
-/* details of this structure hidden by the implementation */
 struct xt_hashlimit_htable;
 
 enum {
@@ -20,22 +16,22 @@ enum {
 };
 
 struct hashlimit_cfg {
-	__u32 mode;	  /* bitmask of XT_HASHLIMIT_HASH_* */
-	__u32 avg;    /* Average secs between packets * scale */
-	__u32 burst;  /* Period multiplier for upper limit. */
+	__u32 mode;	  
+	__u32 avg;    
+	__u32 burst;  
 
-	/* user specified */
-	__u32 size;		/* how many buckets */
-	__u32 max;		/* max number of entries */
-	__u32 gc_interval;	/* gc interval */
-	__u32 expire;	/* when do entries expire? */
+	
+	__u32 size;		
+	__u32 max;		
+	__u32 gc_interval;	
+	__u32 expire;	
 };
 
 struct xt_hashlimit_info {
-	char name [IFNAMSIZ];		/* name */
+	char name [IFNAMSIZ];		
 	struct hashlimit_cfg cfg;
 
-	/* Used internally by the kernel */
+	
 	struct xt_hashlimit_htable *hinfo;
 	union {
 		void *ptr;
@@ -44,15 +40,15 @@ struct xt_hashlimit_info {
 };
 
 struct hashlimit_cfg1 {
-	__u32 mode;	  /* bitmask of XT_HASHLIMIT_HASH_* */
-	__u32 avg;    /* Average secs between packets * scale */
-	__u32 burst;  /* Period multiplier for upper limit. */
+	__u32 mode;	  
+	__u32 avg;    
+	__u32 burst;  
 
-	/* user specified */
-	__u32 size;		/* how many buckets */
-	__u32 max;		/* max number of entries */
-	__u32 gc_interval;	/* gc interval */
-	__u32 expire;	/* when do entries expire? */
+	
+	__u32 size;		
+	__u32 max;		
+	__u32 gc_interval;	
+	__u32 expire;	
 
 	__u8 srcmask, dstmask;
 };
@@ -61,8 +57,8 @@ struct xt_hashlimit_mtinfo1 {
 	char name[IFNAMSIZ];
 	struct hashlimit_cfg1 cfg;
 
-	/* Used internally by the kernel */
+	
 	struct xt_hashlimit_htable *hinfo __attribute__((aligned(8)));
 };
 
-#endif /*_XT_HASHLIMIT_H*/
+#endif 

@@ -107,15 +107,8 @@ void dm_unregister_target(struct target_type *tt)
 	up_write(&_lock);
 }
 
-/*
- * io-err: always fails an io, useful for bringing
- * up LVs that have holes in them.
- */
 static int io_err_ctr(struct dm_target *tt, unsigned int argc, char **args)
 {
-	/*
-	 * Return error for discards instead of -EOPNOTSUPP
-	 */
 	tt->num_discard_requests = 1;
 
 	return 0;
@@ -123,7 +116,7 @@ static int io_err_ctr(struct dm_target *tt, unsigned int argc, char **args)
 
 static void io_err_dtr(struct dm_target *tt)
 {
-	/* empty */
+	
 }
 
 static int io_err_map(struct dm_target *tt, struct bio *bio,

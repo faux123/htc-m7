@@ -1,4 +1,3 @@
-/* FILE TO BE DELETED. DO NOT ADD STUFF HERE! */
 #include <asm/barrier.h>
 #include <asm/compiler.h>
 #include <asm/cmpxchg.h>

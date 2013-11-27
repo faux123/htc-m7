@@ -1,11 +1,3 @@
-/*
- * xfrm4_state.c
- *
- * Changes:
- * 	YOSHIFUJI Hideaki @USAGI
- * 		Split up af-specific portion
- *
- */
 
 #include <net/ip.h>
 #include <net/xfrm.h>
@@ -95,5 +87,5 @@ void __exit xfrm4_state_fini(void)
 {
 	xfrm_state_unregister_afinfo(&xfrm4_state_afinfo);
 }
-#endif  /*  0  */
+#endif  
 

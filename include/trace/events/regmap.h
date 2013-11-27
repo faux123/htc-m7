@@ -10,9 +10,6 @@
 struct device;
 struct regmap;
 
-/*
- * Log register events
- */
 DECLARE_EVENT_CLASS(regmap_reg,
 
 	TP_PROTO(struct device *dev, unsigned int reg,
@@ -175,7 +172,6 @@ DEFINE_EVENT(regmap_bool, regmap_cache_bypass,
 
 );
 
-#endif /* _TRACE_REGMAP_H */
+#endif 
 
-/* This part must be outside protection */
 #include <trace/define_trace.h>

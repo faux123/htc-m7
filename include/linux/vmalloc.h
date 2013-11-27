@@ -3,25 +3,19 @@
 
 #include <linux/spinlock.h>
 #include <linux/init.h>
-#include <asm/page.h>		/* pgprot_t */
+#include <asm/page.h>		
 
-struct vm_area_struct;		/* vma defining user mapping in mm_types.h */
+struct vm_area_struct;		
 
-/* bits in flags of vmalloc's vm_struct below */
-#define VM_IOREMAP	0x00000001	/* ioremap() and friends */
-#define VM_ALLOC	0x00000002	/* vmalloc() */
-#define VM_MAP		0x00000004	/* vmap()ed pages */
-#define VM_USERMAP	0x00000008	/* suitable for remap_vmalloc_range */
-#define VM_VPAGES	0x00000010	/* buffer for pages was vmalloc'ed */
-#define VM_UNLIST	0x00000020	/* vm_struct is not listed in vmlist */
-/* bits [20..32] reserved for arch specific ioremap internals */
+#define VM_IOREMAP	0x00000001	
+#define VM_ALLOC	0x00000002	
+#define VM_MAP		0x00000004	
+#define VM_USERMAP	0x00000008	
+#define VM_VPAGES	0x00000010	
+#define VM_UNLIST	0x00000020	
 
-/*
- * Maximum alignment for ioremap() regions.
- * Can be overriden by arch-specific value.
- */
 #ifndef IOREMAP_MAX_ORDER
-#define IOREMAP_MAX_ORDER	(7 + PAGE_SHIFT)	/* 128 pages */
+#define IOREMAP_MAX_ORDER	(7 + PAGE_SHIFT)	
 #endif
 
 struct vm_struct {
@@ -35,9 +29,6 @@ struct vm_struct {
 	void			*caller;
 };
 
-/*
- *	Highlevel APIs for driver use
- */
 extern void vm_unmap_ram(const void *mem, unsigned int count);
 extern void *vm_map_ram(struct page **pages, unsigned int count,
 				int node, pgprot_t prot);
@@ -73,13 +64,10 @@ extern int remap_vmalloc_range(struct vm_area_struct *vma, void *addr,
 							unsigned long pgoff);
 void vmalloc_sync_all(void);
  
-/*
- *	Lowlevel-APIs (not for driver use!)
- */
 
 static inline size_t get_vm_area_size(const struct vm_struct *area)
 {
-	/* return actual size without guard page */
+	
 	return area->size - PAGE_SIZE;
 }
 
@@ -118,17 +106,12 @@ unmap_kernel_range(unsigned long addr, unsigned long size)
 }
 #endif
 
-/* Allocate/destroy a 'vmalloc' VM area. */
 extern struct vm_struct *alloc_vm_area(size_t size, pte_t **ptes);
 extern void free_vm_area(struct vm_struct *area);
 
-/* for /dev/kmem */
 extern long vread(char *buf, char *addr, unsigned long count);
 extern long vwrite(char *buf, char *addr, unsigned long count);
 
-/*
- *	Internals.  Dont't use..
- */
 extern rwlock_t vmlist_lock;
 extern struct vm_struct *vmlist;
 extern __init void vm_area_add_early(struct vm_struct *vm);
@@ -157,4 +140,4 @@ pcpu_free_vm_areas(struct vm_struct **vms, int nr_vms)
 # endif
 #endif
 
-#endif /* _LINUX_VMALLOC_H */
+#endif 

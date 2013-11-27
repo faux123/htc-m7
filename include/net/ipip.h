@@ -4,10 +4,8 @@
 #include <linux/if_tunnel.h>
 #include <net/ip.h>
 
-/* Keep error state on tunnel for 30 sec */
 #define IPTUNNEL_ERR_TIMEO	(30*HZ)
 
-/* 6rd prefix/relay information */
 struct ip_tunnel_6rd_parm {
 	struct in6_addr		prefix;
 	__be32			relay_prefix;
@@ -19,23 +17,23 @@ struct ip_tunnel {
 	struct ip_tunnel __rcu	*next;
 	struct net_device	*dev;
 
-	int			err_count;	/* Number of arrived ICMP errors */
-	unsigned long		err_time;	/* Time when the last ICMP error arrived */
+	int			err_count;	
+	unsigned long		err_time;	
 
-	/* These four fields used only by GRE */
-	__u32			i_seqno;	/* The last seen seqno	*/
-	__u32			o_seqno;	/* The last output seqno */
-	int			hlen;		/* Precalculated GRE header length */
+	
+	__u32			i_seqno;	
+	__u32			o_seqno;	
+	int			hlen;		
 	int			mlink;
 
 	struct ip_tunnel_parm	parms;
 
-	/* for SIT */
+	
 #ifdef CONFIG_IPV6_SIT_6RD
 	struct ip_tunnel_6rd_parm	ip6rd;
 #endif
-	struct ip_tunnel_prl_entry __rcu *prl;		/* potential router list */
-	unsigned int			prl_count;	/* # of entries in PRL */
+	struct ip_tunnel_prl_entry __rcu *prl;		
+	unsigned int			prl_count;	
 };
 
 struct ip_tunnel_prl_entry {

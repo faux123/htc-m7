@@ -20,13 +20,6 @@
 #include <asm/param.h>
 #include <asm/byteorder.h>
 
-/* 
- *  comp_t is a 16-bit "floating" point number with a 3-bit base 8
- *  exponent and a 13-bit fraction.
- *  comp2_t is 24-bit with 5-bit base 2 exponent and 20 bit fraction
- *  (leading 1 not stored).
- *  See linux/kernel/acct.c for the specific encoding systems used.
- */
 
 typedef __u16	comp_t;
 typedef __u32	comp2_t;
@@ -42,75 +35,71 @@ typedef __u32	comp2_t;
 
 struct acct
 {
-	char		ac_flag;		/* Flags */
-	char		ac_version;		/* Always set to ACCT_VERSION */
-	/* for binary compatibility back until 2.0 */
-	__u16		ac_uid16;		/* LSB of Real User ID */
-	__u16		ac_gid16;		/* LSB of Real Group ID */
-	__u16		ac_tty;			/* Control Terminal */
-	__u32		ac_btime;		/* Process Creation Time */
-	comp_t		ac_utime;		/* User Time */
-	comp_t		ac_stime;		/* System Time */
-	comp_t		ac_etime;		/* Elapsed Time */
-	comp_t		ac_mem;			/* Average Memory Usage */
-	comp_t		ac_io;			/* Chars Transferred */
+	char		ac_flag;		
+	char		ac_version;		
+	
+	__u16		ac_uid16;		
+	__u16		ac_gid16;		
+	__u16		ac_tty;			
+	__u32		ac_btime;		
+	comp_t		ac_utime;		
+	comp_t		ac_stime;		
+	comp_t		ac_etime;		
+	comp_t		ac_mem;			
+	comp_t		ac_io;			
 	comp_t		ac_rw;			/* Blocks Read or Written */
-	comp_t		ac_minflt;		/* Minor Pagefaults */
-	comp_t		ac_majflt;		/* Major Pagefaults */
-	comp_t		ac_swaps;		/* Number of Swaps */
-/* m68k had no padding here. */
+	comp_t		ac_minflt;		
+	comp_t		ac_majflt;		
+	comp_t		ac_swaps;		
 #if !defined(CONFIG_M68K) || !defined(__KERNEL__)
-	__u16		ac_ahz;			/* AHZ */
+	__u16		ac_ahz;			
 #endif
-	__u32		ac_exitcode;		/* Exitcode */
-	char		ac_comm[ACCT_COMM + 1];	/* Command Name */
-	__u8		ac_etime_hi;		/* Elapsed Time MSB */
-	__u16		ac_etime_lo;		/* Elapsed Time LSB */
-	__u32		ac_uid;			/* Real User ID */
-	__u32		ac_gid;			/* Real Group ID */
+	__u32		ac_exitcode;		
+	char		ac_comm[ACCT_COMM + 1];	
+	__u8		ac_etime_hi;		
+	__u16		ac_etime_lo;		
+	__u32		ac_uid;			
+	__u32		ac_gid;			
 };
 
 struct acct_v3
 {
-	char		ac_flag;		/* Flags */
-	char		ac_version;		/* Always set to ACCT_VERSION */
-	__u16		ac_tty;			/* Control Terminal */
-	__u32		ac_exitcode;		/* Exitcode */
-	__u32		ac_uid;			/* Real User ID */
-	__u32		ac_gid;			/* Real Group ID */
-	__u32		ac_pid;			/* Process ID */
-	__u32		ac_ppid;		/* Parent Process ID */
-	__u32		ac_btime;		/* Process Creation Time */
+	char		ac_flag;		
+	char		ac_version;		
+	__u16		ac_tty;			
+	__u32		ac_exitcode;		
+	__u32		ac_uid;			
+	__u32		ac_gid;			
+	__u32		ac_pid;			
+	__u32		ac_ppid;		
+	__u32		ac_btime;		
 #ifdef __KERNEL__
-	__u32		ac_etime;		/* Elapsed Time */
+	__u32		ac_etime;		
 #else
-	float		ac_etime;		/* Elapsed Time */
+	float		ac_etime;		
 #endif
-	comp_t		ac_utime;		/* User Time */
-	comp_t		ac_stime;		/* System Time */
-	comp_t		ac_mem;			/* Average Memory Usage */
-	comp_t		ac_io;			/* Chars Transferred */
+	comp_t		ac_utime;		
+	comp_t		ac_stime;		
+	comp_t		ac_mem;			
+	comp_t		ac_io;			
 	comp_t		ac_rw;			/* Blocks Read or Written */
-	comp_t		ac_minflt;		/* Minor Pagefaults */
-	comp_t		ac_majflt;		/* Major Pagefaults */
-	comp_t		ac_swaps;		/* Number of Swaps */
-	char		ac_comm[ACCT_COMM];	/* Command Name */
+	comp_t		ac_minflt;		
+	comp_t		ac_majflt;		
+	comp_t		ac_swaps;		
+	char		ac_comm[ACCT_COMM];	
 };
 
-/*
- *  accounting flags
- */
-				/* bit set when the process ... */
-#define AFORK		0x01	/* ... executed fork, but did not exec */
-#define ASU		0x02	/* ... used super-user privileges */
-#define ACOMPAT		0x04	/* ... used compatibility mode (VAX only not used) */
-#define ACORE		0x08	/* ... dumped core */
-#define AXSIG		0x10	/* ... was killed by a signal */
+				
+#define AFORK		0x01	
+#define ASU		0x02	
+#define ACOMPAT		0x04	
+#define ACORE		0x08	
+#define AXSIG		0x10	
 
 #ifdef __BIG_ENDIAN
-#define ACCT_BYTEORDER	0x80	/* accounting file is big endian */
+#define ACCT_BYTEORDER	0x80	
 #else
-#define ACCT_BYTEORDER	0x00	/* accounting file is little endian */
+#define ACCT_BYTEORDER	0x00	
 #endif
 
 #ifdef __KERNEL__
@@ -121,7 +110,7 @@ struct vfsmount;
 struct super_block;
 struct pacct_struct;
 struct pid_namespace;
-extern int acct_parm[]; /* for sysctl */
+extern int acct_parm[]; 
 extern void acct_auto_close_mnt(struct vfsmount *m);
 extern void acct_auto_close(struct super_block *sb);
 extern void acct_collect(long exitcode, int group_dead);
@@ -135,16 +124,6 @@ extern void acct_exit_ns(struct pid_namespace *);
 #define acct_exit_ns(ns)	do { } while (0)
 #endif
 
-/*
- * ACCT_VERSION numbers as yet defined:
- * 0: old format (until 2.6.7) with 16 bit uid/gid
- * 1: extended variant (binary compatible on M68K)
- * 2: extended variant (binary compatible on everything except M68K)
- * 3: new binary incompatible format (64 bytes)
- * 4: new binary incompatible format (128 bytes)
- * 5: new binary incompatible format (128 bytes, second half)
- *
- */
 
 #undef ACCT_VERSION
 #undef AHZ
@@ -166,14 +145,10 @@ typedef struct acct acct_t;
 #else
 #define ACCT_VERSION	2
 #define AHZ		(HZ)
-#endif	/* __KERNEL */
+#endif	
 
 #ifdef __KERNEL__
 #include <linux/jiffies.h>
-/*
- * Yet another set of HZ to *HZ helper functions.
- * See <linux/jiffies.h> for the original.
- */
 
 static inline u32 jiffies_to_AHZ(unsigned long x)
 {
@@ -198,11 +173,6 @@ static inline u64 nsec_to_AHZ(u64 x)
 	x *= AHZ/512;
 	do_div(x, (NSEC_PER_SEC / 512));
 #else
-	/*
-         * max relative error 5.7e-8 (1.8s per year) for AHZ <= 1024,
-         * overflow after 64.99 years.
-         * exact for AHZ=60, 72, 90, 120, 144, 180, 300, 600, 900, ...
-         */
 	x *= 9;
 	do_div(x, (unsigned long)((9ull * NSEC_PER_SEC + (AHZ/2))
 	                          / AHZ));
@@ -210,6 +180,6 @@ static inline u64 nsec_to_AHZ(u64 x)
 	return x;
 }
 
-#endif  /* __KERNEL */
+#endif  
 
-#endif	/* _LINUX_ACCT_H */
+#endif	

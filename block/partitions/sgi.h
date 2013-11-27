@@ -1,6 +1,3 @@
-/*
- *  fs/partitions/sgi.h
- */
 
 extern int sgi_partition(struct parsed_partitions *state);
 

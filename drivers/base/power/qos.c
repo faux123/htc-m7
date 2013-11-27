@@ -47,12 +47,6 @@ static DEFINE_MUTEX(dev_pm_qos_mtx);
 
 static BLOCKING_NOTIFIER_HEAD(dev_pm_notifiers);
 
-/**
- * __dev_pm_qos_read_value - Get PM QoS constraint for a given device.
- * @dev: Device to get the PM QoS constraint value for.
- *
- * This routine must be called with dev->power.lock held.
- */
 s32 __dev_pm_qos_read_value(struct device *dev)
 {
 	struct pm_qos_constraints *c = dev->power.constraints;
@@ -60,10 +54,6 @@ s32 __dev_pm_qos_read_value(struct device *dev)
 	return c ? pm_qos_read_value(c) : 0;
 }
 
-/**
- * dev_pm_qos_read_value - Get PM QoS constraint for a given device (locked).
- * @dev: Device to get the PM QoS constraint value for.
- */
 s32 dev_pm_qos_read_value(struct device *dev)
 {
 	unsigned long flags;
@@ -76,16 +66,6 @@ s32 dev_pm_qos_read_value(struct device *dev)
 	return ret;
 }
 
-/*
- * apply_constraint
- * @req: constraint request to apply
- * @action: action to perform add/update/remove, of type enum pm_qos_req_action
- * @value: defines the qos request
- *
- * Internal function to update the constraints list using the PM QoS core
- * code and if needed call the per-device and the global notification
- * callbacks
- */
 static int apply_constraint(struct dev_pm_qos_request *req,
 			    enum pm_qos_req_action action, int value)
 {
@@ -95,7 +75,7 @@ static int apply_constraint(struct dev_pm_qos_request *req,
 				   &req->node, action, value);
 
 	if (ret) {
-		/* Call the global callbacks if needed */
+		
 		curr_value = pm_qos_read_value(req->dev->power.constraints);
 		blocking_notifier_call_chain(&dev_pm_notifiers,
 					     (unsigned long)curr_value,
@@ -105,13 +85,6 @@ static int apply_constraint(struct dev_pm_qos_request *req,
 	return ret;
 }
 
-/*
- * dev_pm_qos_constraints_allocate
- * @dev: device to allocate data for
- *
- * Called at the first call to add_request, for constraint data allocation
- * Must be called with the dev_pm_qos_mtx mutex held
- */
 static int dev_pm_qos_constraints_allocate(struct device *dev)
 {
 	struct pm_qos_constraints *c;
@@ -141,13 +114,6 @@ static int dev_pm_qos_constraints_allocate(struct device *dev)
 	return 0;
 }
 
-/**
- * dev_pm_qos_constraints_init - Initalize device's PM QoS constraints pointer.
- * @dev: target device
- *
- * Called from the device PM subsystem during device insertion under
- * device_pm_lock().
- */
 void dev_pm_qos_constraints_init(struct device *dev)
 {
 	mutex_lock(&dev_pm_qos_mtx);
@@ -156,21 +122,11 @@ void dev_pm_qos_constraints_init(struct device *dev)
 	mutex_unlock(&dev_pm_qos_mtx);
 }
 
-/**
- * dev_pm_qos_constraints_destroy
- * @dev: target device
- *
- * Called from the device PM subsystem on device removal under device_pm_lock().
- */
 void dev_pm_qos_constraints_destroy(struct device *dev)
 {
 	struct dev_pm_qos_request *req, *tmp;
 	struct pm_qos_constraints *c;
 
-	/*
-	 * If the device's PM QoS resume latency limit has been exposed to user
-	 * space, it has to be hidden at this point.
-	 */
 	dev_pm_qos_hide_latency_limit(dev);
 
 	mutex_lock(&dev_pm_qos_mtx);
@@ -180,12 +136,8 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 	if (!c)
 		goto out;
 
-	/* Flush the constraints list for the device */
+	
 	plist_for_each_entry_safe(req, tmp, &c->list, node) {
-		/*
-		 * Update constraints list and call the notification
-		 * callbacks if needed
-		 */
 		apply_constraint(req, PM_QOS_REMOVE_REQ, PM_QOS_DEFAULT_VALUE);
 		memset(req, 0, sizeof(*req));
 	}
@@ -201,30 +153,12 @@ void dev_pm_qos_constraints_destroy(struct device *dev)
 	mutex_unlock(&dev_pm_qos_mtx);
 }
 
-/**
- * dev_pm_qos_add_request - inserts new qos request into the list
- * @dev: target device for the constraint
- * @req: pointer to a preallocated handle
- * @value: defines the qos request
- *
- * This function inserts a new entry in the device constraints list of
- * requested qos performance characteristics. It recomputes the aggregate
- * QoS expectations of parameters and initializes the dev_pm_qos_request
- * handle.  Caller needs to save this handle for later use in updates and
- * removal.
- *
- * Returns 1 if the aggregated constraint value has changed,
- * 0 if the aggregated constraint value has not changed,
- * -EINVAL in case of wrong parameters, -ENOMEM if there's not enough memory
- * to allocate for data structures, -ENODEV if the device has just been removed
- * from the system.
- */
 int dev_pm_qos_add_request(struct device *dev, struct dev_pm_qos_request *req,
 			   s32 value)
 {
 	int ret = 0;
 
-	if (!dev || !req) /*guard against callers passing in null */
+	if (!dev || !req) 
 		return -EINVAL;
 
 	if (WARN(dev_pm_qos_request_active(req),
@@ -237,16 +171,11 @@ int dev_pm_qos_add_request(struct device *dev, struct dev_pm_qos_request *req,
 
 	if (!dev->power.constraints) {
 		if (dev->power.power_state.event == PM_EVENT_INVALID) {
-			/* The device has been removed from the system. */
+			
 			req->dev = NULL;
 			ret = -ENODEV;
 			goto out;
 		} else {
-			/*
-			 * Allocate the constraints data on the first call to
-			 * add_request, i.e. only if the data is not already
-			 * allocated and if the device has not been removed.
-			 */
 			ret = dev_pm_qos_constraints_allocate(dev);
 		}
 	}
@@ -261,27 +190,12 @@ int dev_pm_qos_add_request(struct device *dev, struct dev_pm_qos_request *req,
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_add_request);
 
-/**
- * dev_pm_qos_update_request - modifies an existing qos request
- * @req : handle to list element holding a dev_pm_qos request to use
- * @new_value: defines the qos request
- *
- * Updates an existing dev PM qos request along with updating the
- * target value.
- *
- * Attempts are made to make this code callable on hot code paths.
- *
- * Returns 1 if the aggregated constraint value has changed,
- * 0 if the aggregated constraint value has not changed,
- * -EINVAL in case of wrong parameters, -ENODEV if the device has been
- * removed from the system
- */
 int dev_pm_qos_update_request(struct dev_pm_qos_request *req,
 			      s32 new_value)
 {
 	int ret = 0;
 
-	if (!req) /*guard against callers passing in null */
+	if (!req) 
 		return -EINVAL;
 
 	if (WARN(!dev_pm_qos_request_active(req),
@@ -295,7 +209,7 @@ int dev_pm_qos_update_request(struct dev_pm_qos_request *req,
 			ret = apply_constraint(req, PM_QOS_UPDATE_REQ,
 					       new_value);
 	} else {
-		/* Return if the device has been removed */
+		
 		ret = -ENODEV;
 	}
 
@@ -304,23 +218,11 @@ int dev_pm_qos_update_request(struct dev_pm_qos_request *req,
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_update_request);
 
-/**
- * dev_pm_qos_remove_request - modifies an existing qos request
- * @req: handle to request list element
- *
- * Will remove pm qos request from the list of constraints and
- * recompute the current target value. Call this on slow code paths.
- *
- * Returns 1 if the aggregated constraint value has changed,
- * 0 if the aggregated constraint value has not changed,
- * -EINVAL in case of wrong parameters, -ENODEV if the device has been
- * removed from the system
- */
 int dev_pm_qos_remove_request(struct dev_pm_qos_request *req)
 {
 	int ret = 0;
 
-	if (!req) /*guard against callers passing in null */
+	if (!req) 
 		return -EINVAL;
 
 	if (WARN(!dev_pm_qos_request_active(req),
@@ -334,7 +236,7 @@ int dev_pm_qos_remove_request(struct dev_pm_qos_request *req)
 				       PM_QOS_DEFAULT_VALUE);
 		memset(req, 0, sizeof(*req));
 	} else {
-		/* Return if the device has been removed */
+		
 		ret = -ENODEV;
 	}
 
@@ -343,23 +245,13 @@ int dev_pm_qos_remove_request(struct dev_pm_qos_request *req)
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_remove_request);
 
-/**
- * dev_pm_qos_add_notifier - sets notification entry for changes to target value
- * of per-device PM QoS constraints
- *
- * @dev: target device for the constraint
- * @notifier: notifier block managed by caller.
- *
- * Will register the notifier into a notification chain that gets called
- * upon changes to the target value for the device.
- */
 int dev_pm_qos_add_notifier(struct device *dev, struct notifier_block *notifier)
 {
 	int retval = 0;
 
 	mutex_lock(&dev_pm_qos_mtx);
 
-	/* Silently return if the constraints object is not present. */
+	
 	if (dev->power.constraints)
 		retval = blocking_notifier_chain_register(
 				dev->power.constraints->notifiers,
@@ -370,16 +262,6 @@ int dev_pm_qos_add_notifier(struct device *dev, struct notifier_block *notifier)
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_add_notifier);
 
-/**
- * dev_pm_qos_remove_notifier - deletes notification for changes to target value
- * of per-device PM QoS constraints
- *
- * @dev: target device for the constraint
- * @notifier: notifier block to be removed.
- *
- * Will remove the notifier from the notification chain that gets called
- * upon changes to the target value.
- */
 int dev_pm_qos_remove_notifier(struct device *dev,
 			       struct notifier_block *notifier)
 {
@@ -387,7 +269,7 @@ int dev_pm_qos_remove_notifier(struct device *dev,
 
 	mutex_lock(&dev_pm_qos_mtx);
 
-	/* Silently return if the constraints object is not present. */
+	
 	if (dev->power.constraints)
 		retval = blocking_notifier_chain_unregister(
 				dev->power.constraints->notifiers,
@@ -398,42 +280,18 @@ int dev_pm_qos_remove_notifier(struct device *dev,
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_remove_notifier);
 
-/**
- * dev_pm_qos_add_global_notifier - sets notification entry for changes to
- * target value of the PM QoS constraints for any device
- *
- * @notifier: notifier block managed by caller.
- *
- * Will register the notifier into a notification chain that gets called
- * upon changes to the target value for any device.
- */
 int dev_pm_qos_add_global_notifier(struct notifier_block *notifier)
 {
 	return blocking_notifier_chain_register(&dev_pm_notifiers, notifier);
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_add_global_notifier);
 
-/**
- * dev_pm_qos_remove_global_notifier - deletes notification for changes to
- * target value of PM QoS constraints for any device
- *
- * @notifier: notifier block to be removed.
- *
- * Will remove the notifier from the notification chain that gets called
- * upon changes to the target value for any device.
- */
 int dev_pm_qos_remove_global_notifier(struct notifier_block *notifier)
 {
 	return blocking_notifier_chain_unregister(&dev_pm_notifiers, notifier);
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_remove_global_notifier);
 
-/**
- * dev_pm_qos_add_ancestor_request - Add PM QoS request for device's ancestor.
- * @dev: Device whose ancestor to add the request for.
- * @req: Pointer to the preallocated handle.
- * @value: Constraint latency value.
- */
 int dev_pm_qos_add_ancestor_request(struct device *dev,
 				    struct dev_pm_qos_request *req, s32 value)
 {
@@ -460,11 +318,6 @@ static void __dev_pm_qos_drop_user_request(struct device *dev)
 	dev->power.pq_req = 0;
 }
 
-/**
- * dev_pm_qos_expose_latency_limit - Expose PM QoS latency limit to user space.
- * @dev: Device whose PM QoS latency limit is to be exposed to user space.
- * @value: Initial value of the latency limit.
- */
 int dev_pm_qos_expose_latency_limit(struct device *dev, s32 value)
 {
 	struct dev_pm_qos_request *req;
@@ -493,10 +346,6 @@ int dev_pm_qos_expose_latency_limit(struct device *dev, s32 value)
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_expose_latency_limit);
 
-/**
- * dev_pm_qos_hide_latency_limit - Hide PM QoS latency limit from user space.
- * @dev: Device whose PM QoS latency limit is to be hidden from user space.
- */
 void dev_pm_qos_hide_latency_limit(struct device *dev)
 {
 	if (dev->power.pq_req) {
@@ -505,4 +354,4 @@ void dev_pm_qos_hide_latency_limit(struct device *dev)
 	}
 }
 EXPORT_SYMBOL_GPL(dev_pm_qos_hide_latency_limit);
-#endif /* CONFIG_PM_RUNTIME */
+#endif 

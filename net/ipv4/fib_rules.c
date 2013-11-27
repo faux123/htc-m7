@@ -27,11 +27,14 @@
 #include <linux/list.h>
 #include <linux/rcupdate.h>
 #include <linux/export.h>
+#include <linux/module.h>
 #include <net/ip.h>
 #include <net/route.h>
 #include <net/tcp.h>
 #include <net/ip_fib.h>
 #include <net/fib_rules.h>
+
+#define FIB_RULE_DEBUG 1
 
 struct fib4_rule {
 	struct fib_rule		common;
@@ -126,6 +129,10 @@ static struct fib_table *fib_empty_table(struct net *net)
 {
 	u32 id;
 
+#ifdef FIB_RULE_DEBUG
+	printk(KERN_DEBUG "[NET][IPV4][RULE] %s \n", __func__);
+#endif
+
 	for (id = 1; id <= RT_TABLE_MAX; id++)
 		if (fib_get_table(net, id) == NULL)
 			return fib_new_table(net, id);
@@ -144,6 +151,10 @@ static int fib4_rule_configure(struct fib_rule *rule, struct sk_buff *skb,
 	struct net *net = sock_net(skb->sk);
 	int err = -EINVAL;
 	struct fib4_rule *rule4 = (struct fib4_rule *) rule;
+
+#ifdef FIB_RULE_DEBUG
+	printk(KERN_DEBUG "[NET][IPV4][RULE] %s \n", __func__);
+#endif
 
 	if (frh->tos & ~IPTOS_TOS_MASK)
 		goto errout;
@@ -217,6 +228,10 @@ static int fib4_rule_fill(struct fib_rule *rule, struct sk_buff *skb,
 {
 	struct fib4_rule *rule4 = (struct fib4_rule *) rule;
 
+#ifdef FIB_RULE_DEBUG
+	printk(KERN_DEBUG "[NET][IPV4][RULE] %s \n", __func__);
+#endif
+
 	frh->dst_len = rule4->dst_len;
 	frh->src_len = rule4->src_len;
 	frh->tos = rule4->tos;
@@ -239,13 +254,16 @@ nla_put_failure:
 
 static size_t fib4_rule_nlmsg_payload(struct fib_rule *rule)
 {
-	return nla_total_size(4) /* dst */
-	       + nla_total_size(4) /* src */
-	       + nla_total_size(4); /* flow */
+	return nla_total_size(4) 
+	       + nla_total_size(4) 
+	       + nla_total_size(4); 
 }
 
 static void fib4_rule_flush_cache(struct fib_rules_ops *ops)
 {
+#ifdef FIB_RULE_DEBUG
+	printk(KERN_DEBUG "[NET][IPV4][RULE] %s \n", __func__);
+#endif
 	rt_cache_flush(ops->fro_net, -1);
 }
 
@@ -270,6 +288,10 @@ static int fib_default_rules_init(struct fib_rules_ops *ops)
 {
 	int err;
 
+#ifdef FIB_RULE_DEBUG
+	printk(KERN_DEBUG "[NET][IPV4][RULE] %s \n", __func__);
+#endif
+
 	err = fib_default_rule_add(ops, 0, RT_TABLE_LOCAL, 0);
 	if (err < 0)
 		return err;
@@ -287,6 +309,10 @@ int __net_init fib4_rules_init(struct net *net)
 	int err;
 	struct fib_rules_ops *ops;
 
+#ifdef FIB_RULE_DEBUG
+	printk(KERN_DEBUG "[NET][IPV4][RULE] %s \n", __func__);
+#endif 
+
 	ops = fib_rules_register(&fib4_rules_ops_template, net);
 	if (IS_ERR(ops))
 		return PTR_ERR(ops);
@@ -298,12 +324,20 @@ int __net_init fib4_rules_init(struct net *net)
 	return 0;
 
 fail:
-	/* also cleans all rules already added */
+
+#ifdef FIB_RULE_DEBUG
+	printk(KERN_DEBUG "[NET][IPV4][RULE] %s : fib_rules_unregister\n", __func__);
+#endif 
+	
 	fib_rules_unregister(ops);
 	return err;
 }
 
 void __net_exit fib4_rules_exit(struct net *net)
 {
+
+#ifdef FIB_RULE_DEBUG
+	printk(KERN_DEBUG "[NET][IPV4][RULE] %s : fib_rules_unregister\n", __func__);
+#endif 
 	fib_rules_unregister(net->ipv4.rules_ops);
 }

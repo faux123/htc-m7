@@ -1,6 +1,3 @@
-/*
- * memory buffer pool support
- */
 #ifndef _LINUX_MEMPOOL_H
 #define _LINUX_MEMPOOL_H
 
@@ -13,8 +10,8 @@ typedef void (mempool_free_t)(void *element, void *pool_data);
 
 typedef struct mempool_s {
 	spinlock_t lock;
-	int min_nr;		/* nr of elements at *elements */
-	int curr_nr;		/* Current nr of elements at *elements */
+	int min_nr;		
+	int curr_nr;		
 	void **elements;
 
 	void *pool_data;
@@ -33,10 +30,6 @@ extern void mempool_destroy(mempool_t *pool);
 extern void * mempool_alloc(mempool_t *pool, gfp_t gfp_mask);
 extern void mempool_free(void *element, mempool_t *pool);
 
-/*
- * A mempool_alloc_t and mempool_free_t that get the memory from
- * a slab that is passed in through pool_data.
- */
 void *mempool_alloc_slab(gfp_t gfp_mask, void *pool_data);
 void mempool_free_slab(void *element, void *pool_data);
 static inline mempool_t *
@@ -46,10 +39,6 @@ mempool_create_slab_pool(int min_nr, struct kmem_cache *kc)
 			      (void *) kc);
 }
 
-/*
- * a mempool_alloc_t and a mempool_free_t to kmalloc and kfree the
- * amount of memory specified by pool_data
- */
 void *mempool_kmalloc(gfp_t gfp_mask, void *pool_data);
 void mempool_kfree(void *element, void *pool_data);
 static inline mempool_t *mempool_create_kmalloc_pool(int min_nr, size_t size)
@@ -58,10 +47,6 @@ static inline mempool_t *mempool_create_kmalloc_pool(int min_nr, size_t size)
 			      (void *) size);
 }
 
-/*
- * A mempool_alloc_t and mempool_free_t for a simple page allocator that
- * allocates pages of the order specified by pool_data
- */
 void *mempool_alloc_pages(gfp_t gfp_mask, void *pool_data);
 void mempool_free_pages(void *element, void *pool_data);
 static inline mempool_t *mempool_create_page_pool(int min_nr, int order)
@@ -70,4 +55,4 @@ static inline mempool_t *mempool_create_page_pool(int min_nr, int order)
 			      (void *)(long)order);
 }
 
-#endif /* _LINUX_MEMPOOL_H */
+#endif 
