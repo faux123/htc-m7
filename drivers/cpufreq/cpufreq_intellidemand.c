@@ -92,10 +92,6 @@ static int sampling_rate_boosted;
 static u64 sampling_rate_boosted_time;
 static unsigned int current_sampling_rate = DEF_SAMPLING_RATE;
 
-#ifdef CONFIG_CPUFREQ_ID_PERFLOCK
-static unsigned int saved_policy_min;
-#endif
-
 static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 				unsigned int event);
