@@ -2,6 +2,7 @@
 #define BMA250_H
 
 #include <linux/ioctl.h>
+#include <linux/input.h>
 
 #define SENSOR_NAME 			"bma250"
 #define ABSMIN				-512
@@ -750,5 +751,11 @@ struct bma250_platform_data {
 
 	int (*power_LPM)(int on);
 };
+
+#ifdef CONFIG_BMA250_WAKE_OPTIONS
+/* flick2Wake */
+extern void flick2wake_setdev(struct input_dev * input_device);
+extern void gyroscope_enable(int enable);
+#endif
 
 #endif
