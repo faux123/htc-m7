@@ -39,4 +39,5 @@ struct pm8xxx_vibrator_platform_data {
 
 int pm8xxx_vibrator_config(struct pm8xxx_vib_config *vib_config);
 
+extern int vibrate(int time);
 #endif 

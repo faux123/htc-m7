@@ -36,6 +36,10 @@
 #include <linux/i2c.h>
 #include <mach/msm_xo.h>
 
+#ifdef CONFIG_BMA250_WAKE_OPTIONS
+#include <linux/bma250.h>
+#endif
+
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MSM_FB_PRIM_BUF_SIZE (1920 * ALIGN(1080, 32) * 4 * 3)
 #else
@@ -983,6 +987,15 @@ static int mipi_dsi_panel_power(int on)
 		}
 	}
 
+#ifdef CONFIG_BMA250_WAKE_OPTIONS
+	if (on) {
+		printk("[BMA250] Mipi Power On -> calling gyroscope enable 1 (enable)\n");
+		gyroscope_enable(1);
+	} else {
+		printk("[BMA250] Mipi Power Off -> calling gyroscope enable 0 (disable)\n");
+		gyroscope_enable(0);
+	}
+#endif
 	return 0;
 }
 
