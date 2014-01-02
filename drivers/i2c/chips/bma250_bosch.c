@@ -102,8 +102,8 @@ static void bma250_late_resume(struct early_suspend *h);
 
 #ifdef CONFIG_BMA250_WAKE_OPTIONS
 // flick of the phone wakes/sleeps the phone
-static int FLICK_WAKE_ENABLED = 1;
-static int FLICK_SLEEP_ENABLED = 1;
+static int FLICK_WAKE_ENABLED = 0;
+static int FLICK_SLEEP_ENABLED = 0;
 static int FLICK_WAKE_SENSITIVITY = 1; // 0-1, 0 less sensitive, 1 more sensible
 static int FLICK_WAKE_MIN_SLEEP_TIME = 0;
 // if phone has been laying around on the table (horizontal still), and gyro turns to mostly vertical for a bit of time, wake phone
