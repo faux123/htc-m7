@@ -742,3 +742,4 @@ obj-y += htc_cpu_usage_stats.o
 
 obj-$(CONFIG_MSM_IPC_ROUTER_SECURITY)+= msm_ipc_router_security.o
 obj-$(CONFIG_MSM_CPUFREQ_LIMITER) += cpufreq_limit.o
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
