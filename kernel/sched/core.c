@@ -5448,8 +5448,6 @@ void __init sched_init_smp(void)
 	hotcpu_notifier(cpuset_cpu_inactive, CPU_PRI_CPUSET_INACTIVE);
 
 	
-	hotcpu_notifier(update_runtime, 0);
-
 	init_hrtick();
 
 	
