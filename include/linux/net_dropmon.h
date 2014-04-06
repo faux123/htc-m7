@@ -44,7 +44,6 @@ struct net_dm_user_msg {
 };
 
 
-/* These are the netlink message types for this protocol */
 
 enum {
 	NET_DM_CMD_UNSPEC = 0,
@@ -57,8 +56,5 @@ enum {
 
 #define NET_DM_CMD_MAX (_NET_DM_CMD_MAX - 1)
 
-/*
- * Our group identifiers
- */
 #define NET_DM_GRP_ALERT 1
 #endif

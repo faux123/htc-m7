@@ -14,9 +14,6 @@
 
 struct seq_file;
 
-/*
- * This is internal.  Do not use it.
- */
 extern void init_FIQ(void);
 extern int show_fiq_list(struct seq_file *, int);
 
@@ -24,9 +21,6 @@ extern int show_fiq_list(struct seq_file *, int);
 extern void (*handle_arch_irq)(struct pt_regs *);
 #endif
 
-/*
- * This is for easy migration, but should be changed in the source
- */
 #define do_bad_IRQ(irq,desc)				\
 do {							\
 	raw_spin_lock(&desc->lock);			\
@@ -35,14 +29,10 @@ do {							\
 } while(0)
 
 #ifndef __ASSEMBLY__
-/*
- * Entry/exit functions for chained handlers where the primary IRQ chip
- * may implement either fasteoi or level-trigger flow control.
- */
 static inline void chained_irq_enter(struct irq_chip *chip,
 				     struct irq_desc *desc)
 {
-	/* FastEOI controllers require no action on entry. */
+	
 	if (chip->irq_eoi)
 		return;
 

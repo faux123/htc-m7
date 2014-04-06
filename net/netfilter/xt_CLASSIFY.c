@@ -1,7 +1,3 @@
-/*
- * This is a module which is used for setting the skb->priority field
- * of an skb for qdisc classification.
- */
 
 /* (C) 2001-2002 Patrick McHardy <kaber@trash.net>
  *

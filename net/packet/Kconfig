@@ -14,3 +14,4 @@ config PACKET
 	  be called af_packet.
 
 	  If unsure, say Y.
+

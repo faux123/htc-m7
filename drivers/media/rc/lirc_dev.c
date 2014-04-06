@@ -65,12 +65,8 @@ static DEFINE_MUTEX(lirc_dev_lock);
 
 static struct irctl *irctls[MAX_IRCTL_DEVICES];
 
-/* Only used for sysfs but defined to void otherwise */
 static struct class *lirc_class;
 
-/*  helper function
- *  initializes the irctl structure
- */
 static void lirc_irctl_init(struct irctl *ir)
 {
 	mutex_init(&ir->irctl_lock);
@@ -90,20 +86,12 @@ static void lirc_irctl_cleanup(struct irctl *ir)
 	ir->buf = NULL;
 }
 
-/*  helper function
- *  reads key codes from driver and puts them into buffer
- *  returns 0 on success
- */
 static int lirc_add_to_buf(struct irctl *ir)
 {
 	if (ir->d.add_to_buf) {
 		int res = -ENODATA;
 		int got_data = 0;
 
-		/*
-		 * service the device as long as it is returning
-		 * data and we have space
-		 */
 get_data:
 		res = ir->d.add_to_buf(ir->d.data, ir->buf);
 		if (res == 0) {
@@ -120,8 +108,6 @@ get_data:
 	return 0;
 }
 
-/* main function of the polling thread
- */
 static int lirc_thread(void *irctl)
 {
 	struct irctl *ir = irctl;
@@ -277,7 +263,7 @@ int lirc_register_driver(struct lirc_driver *d)
 	minor = d->minor;
 
 	if (minor < 0) {
-		/* find first free slot for driver */
+		
 		for (minor = 0; minor < MAX_IRCTL_DEVICES; minor++)
 			if (!irctls[minor])
 				break;
@@ -306,11 +292,11 @@ int lirc_register_driver(struct lirc_driver *d)
 	if (d->sample_rate) {
 		ir->jiffies_to_wait = HZ / d->sample_rate;
 	} else {
-		/* it means - wait for external event in task queue */
+		
 		ir->jiffies_to_wait = 0;
 	}
 
-	/* some safety check 8-) */
+	
 	d->name[sizeof(d->name)-1] = '\0';
 
 	bytes_in_key = BITS_TO_LONGS(d->code_length) +
@@ -344,7 +330,7 @@ int lirc_register_driver(struct lirc_driver *d)
 		      "lirc%u", ir->d.minor);
 
 	if (d->sample_rate) {
-		/* try to fire up polling thread */
+		
 		ir->task = kthread_run(lirc_thread, (void *)ir, "lirc_dev");
 		if (IS_ERR(ir->task)) {
 			dev_err(d->dev, "lirc_dev: lirc_register_driver: "
@@ -404,7 +390,7 @@ int lirc_unregister_driver(int minor)
 		return -ENOENT;
 	}
 
-	/* end up polling thread */
+	
 	if (ir->task)
 		kthread_stop(ir->task);
 
@@ -497,8 +483,16 @@ EXPORT_SYMBOL(lirc_dev_fop_open);
 
 int lirc_dev_fop_close(struct inode *inode, struct file *file)
 {
-	struct irctl *ir = irctls[iminor(inode)];
+	
+	struct irctl *ir;
 	struct cdev *cdev;
+	if (iminor(inode) >= MAX_IRCTL_DEVICES){
+		printk(KERN_WARNING "lirc_dev [%d]: open result = -ENODEV\n",
+		iminor(inode));
+		return -ENODEV;
+	}
+	ir = irctls[iminor(inode)];
+	
 
 	if (!ir) {
 		printk(KERN_ERR "%s: called with invalid irctl\n", __func__);
@@ -531,8 +525,16 @@ EXPORT_SYMBOL(lirc_dev_fop_close);
 
 unsigned int lirc_dev_fop_poll(struct file *file, poll_table *wait)
 {
-	struct irctl *ir = irctls[iminor(file->f_dentry->d_inode)];
+	
+	struct irctl *ir;
 	unsigned int ret;
+	if (iminor(file->f_dentry->d_inode) >= MAX_IRCTL_DEVICES) {
+		printk(KERN_WARNING "lirc_dev [%d]: open result = -ENODEV\n",
+		iminor(file->f_dentry->d_inode));
+		return -ENODEV;
+	}
+	ir = irctls[iminor(file->f_dentry->d_inode)];
+	
 
 	if (!ir) {
 		printk(KERN_ERR "%s: called with invalid irctl\n", __func__);
@@ -565,7 +567,15 @@ long lirc_dev_fop_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	__u32 mode;
 	int result = 0;
-	struct irctl *ir = irctls[iminor(file->f_dentry->d_inode)];
+	
+	struct irctl *ir;
+	if (iminor(file->f_dentry->d_inode) >= MAX_IRCTL_DEVICES) {
+		printk(KERN_WARNING "lirc_dev [%d]: open result = -ENODEV\n",
+		iminor(file->f_dentry->d_inode));
+		return -ENODEV;
+	}
+	ir = irctls[iminor(file->f_dentry->d_inode)];
+	
 
 	if (!ir) {
 		printk(KERN_ERR "lirc_dev: %s: no irctl found!\n", __func__);
@@ -606,10 +616,6 @@ long lirc_dev_fop_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		result = get_user(mode, (__u32 *)arg);
 		if (!result && !(LIRC_MODE2REC(mode) & ir->d.features))
 			result = -EINVAL;
-		/*
-		 * FIXME: We should actually set the mode somehow but
-		 * for now, lirc_serial doesn't support mode changing either
-		 */
 		break;
 	case LIRC_GET_LENGTH:
 		result = put_user(ir->d.code_length, (__u32 *)arg);
@@ -650,10 +656,18 @@ ssize_t lirc_dev_fop_read(struct file *file,
 			  size_t length,
 			  loff_t *ppos)
 {
-	struct irctl *ir = irctls[iminor(file->f_dentry->d_inode)];
 	unsigned char *buf;
 	int ret = 0, written = 0;
+	
+	struct irctl *ir;
 	DECLARE_WAITQUEUE(wait, current);
+	if (iminor(file->f_dentry->d_inode) >= MAX_IRCTL_DEVICES) {
+		printk(KERN_WARNING "lirc_dev [%d]: open result = -ENODEV\n",
+		iminor(file->f_dentry->d_inode));
+		return -ENODEV;
+	}
+	ir = irctls[iminor(file->f_dentry->d_inode)];
+	
 
 	if (!ir) {
 		printk(KERN_ERR "%s: called with invalid irctl\n", __func__);
@@ -680,18 +694,9 @@ ssize_t lirc_dev_fop_read(struct file *file,
 		goto out_locked;
 	}
 
-	/*
-	 * we add ourselves to the task queue before buffer check
-	 * to avoid losing scan code (in case when queue is awaken somewhere
-	 * between while condition checking and scheduling)
-	 */
 	add_wait_queue(&ir->buf->wait_poll, &wait);
 	set_current_state(TASK_INTERRUPTIBLE);
 
-	/*
-	 * while we didn't provide 'length' bytes, device is opened in blocking
-	 * mode and 'copy_to_user' is happy, wait for data.
-	 */
 	while (written < length && ret == 0) {
 		if (lirc_buffer_empty(ir->buf)) {
 			/* According to the read(2) man page, 'written' can be
@@ -757,6 +762,13 @@ void *lirc_get_pdata(struct file *file)
 	if (file && file->f_dentry && file->f_dentry->d_inode &&
 	    file->f_dentry->d_inode->i_rdev) {
 		struct irctl *ir;
+		
+		if (iminor(file->f_dentry->d_inode) >= MAX_IRCTL_DEVICES) {
+			printk(KERN_WARNING "lirc_dev [%d]: open result = -ENODEV\n",
+			iminor(file->f_dentry->d_inode));
+			return 0;
+		}
+		
 		ir = irctls[iminor(file->f_dentry->d_inode)];
 		data = ir->d.data;
 	}

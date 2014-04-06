@@ -5,4 +5,4 @@ struct xt_pkttype_info {
 	int	pkttype;
 	int	invert;
 };
-#endif /*_XT_PKTTYPE_H*/
+#endif 

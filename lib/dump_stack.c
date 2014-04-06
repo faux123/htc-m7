@@ -1,7 +1,3 @@
-/*
- * Provide a default dump_stack() function for architectures
- * which don't implement their own.
- */
 
 #include <linux/kernel.h>
 #include <linux/export.h>

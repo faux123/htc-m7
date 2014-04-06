@@ -1,8 +1,3 @@
-/*
- * netfilter module to enforce network quotas
- *
- * Sam Johnston <samj@samj.net>
- */
 #include <linux/skbuff.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
@@ -34,7 +29,7 @@ quota_mt(const struct sk_buff *skb, struct xt_action_param *par)
 		priv->quota -= skb->len;
 		ret = !ret;
 	} else {
-		/* we do not allow even small packets from now on */
+		
 		priv->quota = 0;
 	}
 	spin_unlock_bh(&priv->lock);

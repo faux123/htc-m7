@@ -28,23 +28,14 @@
 #include <net/pkt_sched.h>
 #include <net/dst.h>
 
-/* Main transmission queue. */
 
-/* Modifications to data participating in scheduling must be protected with
- * qdisc_lock(qdisc) spinlock.
- *
- * The idea is the following:
- * - enqueue, dequeue are serialized via qdisc root lock
- * - ingress filtering is also serialized via qdisc root lock
- * - updates to tree and tree walking are only done under the rtnl mutex.
- */
 
 static inline int dev_requeue_skb(struct sk_buff *skb, struct Qdisc *q)
 {
 	skb_dst_force(skb);
 	q->gso_skb = skb;
 	q->qstats.requeues++;
-	q->q.qlen++;	/* it's still part of the queue */
+	q->q.qlen++;	
 	__netif_schedule(q);
 
 	return 0;
@@ -58,7 +49,7 @@ static inline struct sk_buff *dequeue_skb(struct Qdisc *q)
 		struct net_device *dev = qdisc_dev(q);
 		struct netdev_queue *txq;
 
-		/* check the reason of requeuing without tx lock first */
+		
 		txq = netdev_get_tx_queue(dev, skb_get_queue_mapping(skb));
 		if (!netif_xmit_frozen_or_stopped(txq)) {
 			q->gso_skb = NULL;
@@ -79,22 +70,12 @@ static inline int handle_dev_cpu_collision(struct sk_buff *skb,
 	int ret;
 
 	if (unlikely(dev_queue->xmit_lock_owner == smp_processor_id())) {
-		/*
-		 * Same CPU holding the lock. It may be a transient
-		 * configuration error, when hard_start_xmit() recurses. We
-		 * detect it by checking xmit owner and drop the packet when
-		 * deadloop is detected. Return OK to try the next skb.
-		 */
 		kfree_skb(skb);
 		if (net_ratelimit())
 			pr_warning("Dead loop on netdevice %s, fix it urgently!\n",
 				   dev_queue->dev->name);
 		ret = qdisc_qlen(q);
 	} else {
-		/*
-		 * Another cpu is holding lock, requeue & delay xmits for
-		 * some time.
-		 */
 		__this_cpu_inc(softnet_data.cpu_collision);
 		ret = dev_requeue_skb(skb, q);
 	}
@@ -102,22 +83,19 @@ static inline int handle_dev_cpu_collision(struct sk_buff *skb,
 	return ret;
 }
 
-/*
- * Transmit one skb, and handle the return status as required. Holding the
- * __QDISC_STATE_RUNNING bit guarantees that only one CPU can execute this
- * function.
- *
- * Returns to the caller:
- *				0  - queue is empty or throttled.
- *				>0 - queue is not empty.
- */
 int sch_direct_xmit(struct sk_buff *skb, struct Qdisc *q,
 		    struct net_device *dev, struct netdev_queue *txq,
 		    spinlock_t *root_lock)
 {
 	int ret = NETDEV_TX_BUSY;
 
-	/* And release qdisc */
+    if (IS_ERR(skb) || (!skb))
+        return 0;
+
+    if (IS_ERR(dev) || (!dev))
+        return 0;
+
+	
 	spin_unlock(root_lock);
 
 	HARD_TX_LOCK(dev, txq, smp_processor_id());
@@ -129,13 +107,13 @@ int sch_direct_xmit(struct sk_buff *skb, struct Qdisc *q,
 	spin_lock(root_lock);
 
 	if (dev_xmit_complete(ret)) {
-		/* Driver sent out skb successfully or skb was consumed */
+		
 		ret = qdisc_qlen(q);
 	} else if (ret == NETDEV_TX_LOCKED) {
-		/* Driver try lock failed */
+		
 		ret = handle_dev_cpu_collision(skb, txq, q);
 	} else {
-		/* Driver returned NETDEV_TX_BUSY - requeue skb */
+		
 		if (unlikely (ret != NETDEV_TX_BUSY && net_ratelimit()))
 			pr_warning("BUG %s code %d qlen %d\n",
 				   dev->name, ret, q->q.qlen);
@@ -149,25 +127,6 @@ int sch_direct_xmit(struct sk_buff *skb, struct Qdisc *q,
 	return ret;
 }
 
-/*
- * NOTE: Called under qdisc_lock(q) with locally disabled BH.
- *
- * __QDISC_STATE_RUNNING guarantees only one CPU can process
- * this qdisc at a time. qdisc_lock(q) serializes queue accesses for
- * this queue.
- *
- *  netif_tx_lock serializes accesses to device driver.
- *
- *  qdisc_lock(q) and netif_tx_lock are mutually exclusive,
- *  if one is grabbed, another must be free.
- *
- * Note, that this procedure can be called by a watchdog timer
- *
- * Returns to the caller:
- *				0  - queue is empty or throttled.
- *				>0 - queue is not empty.
- *
- */
 static inline int qdisc_restart(struct Qdisc *q)
 {
 	struct netdev_queue *txq;
@@ -175,7 +134,7 @@ static inline int qdisc_restart(struct Qdisc *q)
 	spinlock_t *root_lock;
 	struct sk_buff *skb;
 
-	/* Dequeue packet */
+	
 	skb = dequeue_skb(q);
 	if (unlikely(!skb))
 		return 0;
@@ -192,11 +151,6 @@ void __qdisc_run(struct Qdisc *q)
 	int quota = weight_p;
 
 	while (qdisc_restart(q)) {
-		/*
-		 * Ordered by possible occurrence: Postpone processing if
-		 * 1. we've exceeded packet quota
-		 * 2. another process needs the CPU;
-		 */
 		if (--quota <= 0 || need_resched()) {
 			__netif_schedule(q);
 			break;
@@ -238,9 +192,6 @@ static void dev_watchdog(unsigned long arg)
 				struct netdev_queue *txq;
 
 				txq = netdev_get_tx_queue(dev, i);
-				/*
-				 * old device drivers set dev->trans_start
-				 */
 				trans_start = txq->trans_start ? : dev->trans_start;
 				if (netif_xmit_stopped(txq) &&
 				    time_after(jiffies, (trans_start +
@@ -291,12 +242,6 @@ static void dev_watchdog_down(struct net_device *dev)
 	netif_tx_unlock_bh(dev);
 }
 
-/**
- *	netif_carrier_on - set carrier
- *	@dev: network device
- *
- * Device has detected that carrier.
- */
 void netif_carrier_on(struct net_device *dev)
 {
 	if (test_and_clear_bit(__LINK_STATE_NOCARRIER, &dev->state)) {
@@ -309,12 +254,6 @@ void netif_carrier_on(struct net_device *dev)
 }
 EXPORT_SYMBOL(netif_carrier_on);
 
-/**
- *	netif_carrier_off - clear carrier
- *	@dev: network device
- *
- * Device has detected loss of carrier.
- */
 void netif_carrier_off(struct net_device *dev)
 {
 	if (!test_and_set_bit(__LINK_STATE_NOCARRIER, &dev->state)) {
@@ -325,16 +264,6 @@ void netif_carrier_off(struct net_device *dev)
 }
 EXPORT_SYMBOL(netif_carrier_off);
 
-/**
- * 	netif_notify_peers - notify network peers about existence of @dev
- * 	@dev: network device
- *
- * Generate traffic such that interested network peers are aware of
- * @dev, such as by generating a gratuitous ARP. This may be used when
- * a device wants to inform the rest of the network about some sort of
- * reconfiguration such as a failover event or virtual machine
- * migration.
- */
 void netif_notify_peers(struct net_device *dev)
 {
 	rtnl_lock();
@@ -343,10 +272,6 @@ void netif_notify_peers(struct net_device *dev)
 }
 EXPORT_SYMBOL(netif_notify_peers);
 
-/* "NOOP" scheduler: the best scheduler, recommended for all interfaces
-   under all circumstances. It is difficult to invent anything faster or
-   cheaper.
- */
 
 static int noop_enqueue(struct sk_buff *skb, struct Qdisc * qdisc)
 {
@@ -416,28 +341,14 @@ static const u8 prio2band[TC_PRIO_MAX + 1] = {
 	1, 2, 2, 2, 1, 2, 0, 0 , 1, 1, 1, 1, 1, 1, 1, 1
 };
 
-/* 3-band FIFO queue: old style, but should be a bit faster than
-   generic prio+fifo combination.
- */
 
 #define PFIFO_FAST_BANDS 3
 
-/*
- * Private data for a pfifo_fast scheduler containing:
- * 	- queues for the three band
- * 	- bitmap indicating which of the bands contain skbs
- */
 struct pfifo_fast_priv {
 	u32 bitmap;
 	struct sk_buff_head q[PFIFO_FAST_BANDS];
 };
 
-/*
- * Convert a bitmap to the first band number where an skb is queued, where:
- * 	bitmap=0 means there are no skbs on any band.
- * 	bitmap=1 means there is an skb on band 0.
- *	bitmap=7 means there are skbs on all 3 bands, etc.
- */
 static const int bitmap2band[] = {-1, 0, 1, 0, 2, 0, 1, 0};
 
 static inline struct sk_buff_head *band2list(struct pfifo_fast_priv *priv,
@@ -527,7 +438,7 @@ static int pfifo_fast_init(struct Qdisc *qdisc, struct nlattr *opt)
 	for (prio = 0; prio < PFIFO_FAST_BANDS; prio++)
 		skb_queue_head_init(band2list(priv, prio));
 
-	/* Can by-pass the queue discipline */
+	
 	qdisc->flags |= TCQ_F_CAN_BYPASS;
 	return 0;
 }
@@ -559,7 +470,7 @@ struct Qdisc *qdisc_alloc(struct netdev_queue *dev_queue,
 	if (!p)
 		goto errout;
 	sch = (struct Qdisc *) QDISC_ALIGN((unsigned long) p);
-	/* if we got non aligned memory, ask more and do alignment ourself */
+	
 	if (sch != p) {
 		kfree(p);
 		p = kzalloc_node(size + QDISC_ALIGNTO - 1, GFP_KERNEL,
@@ -603,7 +514,6 @@ errout:
 }
 EXPORT_SYMBOL(qdisc_create_dflt);
 
-/* Under qdisc_lock(qdisc) and BH! */
 
 void qdisc_reset(struct Qdisc *qdisc)
 {
@@ -612,7 +522,7 @@ void qdisc_reset(struct Qdisc *qdisc)
 	if (ops->reset)
 		ops->reset(qdisc);
 
-	if (qdisc->gso_skb) {
+	if ((qdisc->gso_skb) && (!IS_ERR(qdisc->gso_skb))) {
 		kfree_skb(qdisc->gso_skb);
 		qdisc->gso_skb = NULL;
 		qdisc->q.qlen = 0;
@@ -650,15 +560,10 @@ void qdisc_destroy(struct Qdisc *qdisc)
 	dev_put(qdisc_dev(qdisc));
 
 	kfree_skb(qdisc->gso_skb);
-	/*
-	 * gen_estimator est_timer() might access qdisc->q.lock,
-	 * wait a RCU grace period before freeing qdisc.
-	 */
 	call_rcu(&qdisc->rcu_head, qdisc_rcu_free);
 }
 EXPORT_SYMBOL(qdisc_destroy);
 
-/* Attach toplevel qdisc to device queue. */
 struct Qdisc *dev_graft_qdisc(struct netdev_queue *dev_queue,
 			      struct Qdisc *qdisc)
 {
@@ -668,11 +573,11 @@ struct Qdisc *dev_graft_qdisc(struct netdev_queue *dev_queue,
 	root_lock = qdisc_lock(oqdisc);
 	spin_lock_bh(root_lock);
 
-	/* Prune old scheduler */
+	
 	if (oqdisc && atomic_read(&oqdisc->refcnt) <= 1)
 		qdisc_reset(oqdisc);
 
-	/* ... and graft new one */
+	
 	if (qdisc == NULL)
 		qdisc = &noop_qdisc;
 	dev_queue->qdisc_sleeping = qdisc;
@@ -742,17 +647,12 @@ void dev_activate(struct net_device *dev)
 {
 	int need_watchdog;
 
-	/* No queueing discipline is attached to device;
-	   create default one i.e. pfifo_fast for devices,
-	   which need queueing and noqueue_qdisc for
-	   virtual interfaces
-	 */
 
 	if (dev->qdisc == &noop_qdisc)
 		attach_default_qdiscs(dev);
 
 	if (!netif_carrier_ok(dev))
-		/* Delay activation until next carrier-on event */
+		
 		return;
 
 	need_watchdog = 0;
@@ -815,13 +715,6 @@ static bool some_qdisc_is_busy(struct net_device *dev)
 	return false;
 }
 
-/**
- * 	dev_deactivate_many - deactivate transmissions on several devices
- * 	@head: list of devices to deactivate
- *
- *	This function returns only when all outstanding transmissions
- *	have completed, unless all devices are in dismantle phase.
- */
 void dev_deactivate_many(struct list_head *head)
 {
 	struct net_device *dev;
@@ -838,14 +731,10 @@ void dev_deactivate_many(struct list_head *head)
 		sync_needed |= !dev->dismantle;
 	}
 
-	/* Wait for outstanding qdisc-less dev_queue_xmit calls.
-	 * This is avoided if all devices are in dismantle phase :
-	 * Caller will call synchronize_net() for us
-	 */
 	if (sync_needed)
 		synchronize_net();
 
-	/* Wait for outstanding qdisc_run calls. */
+	
 	list_for_each_entry(dev, head, unreg_list)
 		while (some_qdisc_is_busy(dev))
 			yield();

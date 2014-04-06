@@ -1,10 +1,8 @@
 #ifndef _NF_CONNTRACK_TCP_H
 #define _NF_CONNTRACK_TCP_H
-/* TCP tracking. */
 
 #include <linux/types.h>
 
-/* This is exposed to userspace (ctnetlink) */
 enum tcp_conntrack {
 	TCP_CONNTRACK_NONE,
 	TCP_CONNTRACK_SYN_SENT,
@@ -15,7 +13,7 @@ enum tcp_conntrack {
 	TCP_CONNTRACK_LAST_ACK,
 	TCP_CONNTRACK_TIME_WAIT,
 	TCP_CONNTRACK_CLOSE,
-	TCP_CONNTRACK_LISTEN,	/* obsolete */
+	TCP_CONNTRACK_LISTEN,	
 #define TCP_CONNTRACK_SYN_SENT2	TCP_CONNTRACK_LISTEN
 	TCP_CONNTRACK_MAX,
 	TCP_CONNTRACK_IGNORE,
@@ -24,22 +22,16 @@ enum tcp_conntrack {
 	TCP_CONNTRACK_TIMEOUT_MAX
 };
 
-/* Window scaling is advertised by the sender */
 #define IP_CT_TCP_FLAG_WINDOW_SCALE		0x01
 
-/* SACK is permitted by the sender */
 #define IP_CT_TCP_FLAG_SACK_PERM		0x02
 
-/* This sender sent FIN first */
 #define IP_CT_TCP_FLAG_CLOSE_INIT		0x04
 
-/* Be liberal in window checking */
 #define IP_CT_TCP_FLAG_BE_LIBERAL		0x08
 
-/* Has unacknowledged data */
 #define IP_CT_TCP_FLAG_DATA_UNACKNOWLEDGED	0x10
 
-/* The field td_maxack has been set */
 #define IP_CT_TCP_FLAG_MAXACK_SET		0x20
 
 struct nf_ct_tcp_flags {
@@ -50,30 +42,30 @@ struct nf_ct_tcp_flags {
 #ifdef __KERNEL__
 
 struct ip_ct_tcp_state {
-	u_int32_t	td_end;		/* max of seq + len */
-	u_int32_t	td_maxend;	/* max of ack + max(win, 1) */
-	u_int32_t	td_maxwin;	/* max(win) */
-	u_int32_t	td_maxack;	/* max of ack */
-	u_int8_t	td_scale;	/* window scale factor */
-	u_int8_t	flags;		/* per direction options */
+	u_int32_t	td_end;		
+	u_int32_t	td_maxend;	
+	u_int32_t	td_maxwin;	
+	u_int32_t	td_maxack;	
+	u_int8_t	td_scale;	
+	u_int8_t	flags;		
 };
 
 struct ip_ct_tcp {
-	struct ip_ct_tcp_state seen[2];	/* connection parameters per direction */
-	u_int8_t	state;		/* state of the connection (enum tcp_conntrack) */
-	/* For detecting stale connections */
-	u_int8_t	last_dir;	/* Direction of the last packet (enum ip_conntrack_dir) */
-	u_int8_t	retrans;	/* Number of retransmitted packets */
-	u_int8_t	last_index;	/* Index of the last packet */
-	u_int32_t	last_seq;	/* Last sequence number seen in dir */
-	u_int32_t	last_ack;	/* Last sequence number seen in opposite dir */
-	u_int32_t	last_end;	/* Last seq + len */
-	u_int16_t	last_win;	/* Last window advertisement seen in dir */
-	/* For SYN packets while we may be out-of-sync */
-	u_int8_t	last_wscale;	/* Last window scaling factor seen */
-	u_int8_t	last_flags;	/* Last flags set */
+	struct ip_ct_tcp_state seen[2];	
+	u_int8_t	state;		
+	
+	u_int8_t	last_dir;	
+	u_int8_t	retrans;	
+	u_int8_t	last_index;	
+	u_int32_t	last_seq;	
+	u_int32_t	last_ack;	
+	u_int32_t	last_end;	
+	u_int16_t	last_win;	
+	
+	u_int8_t	last_wscale;	
+	u_int8_t	last_flags;	
 };
 
-#endif /* __KERNEL__ */
+#endif 
 
-#endif /* _NF_CONNTRACK_TCP_H */
+#endif 

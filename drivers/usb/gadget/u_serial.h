@@ -15,51 +15,63 @@
 #include <linux/usb/composite.h>
 #include <linux/usb/cdc.h>
 
-/*
- * One non-multiplexed "serial" I/O port ... there can be several of these
- * on any given USB peripheral device, if it provides enough endpoints.
- *
- * The "u_serial" utility component exists to do one thing:  manage TTY
- * style I/O using the USB peripheral endpoints listed here, including
- * hookups to sysfs and /dev for each logical "tty" device.
- *
- * REVISIT at least ACM could support tiocmget() if needed.
- *
- * REVISIT someday, allow multiplexing several TTYs over these endpoints.
- */
+enum fserial_func_type {
+	USB_FSER_FUNC_NONE,
+	USB_FSER_FUNC_SERIAL,
+	USB_FSER_FUNC_MODEM,
+	USB_FSER_FUNC_MODEM_MDM,
+	USB_FSER_FUNC_ACM,
+	USB_FSER_FUNC_AUTOBOT,
+};
+
 struct gserial {
 	struct usb_function		func;
 
-	/* port is managed by gserial_{connect,disconnect} */
+	
 	struct gs_port			*ioport;
 
 	struct usb_ep			*in;
 	struct usb_ep			*out;
 
-	/* REVISIT avoid this CDC-ACM support harder ... */
-	struct usb_cdc_line_coding port_line_coding;	/* 9600-8-N-1 etc */
+	
+	struct usb_cdc_line_coding port_line_coding;	
+	u16				serial_state;
 
-	/* notification callbacks */
+	
+	unsigned int (*get_dtr)(struct gserial *p);
+	unsigned int (*get_rts)(struct gserial *p);
+
+	
 	void (*connect)(struct gserial *p);
 	void (*disconnect)(struct gserial *p);
 	int (*send_break)(struct gserial *p, int duration);
+	unsigned int (*send_carrier_detect)(struct gserial *p, unsigned int);
+	unsigned int (*send_ring_indicator)(struct gserial *p, unsigned int);
+	int (*send_modem_ctrl_bits)(struct gserial *p, int ctrl_bits);
+
+	
+	void (*notify_modem)(void *gser, u8 portno, int ctrl_bits);
 };
 
-/* utilities to allocate/free request and buffer */
 struct usb_request *gs_alloc_req(struct usb_ep *ep, unsigned len, gfp_t flags);
 void gs_free_req(struct usb_ep *, struct usb_request *req);
 
-/* port setup/teardown is handled by gadget driver */
 int gserial_setup(struct usb_gadget *g, unsigned n_ports);
 void gserial_cleanup(void);
 
-/* connect/disconnect is handled by individual functions */
 int gserial_connect(struct gserial *, u8 port_num);
 void gserial_disconnect(struct gserial *);
 
-/* functions are bound to configurations by a config or gadget driver */
+int gsdio_setup(struct usb_gadget *g, unsigned n_ports);
+int gsdio_connect(struct gserial *, u8 port_num);
+void gsdio_disconnect(struct gserial *, u8 portno);
+
+int gsmd_setup(struct usb_gadget *g, unsigned n_ports);
+int gsmd_connect(struct gserial *, u8 port_num);
+void gsmd_disconnect(struct gserial *, u8 portno);
+
 int acm_bind_config(struct usb_configuration *c, u8 port_num);
 int gser_bind_config(struct usb_configuration *c, u8 port_num);
 int obex_bind_config(struct usb_configuration *c, u8 port_num);
 
-#endif /* __U_SERIAL_H */
+#endif 

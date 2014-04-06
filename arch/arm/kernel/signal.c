@@ -24,23 +24,13 @@
 
 #define _BLOCKABLE (~(sigmask(SIGKILL) | sigmask(SIGSTOP)))
 
-/*
- * For ARM syscalls, we encode the syscall number into the instruction.
- */
 #define SWI_SYS_SIGRETURN	(0xef000000|(__NR_sigreturn)|(__NR_OABI_SYSCALL_BASE))
 #define SWI_SYS_RT_SIGRETURN	(0xef000000|(__NR_rt_sigreturn)|(__NR_OABI_SYSCALL_BASE))
 #define SWI_SYS_RESTART		(0xef000000|__NR_restart_syscall|__NR_OABI_SYSCALL_BASE)
 
-/*
- * With EABI, the syscall number has to be loaded into r7.
- */
 #define MOV_R7_NR_SIGRETURN	(0xe3a07000 | (__NR_sigreturn - __NR_SYSCALL_BASE))
 #define MOV_R7_NR_RT_SIGRETURN	(0xe3a07000 | (__NR_rt_sigreturn - __NR_SYSCALL_BASE))
 
-/*
- * For Thumb syscalls, we pass the syscall number via r7.  We therefore
- * need two 16-bit instructions.
- */
 #define SWI_THUMB_SIGRETURN	(0xdf00 << 16 | 0x2700 | (__NR_sigreturn - __NR_SYSCALL_BASE))
 #define SWI_THUMB_RT_SIGRETURN	(0xdf00 << 16 | 0x2700 | (__NR_rt_sigreturn - __NR_SYSCALL_BASE))
 
@@ -49,21 +39,11 @@ const unsigned long sigreturn_codes[7] = {
 	MOV_R7_NR_RT_SIGRETURN, SWI_SYS_RT_SIGRETURN, SWI_THUMB_RT_SIGRETURN,
 };
 
-/*
- * Either we support OABI only, or we have EABI with the OABI
- * compat layer enabled.  In the later case we don't know if
- * user space is EABI or not, and if not we must not clobber r7.
- * Always using the OABI syscall solves that issue and works for
- * all those cases.
- */
 const unsigned long syscall_restart_code[2] = {
-	SWI_SYS_RESTART,	/* swi	__NR_restart_syscall */
-	0xe49df004,		/* ldr	pc, [sp], #4 */
+	SWI_SYS_RESTART,	
+	0xe49df004,		
 };
 
-/*
- * atomically swap in the new signal mask, and wait for a signal.
- */
 asmlinkage int sys_sigsuspend(int restart, unsigned long oldmask, old_sigset_t mask)
 {
 	sigset_t blocked;
@@ -118,7 +98,7 @@ static int preserve_crunch_context(struct crunch_sigframe __user *frame)
 	char kbuf[sizeof(*frame) + 8];
 	struct crunch_sigframe *kframe;
 
-	/* the crunch context must be 64 bit aligned */
+	
 	kframe = (struct crunch_sigframe *)((unsigned long)(kbuf + 8) & ~7);
 	kframe->magic = CRUNCH_MAGIC;
 	kframe->size = CRUNCH_STORAGE_SIZE;
@@ -131,7 +111,7 @@ static int restore_crunch_context(struct crunch_sigframe __user *frame)
 	char kbuf[sizeof(*frame) + 8];
 	struct crunch_sigframe *kframe;
 
-	/* the crunch context must be 64 bit aligned */
+	
 	kframe = (struct crunch_sigframe *)((unsigned long)(kbuf + 8) & ~7);
 	if (__copy_from_user(kframe, frame, sizeof(*frame)))
 		return -1;
@@ -150,7 +130,7 @@ static int preserve_iwmmxt_context(struct iwmmxt_sigframe *frame)
 	char kbuf[sizeof(*frame) + 8];
 	struct iwmmxt_sigframe *kframe;
 
-	/* the iWMMXt context must be 64 bit aligned */
+	
 	kframe = (struct iwmmxt_sigframe *)((unsigned long)(kbuf + 8) & ~7);
 	kframe->magic = IWMMXT_MAGIC;
 	kframe->size = IWMMXT_STORAGE_SIZE;
@@ -163,7 +143,7 @@ static int restore_iwmmxt_context(struct iwmmxt_sigframe *frame)
 	char kbuf[sizeof(*frame) + 8];
 	struct iwmmxt_sigframe *kframe;
 
-	/* the iWMMXt context must be 64 bit aligned */
+	
 	kframe = (struct iwmmxt_sigframe *)((unsigned long)(kbuf + 8) & ~7);
 	if (__copy_from_user(kframe, frame, sizeof(*frame)))
 		return -1;
@@ -212,9 +192,6 @@ static int restore_vfp_context(struct vfp_sigframe __user *frame)
 
 #endif
 
-/*
- * Do a signal return; undo the signal stack.  These are aligned to 64-bit.
- */
 struct sigframe {
 	struct ucontext uc;
 	unsigned long retcode[2];
@@ -278,14 +255,9 @@ asmlinkage int sys_sigreturn(struct pt_regs *regs)
 {
 	struct sigframe __user *frame;
 
-	/* Always make any pending restarted system calls return -EINTR */
+	
 	current_thread_info()->restart_block.fn = do_no_restart_syscall;
 
-	/*
-	 * Since we stacked the signal on a 64-bit boundary,
-	 * then 'sp' should be word aligned here.  If it's
-	 * not, then the user is trying to mess with us.
-	 */
 	if (regs->ARM_sp & 7)
 		goto badframe;
 
@@ -308,14 +280,9 @@ asmlinkage int sys_rt_sigreturn(struct pt_regs *regs)
 {
 	struct rt_sigframe __user *frame;
 
-	/* Always make any pending restarted system calls return -EINTR */
+	
 	current_thread_info()->restart_block.fn = do_no_restart_syscall;
 
-	/*
-	 * Since we stacked the signal on a 64-bit boundary,
-	 * then 'sp' should be word aligned here.  If it's
-	 * not, then the user is trying to mess with us.
-	 */
 	if (regs->ARM_sp & 7)
 		goto badframe;
 
@@ -392,20 +359,11 @@ get_sigframe(struct k_sigaction *ka, struct pt_regs *regs, int framesize)
 	unsigned long sp = regs->ARM_sp;
 	void __user *frame;
 
-	/*
-	 * This is the X/Open sanctioned signal stack switching.
-	 */
 	if ((ka->sa.sa_flags & SA_ONSTACK) && !sas_ss_flags(sp))
 		sp = current->sas_ss_sp + current->sas_ss_size;
 
-	/*
-	 * ATPCS B01 mandates 8-byte alignment
-	 */
 	frame = (void __user *)((sp - framesize) & ~7);
 
-	/*
-	 * Check that we can actually write to the signal frame.
-	 */
 	if (!access_ok(VERIFY_WRITE, frame, framesize))
 		frame = NULL;
 
@@ -423,24 +381,17 @@ setup_return(struct pt_regs *regs, struct k_sigaction *ka,
 
 	cpsr |= PSR_ENDSTATE;
 
-	/*
-	 * Maybe we need to deliver a 32-bit signal to a 26-bit task.
-	 */
 	if (ka->sa.sa_flags & SA_THIRTYTWO)
 		cpsr = (cpsr & ~MODE_MASK) | USR_MODE;
 
 #ifdef CONFIG_ARM_THUMB
 	if (elf_hwcap & HWCAP_THUMB) {
-		/*
-		 * The LSB of the handler determines if we're going to
-		 * be using THUMB or ARM mode for this signal handler.
-		 */
 		thumb = handler & 1;
 
 		if (thumb) {
 			cpsr |= PSR_T_BIT;
 #if __LINUX_ARM_ARCH__ >= 7
-			/* clear the If-Then Thumb-2 execution state */
+			
 			cpsr &= ~PSR_IT_MASK;
 #endif
 		} else
@@ -461,10 +412,6 @@ setup_return(struct pt_regs *regs, struct k_sigaction *ka,
 			return 1;
 
 		if (cpsr & MODE32_BIT) {
-			/*
-			 * 32-bit code can use the new high-page
-			 * signal return code support.
-			 */
 			retcode = KERN_SIGRETURN_CODE + (idx << 2) + thumb;
 		} else {
 			/*
@@ -496,9 +443,6 @@ setup_frame(int usig, struct k_sigaction *ka, sigset_t *set, struct pt_regs *reg
 	if (!frame)
 		return 1;
 
-	/*
-	 * Set uc.uc_flags to a value which sc.trap_no would never have.
-	 */
 	__put_user_error(0x5ac3c35a, &frame->uc.uc_flags, err);
 
 	err |= setup_sigframe(frame, regs, set);
@@ -535,11 +479,6 @@ setup_rt_frame(int usig, struct k_sigaction *ka, siginfo_t *info,
 		err = setup_return(regs, ka, frame->sig.retcode, frame, usig);
 
 	if (err == 0) {
-		/*
-		 * For realtime signals we must also set the second and third
-		 * arguments for the signal handler.
-		 *   -- Peter Maydell <pmaydell@chiark.greenend.org.uk> 2000-12-06
-		 */
 		regs->ARM_r1 = (unsigned long)&frame->info;
 		regs->ARM_r2 = (unsigned long)&frame->sig.uc;
 	}
@@ -547,9 +486,7 @@ setup_rt_frame(int usig, struct k_sigaction *ka, siginfo_t *info,
 	return err;
 }
 
-/*
- * OK, we're invoking a handler
- */	
+	
 static int
 handle_signal(unsigned long sig, struct k_sigaction *ka,
 	      siginfo_t *info, sigset_t *oldset,
@@ -560,23 +497,14 @@ handle_signal(unsigned long sig, struct k_sigaction *ka,
 	int usig = sig;
 	int ret;
 
-	/*
-	 * translate the signal
-	 */
 	if (usig < 32 && thread->exec_domain && thread->exec_domain->signal_invmap)
 		usig = thread->exec_domain->signal_invmap[usig];
 
-	/*
-	 * Set up the stack frame
-	 */
 	if (ka->sa.sa_flags & SA_SIGINFO)
 		ret = setup_rt_frame(usig, ka, info, oldset, regs);
 	else
 		ret = setup_frame(usig, ka, oldset, regs);
 
-	/*
-	 * Check that the resulting registers are actually sane.
-	 */
 	ret |= !valid_user_regs(regs);
 
 	if (ret != 0) {
@@ -584,23 +512,11 @@ handle_signal(unsigned long sig, struct k_sigaction *ka,
 		return ret;
 	}
 
-	/*
-	 * Block the signal if we were successful.
-	 */
 	block_sigmask(ka, sig);
 
 	return 0;
 }
 
-/*
- * Note that 'init' is a special process: it doesn't get signals it doesn't
- * want to handle. Thus you cannot kill init even with a SIGKILL even by
- * mistake.
- *
- * Note that we go through the signals twice: once to check the signals that
- * the kernel can handle, and then we build all the user-level signal handling
- * stack-frames in one go after that.
- */
 static void do_signal(struct pt_regs *regs, int syscall)
 {
 	unsigned int retval = 0, continue_addr = 0, restart_addr = 0;
@@ -608,27 +524,14 @@ static void do_signal(struct pt_regs *regs, int syscall)
 	siginfo_t info;
 	int signr;
 
-	/*
-	 * We want the common case to go fast, which
-	 * is why we may in certain cases get here from
-	 * kernel mode. Just return without doing anything
-	 * if so.
-	 */
 	if (!user_mode(regs))
 		return;
 
-	/*
-	 * If we were from a system call, check for system call restarting...
-	 */
 	if (syscall) {
 		continue_addr = regs->ARM_pc;
 		restart_addr = continue_addr - (thumb_mode(regs) ? 2 : 4);
 		retval = regs->ARM_r0;
 
-		/*
-		 * Prepare for system call restart.  We do this here so that a
-		 * debugger will see the already changed PSW.
-		 */
 		switch (retval) {
 		case -ERESTARTNOHAND:
 		case -ERESTARTSYS:
@@ -645,19 +548,10 @@ static void do_signal(struct pt_regs *regs, int syscall)
 	if (try_to_freeze())
 		goto no_signal;
 
-	/*
-	 * Get the signal to deliver.  When running under ptrace, at this
-	 * point the debugger may change all our registers ...
-	 */
 	signr = get_signal_to_deliver(&info, &ka, regs, NULL);
 	if (signr > 0) {
 		sigset_t *oldset;
 
-		/*
-		 * Depending on the signal settings we may need to revert the
-		 * decision to restart the system call.  But skip this if a
-		 * debugger has chosen to restart at a different PC.
-		 */
 		if (regs->ARM_pc == restart_addr) {
 			if (retval == -ERESTARTNOHAND
 			    || (retval == -ERESTARTSYS
@@ -672,12 +566,6 @@ static void do_signal(struct pt_regs *regs, int syscall)
 		else
 			oldset = &current->blocked;
 		if (handle_signal(signr, &ka, &info, oldset, regs) == 0) {
-			/*
-			 * A signal was successfully delivered; the saved
-			 * sigmask will have been stored in the signal frame,
-			 * and will be restored by sigreturn, so we can simply
-			 * clear the TIF_RESTORE_SIGMASK flag.
-			 */
 			if (test_thread_flag(TIF_RESTORE_SIGMASK))
 				clear_thread_flag(TIF_RESTORE_SIGMASK);
 		}
@@ -686,11 +574,6 @@ static void do_signal(struct pt_regs *regs, int syscall)
 
  no_signal:
 	if (syscall) {
-		/*
-		 * Handle restarting a different system call.  As above,
-		 * if a debugger has chosen to restart at a different PC,
-		 * ignore the restart.
-		 */
 		if (retval == -ERESTART_RESTARTBLOCK
 		    && regs->ARM_pc == continue_addr) {
 			if (thumb_mode(regs)) {
@@ -716,9 +599,6 @@ static void do_signal(struct pt_regs *regs, int syscall)
 			}
 		}
 
-		/* If there's no signal to deliver, we just put the saved sigmask
-		 * back.
-		 */
 		if (test_thread_flag(TIF_RESTORE_SIGMASK)) {
 			clear_thread_flag(TIF_RESTORE_SIGMASK);
 			sigprocmask(SIG_SETMASK, &current->saved_sigmask, NULL);

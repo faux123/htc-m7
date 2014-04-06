@@ -200,3 +200,15 @@ config INLINE_WRITE_UNLOCK_IRQRESTORE
 
 config MUTEX_SPIN_ON_OWNER
 	def_bool SMP && !DEBUG_MUTEXES
+
+config DEBUG_CSD_LOCK
+	bool "Enable CSD LOCK timeout debug"
+	help
+	 To debug CSD lock stuck issue.
+
+config DEBUG_CSD_LOCK_TIMEOUT_MS
+	int "Set CSD lock timeout in milisecond."
+	default 3000
+	depends on DEBUG_CSD_LOCK
+	help
+	 If csd lock waiting time exceeds this timeout, it will dump CSD queue for debug.
