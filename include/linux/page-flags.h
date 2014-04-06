@@ -51,6 +51,7 @@ enum pageflags {
 #ifdef CONFIG_HTC_DEBUG_REPORT_MEMINFO
 	PG_kmalloc,			
 	PG_kgsl,
+#endif
 #ifdef CONFIG_KSM_CHECK_PAGE
 	PG_ksm_scan0,		/* page has been scanned by even KSM cycle */
 #endif
