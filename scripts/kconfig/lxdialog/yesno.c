@@ -21,9 +21,6 @@
 
 #include "dialog.h"
 
-/*
- * Display termination buttons
- */
 static void print_buttons(WINDOW * dialog, int height, int width, int selected)
 {
 	int x = width / 2 - 10;
@@ -36,9 +33,6 @@ static void print_buttons(WINDOW * dialog, int height, int width, int selected)
 	wrefresh(dialog);
 }
 
-/*
- * Display a dialog box with two buttons - Yes and No
- */
 int dialog_yesno(const char *title, const char *prompt, int height, int width)
 {
 	int i, x, y, key = 0, button = 0;
@@ -50,7 +44,7 @@ do_resize:
 	if (getmaxx(stdscr) < (width + 4))
 		return -ERRDISPLAYTOOSMALL;
 
-	/* center dialog box on screen */
+	
 	x = (COLS - width) / 2;
 	y = (LINES - height) / 2;
 
@@ -110,5 +104,5 @@ do_resize:
 	}
 
 	delwin(dialog);
-	return key;		/* ESC pressed */
+	return key;		
 }

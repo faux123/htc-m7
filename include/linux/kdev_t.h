@@ -17,7 +17,6 @@
 		buffer;							\
 	})
 
-/* acceptable for old filesystems */
 static inline int old_valid_dev(dev_t dev)
 {
 	return MAJOR(dev) < 256 && MINOR(dev) < 256;
@@ -87,14 +86,10 @@ static inline unsigned sysv_minor(u32 dev)
 	return dev & 0x3ffff;
 }
 
-#else /* __KERNEL__ */
+#else 
 
-/*
-Some programs want their definitions of MAJOR and MINOR and MKDEV
-from the kernel sources. These must be the externally visible ones.
-*/
 #define MAJOR(dev)	((dev)>>8)
 #define MINOR(dev)	((dev) & 0xff)
 #define MKDEV(ma,mi)	((ma)<<8 | (mi))
-#endif /* __KERNEL__ */
+#endif 
 #endif

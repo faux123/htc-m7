@@ -6,7 +6,6 @@
  * published by the Free Software Foundation.
  */
 
-/* Everything about the rules for NAT. */
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 #include <linux/types.h>
 #include <linux/ip.h>
@@ -38,7 +37,6 @@ static const struct xt_table nat_table = {
 	.af		= NFPROTO_IPV4,
 };
 
-/* Source NAT */
 static unsigned int
 ipt_snat_target(struct sk_buff *skb, const struct xt_action_param *par)
 {
@@ -51,7 +49,7 @@ ipt_snat_target(struct sk_buff *skb, const struct xt_action_param *par)
 
 	ct = nf_ct_get(skb, &ctinfo);
 
-	/* Connection must be valid and new. */
+	
 	NF_CT_ASSERT(ct && (ctinfo == IP_CT_NEW || ctinfo == IP_CT_RELATED ||
 			    ctinfo == IP_CT_RELATED_REPLY));
 	NF_CT_ASSERT(par->out != NULL);
@@ -71,7 +69,7 @@ ipt_dnat_target(struct sk_buff *skb, const struct xt_action_param *par)
 
 	ct = nf_ct_get(skb, &ctinfo);
 
-	/* Connection must be valid and new. */
+	
 	NF_CT_ASSERT(ct && (ctinfo == IP_CT_NEW || ctinfo == IP_CT_RELATED));
 
 	return nf_nat_setup_info(ct, &mr->range[0], NF_NAT_MANIP_DST);
@@ -81,7 +79,7 @@ static int ipt_snat_checkentry(const struct xt_tgchk_param *par)
 {
 	const struct nf_nat_ipv4_multi_range_compat *mr = par->targinfo;
 
-	/* Must be a valid range */
+	
 	if (mr->rangesize != 1) {
 		pr_info("SNAT: multiple ranges no longer supported\n");
 		return -EINVAL;
@@ -93,7 +91,7 @@ static int ipt_dnat_checkentry(const struct xt_tgchk_param *par)
 {
 	const struct nf_nat_ipv4_multi_range_compat *mr = par->targinfo;
 
-	/* Must be a valid range */
+	
 	if (mr->rangesize != 1) {
 		pr_info("DNAT: multiple ranges no longer supported\n");
 		return -EINVAL;
@@ -104,9 +102,6 @@ static int ipt_dnat_checkentry(const struct xt_tgchk_param *par)
 static unsigned int
 alloc_null_binding(struct nf_conn *ct, unsigned int hooknum)
 {
-	/* Force range to this IP; let proto decide mapping for
-	   per-proto parts (hence not NF_NAT_RANGE_PROTO_SPECIFIED).
-	*/
 	struct nf_nat_ipv4_range range;
 
 	range.flags = 0;
@@ -131,7 +126,7 @@ int nf_nat_rule_find(struct sk_buff *skb,
 
 	if (ret == NF_ACCEPT) {
 		if (!nf_nat_initialized(ct, HOOK2MANIP(hooknum)))
-			/* NUL mapping */
+			
 			ret = alloc_null_binding(ct, hooknum);
 	}
 	return ret;

@@ -65,5 +65,5 @@
 
 #define set_mb(var, value)	do { var = value; smp_mb(); } while (0)
 
-#endif /* !__ASSEMBLY__ */
-#endif /* __ASM_BARRIER_H */
+#endif 
+#endif 

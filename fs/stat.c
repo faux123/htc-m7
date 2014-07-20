@@ -110,10 +110,6 @@ EXPORT_SYMBOL(vfs_lstat);
 
 #ifdef __ARCH_WANT_OLD_STAT
 
-/*
- * For backward compatibility?  Maybe this should be moved
- * into arch/i386 instead?
- */
 static int cp_old_stat(struct kstat *stat, struct __old_kernel_stat __user * statbuf)
 {
 	static int warncount = 5;
@@ -124,7 +120,7 @@ static int cp_old_stat(struct kstat *stat, struct __old_kernel_stat __user * sta
 		printk(KERN_WARNING "VFS: Warning: %s using old stat() call. Recompile your binary.\n",
 			current->comm);
 	} else if (warncount < 0) {
-		/* it's laughable, but... */
+		
 		warncount = 0;
 	}
 
@@ -188,7 +184,7 @@ SYSCALL_DEFINE2(fstat, unsigned int, fd, struct __old_kernel_stat __user *, stat
 	return error;
 }
 
-#endif /* __ARCH_WANT_OLD_STAT */
+#endif 
 
 static int cp_new_stat(struct kstat *stat, struct stat __user *statbuf)
 {
@@ -324,7 +320,6 @@ SYSCALL_DEFINE3(readlink, const char __user *, path, char __user *, buf,
 }
 
 
-/* ---------- LFS-64 ----------- */
 #ifdef __ARCH_WANT_STAT64
 
 static long cp_new_stat64(struct kstat *stat, struct stat64 __user *statbuf)
@@ -333,7 +328,7 @@ static long cp_new_stat64(struct kstat *stat, struct stat64 __user *statbuf)
 
 	memset(&tmp, 0, sizeof(struct stat64));
 #ifdef CONFIG_MIPS
-	/* mips has weird padding, so we don't get 64 bits there */
+	
 	if (!new_valid_dev(stat->dev) || !new_valid_dev(stat->rdev))
 		return -EOVERFLOW;
 	tmp.st_dev = new_encode_dev(stat->dev);
@@ -410,9 +405,8 @@ SYSCALL_DEFINE4(fstatat64, int, dfd, const char __user *, filename,
 		return error;
 	return cp_new_stat64(&stat, statbuf);
 }
-#endif /* __ARCH_WANT_STAT64 */
+#endif 
 
-/* Caller is here responsible for sufficient locking (ie. inode->i_lock) */
 void __inode_add_bytes(struct inode *inode, loff_t bytes)
 {
 	inode->i_blocks += bytes >> 9;
@@ -462,8 +456,6 @@ EXPORT_SYMBOL(inode_get_bytes);
 
 void inode_set_bytes(struct inode *inode, loff_t bytes)
 {
-	/* Caller is here responsible for sufficient locking
-	 * (ie. inode->i_lock) */
 	inode->i_blocks = bytes >> 9;
 	inode->i_bytes = bytes & 511;
 }

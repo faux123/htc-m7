@@ -8,9 +8,6 @@
 #include <linux/netdevice.h>
 #include <linux/tracepoint.h>
 
-/*
- * Tracepoint for free an sk_buff:
- */
 TRACE_EVENT(kfree_skb,
 
 	TP_PROTO(struct sk_buff *skb, void *location),
@@ -69,7 +66,6 @@ TRACE_EVENT(skb_copy_datagram_iovec,
 	TP_printk("skbaddr=%p len=%d", __entry->skbaddr, __entry->len)
 );
 
-#endif /* _TRACE_SKB_H */
+#endif 
 
-/* This part must be outside protection */
 #include <trace/define_trace.h>

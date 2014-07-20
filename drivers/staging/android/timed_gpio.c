@@ -62,10 +62,14 @@ static void gpio_enable(struct timed_output_dev *dev, int value)
 		container_of(dev, struct timed_gpio_data, dev);
 	unsigned long	flags;
 
+retry:
 	spin_lock_irqsave(&data->lock, flags);
+	if (hrtimer_try_to_cancel(&data->timer) < 0) {
+		spin_unlock_irqrestore(&data->lock, flags);
+		cpu_relax();
+		goto retry;
+	}
 
-	/* cancel previous timer and set GPIO according to value */
-	hrtimer_cancel(&data->timer);
 	gpio_direction_output(data->gpio, data->active_low ? !value : !!value);
 
 	if (value > 0) {
@@ -142,6 +146,7 @@ static int timed_gpio_remove(struct platform_device *pdev)
 	struct timed_gpio_data *gpio_data = platform_get_drvdata(pdev);
 	int i;
 
+	hrtimer_cancel(&gpio_data->timer);
 	for (i = 0; i < pdata->num_gpios; i++) {
 		timed_output_dev_unregister(&gpio_data[i].dev);
 		gpio_free(gpio_data[i].gpio);

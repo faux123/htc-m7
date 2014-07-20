@@ -1,6 +1,3 @@
-/*
- * Range add and subtract
- */
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/sort.h>
@@ -12,7 +9,7 @@ int add_range(struct range *range, int az, int nr_range, u64 start, u64 end)
 	if (start >= end)
 		return nr_range;
 
-	/* Out of slots: */
+	
 	if (nr_range >= az)
 		return nr_range;
 
@@ -32,7 +29,7 @@ int add_range_with_merge(struct range *range, int az, int nr_range,
 	if (start >= end)
 		return nr_range;
 
-	/* Try to merge it with old one: */
+	
 	for (i = 0; i < nr_range; i++) {
 		u64 final_start, final_end;
 		u64 common_start, common_end;
@@ -53,7 +50,7 @@ int add_range_with_merge(struct range *range, int az, int nr_range,
 		return nr_range;
 	}
 
-	/* Need to add it: */
+	
 	return add_range(range, az, nr_range, start, end);
 }
 
@@ -88,7 +85,7 @@ void subtract_range(struct range *range, int az, u64 start, u64 end)
 		}
 
 		if (start > range[j].start && end < range[j].end) {
-			/* Find the new spare: */
+			
 			for (i = 0; i < az; i++) {
 				if (range[i].end == 0)
 					break;
@@ -138,7 +135,7 @@ int clean_sort_range(struct range *range, int az)
 		range[k].end   = 0;
 		k--;
 	}
-	/* count it */
+	
 	for (i = 0; i < az; i++) {
 		if (!range[i].end) {
 			nr_range = i;
@@ -146,7 +143,7 @@ int clean_sort_range(struct range *range, int az)
 		}
 	}
 
-	/* sort them */
+	
 	sort(range, nr_range, sizeof(struct range), cmp_range, NULL);
 
 	return nr_range;
@@ -154,6 +151,6 @@ int clean_sort_range(struct range *range, int az)
 
 void sort_range(struct range *range, int nr_range)
 {
-	/* sort them */
+	
 	sort(range, nr_range, sizeof(struct range), cmp_range, NULL);
 }

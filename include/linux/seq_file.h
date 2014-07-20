@@ -37,14 +37,6 @@ struct seq_operations {
 
 #define SEQ_SKIP 1
 
-/**
- * seq_get_buf - get buffer to write arbitrary data to
- * @m: the seq_file handle
- * @bufp: the beginning of the buffer is stored here
- *
- * Return the number of bytes available in the buffer, or zero if
- * there's no space.
- */
 static inline size_t seq_get_buf(struct seq_file *m, char **bufp)
 {
 	BUG_ON(m->count > m->size);
@@ -128,9 +120,6 @@ int seq_put_decimal_ll(struct seq_file *m, char delimiter,
 			long long num);
 
 #define SEQ_START_TOKEN ((void *)1)
-/*
- * Helpers for iteration over list_head-s in seq_files
- */
 
 extern struct list_head *seq_list_start(struct list_head *head,
 		loff_t pos);
@@ -139,9 +128,6 @@ extern struct list_head *seq_list_start_head(struct list_head *head,
 extern struct list_head *seq_list_next(void *v, struct list_head *head,
 		loff_t *ppos);
 
-/*
- * Helpers for iteration over hlist_head-s in seq_files
- */
 
 extern struct hlist_node *seq_hlist_start(struct hlist_head *head,
 					  loff_t pos);

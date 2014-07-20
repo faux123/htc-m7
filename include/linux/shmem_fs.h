@@ -6,32 +6,31 @@
 #include <linux/pagemap.h>
 #include <linux/percpu_counter.h>
 
-/* inode in-kernel data */
 
 struct shmem_inode_info {
 	spinlock_t		lock;
 	unsigned long		flags;
-	unsigned long		alloced;	/* data pages alloced to file */
+	unsigned long		alloced;	
 	union {
-		unsigned long	swapped;	/* subtotal assigned to swap */
-		char		*symlink;	/* unswappable short symlink */
+		unsigned long	swapped;	
+		char		*symlink;	
 	};
-	struct shared_policy	policy;		/* NUMA memory alloc policy */
-	struct list_head	swaplist;	/* chain of maybes on swap */
-	struct list_head	xattr_list;	/* list of shmem_xattr */
+	struct shared_policy	policy;		
+	struct list_head	swaplist;	
+	struct list_head	xattr_list;	
 	struct inode		vfs_inode;
 };
 
 struct shmem_sb_info {
-	unsigned long max_blocks;   /* How many blocks are allowed */
-	struct percpu_counter used_blocks;  /* How many are allocated */
-	unsigned long max_inodes;   /* How many inodes are allowed */
-	unsigned long free_inodes;  /* How many are left for allocation */
-	spinlock_t stat_lock;	    /* Serialize shmem_sb_info changes */
-	uid_t uid;		    /* Mount uid for root directory */
-	gid_t gid;		    /* Mount gid for root directory */
-	umode_t mode;		    /* Mount mode for root directory */
-	struct mempolicy *mpol;     /* default memory policy for mappings */
+	unsigned long max_blocks;   
+	struct percpu_counter used_blocks;  
+	unsigned long max_inodes;   
+	unsigned long free_inodes;  
+	spinlock_t stat_lock;	    
+	uid_t uid;		    
+	gid_t gid;		    
+	umode_t mode;		    
+	struct mempolicy *mpol;     
 };
 
 static inline struct shmem_inode_info *SHMEM_I(struct inode *inode)
@@ -39,9 +38,6 @@ static inline struct shmem_inode_info *SHMEM_I(struct inode *inode)
 	return container_of(inode, struct shmem_inode_info, vfs_inode);
 }
 
-/*
- * Functions in mm/shmem.c called directly from elsewhere:
- */
 extern int shmem_init(void);
 extern int shmem_fill_super(struct super_block *sb, void *data, int silent);
 extern struct file *shmem_file_setup(const char *name,

@@ -16,7 +16,7 @@ menuconfig IPV6
 	  For specific information about IPv6 under Linux, read the HOWTO at
 	  <http://www.bieringer.de/linux/IPv6/>.
 
-	  To compile this protocol support as a module, choose M here: the 
+	  To compile this protocol support as a module, choose M here: the
 	  module will be called ipv6.
 
 if IPV6
@@ -28,14 +28,14 @@ config IPV6_PRIVACY
 	  support.  With this option, additional periodically-altered
 	  pseudo-random global-scope unicast address(es) will be assigned to
 	  your interface(s).
-	
+
 	  We use our standard pseudo-random algorithm to generate the
           randomized interface identifier, instead of one described in RFC 3041.
 
 	  By default the kernel does not generate temporary addresses.
 	  To use temporary addresses, do
-	
-	        echo 2 >/proc/sys/net/ipv6/conf/all/use_tempaddr 
+
+	        echo 2 >/proc/sys/net/ipv6/conf/all/use_tempaddr
 
 	  See <file:Documentation/networking/ip-sysctl.txt> for details.
 

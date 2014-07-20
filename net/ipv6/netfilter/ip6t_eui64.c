@@ -1,4 +1,3 @@
-/* Kernel module to match EUI64 address parameters. */
 
 /* (C) 2001-2002 Andras Kis-Szabo <kisza@sch.bme.hu>
  *

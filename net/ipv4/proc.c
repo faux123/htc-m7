@@ -46,9 +46,6 @@
 #include <net/sock.h>
 #include <net/raw.h>
 
-/*
- *	Report socket allocation statistics [mea@utu.fi]
- */
 static int sockstat_seq_show(struct seq_file *seq, void *v)
 {
 	struct net *net = seq->private;
@@ -89,7 +86,6 @@ static const struct file_operations sockstat_seq_fops = {
 	.release = single_release_net,
 };
 
-/* snmp items */
 static const struct snmp_mib snmp4_ipstats_list[] = {
 	SNMP_MIB_ITEM("InReceives", IPSTATS_MIB_INPKTS),
 	SNMP_MIB_ITEM("InHdrErrors", IPSTATS_MIB_INHDRERRORS),
@@ -111,7 +107,6 @@ static const struct snmp_mib snmp4_ipstats_list[] = {
 	SNMP_MIB_SENTINEL
 };
 
-/* Following RFC4293 items are displayed in /proc/net/netstat */
 static const struct snmp_mib snmp4_ipextstats_list[] = {
 	SNMP_MIB_ITEM("InNoRoutes", IPSTATS_MIB_INNOROUTES),
 	SNMP_MIB_ITEM("InTruncatedPkts", IPSTATS_MIB_INTRUNCATEDPKTS),
@@ -330,9 +325,6 @@ static void icmp_put(struct seq_file *seq)
 			   atomic_long_read(ptr + (icmpmibmap[i].index | 0x100)));
 }
 
-/*
- *	Called from the PROCfs module. This outputs /proc/net/snmp.
- */
 static int snmp_seq_show(struct seq_file *seq, void *v)
 {
 	int i;
@@ -354,7 +346,7 @@ static int snmp_seq_show(struct seq_file *seq, void *v)
 					     snmp4_ipstats_list[i].entry,
 					     offsetof(struct ipstats_mib, syncp)));
 
-	icmp_put(seq);	/* RFC 2011 compatibility */
+	icmp_put(seq);	
 	icmpmsg_put(seq);
 
 	seq_puts(seq, "\nTcp:");
@@ -363,7 +355,7 @@ static int snmp_seq_show(struct seq_file *seq, void *v)
 
 	seq_puts(seq, "\nTcp:");
 	for (i = 0; snmp4_tcp_list[i].name != NULL; i++) {
-		/* MaxConn field is signed, RFC 2012 */
+		
 		if (snmp4_tcp_list[i].entry == TCP_MIB_MAXCONN)
 			seq_printf(seq, " %ld",
 				   snmp_fold_field((void __percpu **)net->mib.tcp_statistics,
@@ -384,7 +376,7 @@ static int snmp_seq_show(struct seq_file *seq, void *v)
 			   snmp_fold_field((void __percpu **)net->mib.udp_statistics,
 					   snmp4_udp_list[i].entry));
 
-	/* the UDP and UDP-Lite MIBs are the same */
+	
 	seq_puts(seq, "\nUdpLite:");
 	for (i = 0; snmp4_udp_list[i].name != NULL; i++)
 		seq_printf(seq, " %s", snmp4_udp_list[i].name);
@@ -414,9 +406,6 @@ static const struct file_operations snmp_seq_fops = {
 
 
 
-/*
- *	Output /proc/net/netstat
- */
 static int netstat_seq_show(struct seq_file *seq, void *v)
 {
 	int i;

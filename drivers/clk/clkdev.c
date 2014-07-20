@@ -23,15 +23,6 @@
 static LIST_HEAD(clocks);
 static DEFINE_MUTEX(clocks_mutex);
 
-/*
- * Find the correct struct clk for the device and connection ID.
- * We do slightly fuzzy matching here:
- *  An entry with a NULL ID is assumed to be a wildcard.
- *  If an entry has a device ID, it must match
- *  If an entry has a connection ID, it must match
- * Then we take the most specific entry - with the following
- * order of precedence: dev+con > dev only > con only.
- */
 static struct clk_lookup *clk_find(const char *dev_id, const char *con_id)
 {
 	struct clk_lookup *p, *cl = NULL;
@@ -83,6 +74,31 @@ struct clk *clk_get(struct device *dev, const char *con_id)
 }
 EXPORT_SYMBOL(clk_get);
 
+static void devm_clk_release(struct device *dev, void *res)
+{
+	clk_put(*(struct clk **)res);
+}
+
+struct clk *devm_clk_get(struct device *dev, const char *id)
+{
+	struct clk **ptr, *clk;
+
+	ptr = devres_alloc(devm_clk_release, sizeof(*ptr), GFP_KERNEL);
+	if (!ptr)
+		return ERR_PTR(-ENOMEM);
+
+	clk = clk_get(dev, id);
+	if (!IS_ERR(clk)) {
+		*ptr = clk;
+		devres_add(dev, ptr);
+	} else {
+		devres_free(ptr);
+	}
+
+	return clk;
+}
+EXPORT_SYMBOL(devm_clk_get);
+
 void clk_put(struct clk *clk)
 {
 	__clk_put(clk);
@@ -97,7 +113,7 @@ void clkdev_add(struct clk_lookup *cl)
 }
 EXPORT_SYMBOL(clkdev_add);
 
-void __init clkdev_add_table(struct clk_lookup *cl, size_t num)
+void clkdev_add_table(struct clk_lookup *cl, size_t num)
 {
 	mutex_lock(&clocks_mutex);
 	while (num--) {
@@ -162,9 +178,6 @@ int clk_add_alias(const char *alias, const char *alias_dev_name, char *id,
 }
 EXPORT_SYMBOL(clk_add_alias);
 
-/*
- * clkdev_drop - remove a clock dynamically allocated
- */
 void clkdev_drop(struct clk_lookup *cl)
 {
 	mutex_lock(&clocks_mutex);

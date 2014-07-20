@@ -1,5 +1,3 @@
-/* ipv6header match - matches IPv6 packets based
-on whether they contain certain headers */
 
 /* Original idea: Brad Chapman 
  * Rewritten by: Andras Kis-Szabo <kisza@sch.bme.hu> */
@@ -25,4 +23,4 @@ struct ip6t_ipv6header_info {
 #define MASK_NONE       2
 #define MASK_PROTO      1
 
-#endif /* __IPV6HEADER_H */
+#endif 

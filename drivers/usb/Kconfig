@@ -53,6 +53,7 @@ config USB_ARCH_HAS_EHCI
 # some non-PCI HCDs implement xHCI
 config USB_ARCH_HAS_XHCI
 	boolean
+	default y if ARCH_MSM8974
 	default PCI
 
 menuconfig USB_SUPPORT
@@ -121,6 +122,11 @@ config USB
 	  To compile this driver as a module, choose M here: the
 	  module will be called usbcore.
 
+config USB_OTG_HOST
+        boolean "USB OTG Host function"
+        depends on USB_OTG
+        default n
+
 source "drivers/usb/core/Kconfig"
 
 source "drivers/usb/dwc3/Kconfig"
@@ -132,8 +138,6 @@ source "drivers/usb/wusbcore/Kconfig"
 source "drivers/usb/host/Kconfig"
 
 source "drivers/usb/musb/Kconfig"
-
-source "drivers/usb/renesas_usbhs/Kconfig"
 
 source "drivers/usb/class/Kconfig"
 

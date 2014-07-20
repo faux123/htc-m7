@@ -3,33 +3,23 @@
 
 #include <linux/types.h>
 
-/*
- * FMODE_EXEC is 0x20
- * FMODE_NONOTIFY is 0x1000000
- * These cannot be used by userspace O_* until internal and external open
- * flags are split.
- * -Eric Paris
- */
 
-/*
- * When introducing new O_* bits, please check its uniqueness in fcntl_init().
- */
 
 #define O_ACCMODE	00000003
 #define O_RDONLY	00000000
 #define O_WRONLY	00000001
 #define O_RDWR		00000002
 #ifndef O_CREAT
-#define O_CREAT		00000100	/* not fcntl */
+#define O_CREAT		00000100	
 #endif
 #ifndef O_EXCL
-#define O_EXCL		00000200	/* not fcntl */
+#define O_EXCL		00000200	
 #endif
 #ifndef O_NOCTTY
-#define O_NOCTTY	00000400	/* not fcntl */
+#define O_NOCTTY	00000400	
 #endif
 #ifndef O_TRUNC
-#define O_TRUNC		00001000	/* not fcntl */
+#define O_TRUNC		00001000	
 #endif
 #ifndef O_APPEND
 #define O_APPEND	00002000
@@ -38,43 +28,30 @@
 #define O_NONBLOCK	00004000
 #endif
 #ifndef O_DSYNC
-#define O_DSYNC		00010000	/* used to be O_SYNC, see below */
+#define O_DSYNC		00010000	
 #endif
 #ifndef FASYNC
-#define FASYNC		00020000	/* fcntl, for BSD compatibility */
+#define FASYNC		00020000	
 #endif
 #ifndef O_DIRECT
-#define O_DIRECT	00040000	/* direct disk access hint */
+#define O_DIRECT	00040000	
 #endif
 #ifndef O_LARGEFILE
 #define O_LARGEFILE	00100000
 #endif
 #ifndef O_DIRECTORY
-#define O_DIRECTORY	00200000	/* must be a directory */
+#define O_DIRECTORY	00200000	
 #endif
 #ifndef O_NOFOLLOW
-#define O_NOFOLLOW	00400000	/* don't follow links */
+#define O_NOFOLLOW	00400000	
 #endif
 #ifndef O_NOATIME
 #define O_NOATIME	01000000
 #endif
 #ifndef O_CLOEXEC
-#define O_CLOEXEC	02000000	/* set close_on_exec */
+#define O_CLOEXEC	02000000	
 #endif
 
-/*
- * Before Linux 2.6.33 only O_DSYNC semantics were implemented, but using
- * the O_SYNC flag.  We continue to use the existing numerical value
- * for O_DSYNC semantics now, but using the correct symbolic name for it.
- * This new value is used to request true Posix O_SYNC semantics.  It is
- * defined in this strange way to make sure applications compiled against
- * new headers get at least O_DSYNC semantics on older kernels.
- *
- * This has the nice side-effect that we can simply test for O_DSYNC
- * wherever we do not care if O_DSYNC or O_SYNC is used.
- *
- * Note: __O_SYNC must never be used directly.
- */
 #ifndef O_SYNC
 #define __O_SYNC	04000000
 #define O_SYNC		(__O_SYNC|O_DSYNC)
@@ -88,28 +65,28 @@
 #define O_NDELAY	O_NONBLOCK
 #endif
 
-#define F_DUPFD		0	/* dup */
-#define F_GETFD		1	/* get close_on_exec */
-#define F_SETFD		2	/* set/clear close_on_exec */
-#define F_GETFL		3	/* get file->f_flags */
-#define F_SETFL		4	/* set file->f_flags */
+#define F_DUPFD		0	
+#define F_GETFD		1	
+#define F_SETFD		2	
+#define F_GETFL		3	
+#define F_SETFL		4	
 #ifndef F_GETLK
 #define F_GETLK		5
 #define F_SETLK		6
 #define F_SETLKW	7
 #endif
 #ifndef F_SETOWN
-#define F_SETOWN	8	/* for sockets. */
-#define F_GETOWN	9	/* for sockets. */
+#define F_SETOWN	8	
+#define F_GETOWN	9	
 #endif
 #ifndef F_SETSIG
-#define F_SETSIG	10	/* for sockets. */
-#define F_GETSIG	11	/* for sockets. */
+#define F_SETSIG	10	
+#define F_GETSIG	11	
 #endif
 
 #ifndef CONFIG_64BIT
 #ifndef F_GETLK64
-#define F_GETLK64	12	/*  using 'struct flock64' */
+#define F_GETLK64	12	
 #define F_SETLK64	13
 #define F_SETLKW64	14
 #endif
@@ -129,33 +106,28 @@ struct f_owner_ex {
 	__kernel_pid_t	pid;
 };
 
-/* for F_[GET|SET]FL */
-#define FD_CLOEXEC	1	/* actually anything with low bit set goes */
+#define FD_CLOEXEC	1	
 
-/* for posix fcntl() and lockf() */
 #ifndef F_RDLCK
 #define F_RDLCK		0
 #define F_WRLCK		1
 #define F_UNLCK		2
 #endif
 
-/* for old implementation of bsd flock () */
 #ifndef F_EXLCK
-#define F_EXLCK		4	/* or 3 */
-#define F_SHLCK		8	/* or 4 */
+#define F_EXLCK		4	
+#define F_SHLCK		8	
 #endif
 
-/* operations for bsd flock(), also used by the kernel implementation */
-#define LOCK_SH		1	/* shared lock */
-#define LOCK_EX		2	/* exclusive lock */
-#define LOCK_NB		4	/* or'd with one of the above to prevent
-				   blocking */
-#define LOCK_UN		8	/* remove lock */
+#define LOCK_SH		1	
+#define LOCK_EX		2	
+#define LOCK_NB		4	
+#define LOCK_UN		8	
 
-#define LOCK_MAND	32	/* This is a mandatory flock ... */
-#define LOCK_READ	64	/* which allows concurrent read operations */
-#define LOCK_WRITE	128	/* which allows concurrent write operations */
-#define LOCK_RW		192	/* which allows concurrent read & write ops */
+#define LOCK_MAND	32	
+#define LOCK_READ	64	
+#define LOCK_WRITE	128	
+#define LOCK_RW		192	
 
 #define F_LINUX_SPECIFIC_BASE	1024
 
@@ -190,6 +162,6 @@ struct flock64 {
 	__ARCH_FLOCK64_PAD
 };
 #endif
-#endif /* !CONFIG_64BIT */
+#endif 
 
-#endif /* _ASM_GENERIC_FCNTL_H */
+#endif 

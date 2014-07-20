@@ -203,6 +203,10 @@ source "fs/hfsplus/Kconfig"
 source "fs/befs/Kconfig"
 source "fs/bfs/Kconfig"
 source "fs/efs/Kconfig"
+
+# Patched by YAFFS
+source "fs/yaffs2/Kconfig"
+
 source "fs/jffs2/Kconfig"
 # UBIFS File system configuration
 source "fs/ubifs/Kconfig"
@@ -275,5 +279,21 @@ endif # NETWORK_FILESYSTEMS
 
 source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
+
+config EXFAT_FS
+	tristate "exFAT file system support"
+	select NLS
+	help
+	  exFAT is the interoperable file system of choice by Microsoft.
+
+config EXFAT_PATH
+	string "Tuxera EXFAT folder"
+	depends on EXFAT_FS
+	default "texfat"
+
+config EXFAT_VERSION
+	string "Tuxera EXFAT version"
+	depends on EXFAT_FS
+	default "target/htc.d/htc"
 
 endmenu
