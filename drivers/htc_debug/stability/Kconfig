@@ -1,0 +1,22 @@
+config DIRTY_SYSTEM_DETECTOR
+        depends on ARCH_APQ8064 || ARCH_MSM8960 || ARCH_MSM8X60 || ARCH_QSD8X50 || ARCH_MSM7X30 || ARCH_MSM7X00A || ARCH_MSM7227 || ARCH_MSM7225
+        default n
+        bool "HTC dirty file detector for /system partition"
+
+config HTC_PROCESS_DEBUG
+        bool "process/thread debug support"
+        default y
+        help
+	  This option enables kernel debug log to check if any
+          assigned process receives signal or unexpected exit
+
+config HTC_DEBUG_SAVE_BOOT_MSG
+        default y
+        bool "HTC debug: saving kernel log of booting to memory"
+
+config HTC_DEBUG_REPORT_MEMINFO
+        depends on SLUB && TRACING
+        default y
+        bool "HTC debug: Report memory usage which is not included in /proc/meminfo, such as kmalloc, dma, ftrace"
+        help
+          Enable this will get more memory report entries in /proc/meminfo
