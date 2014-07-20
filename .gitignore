@@ -84,3 +84,11 @@ GTAGS
 *.orig
 *~
 \#*#
+
+#user ignores:
+ge442mkzip.sh
+out/
+out_sense/
+ramfs/
+sense442mkzip.sh
+
