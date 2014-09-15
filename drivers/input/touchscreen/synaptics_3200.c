@@ -1147,10 +1147,13 @@ static int syn_config_update(struct synaptics_ts_data *ts, int attr)
 	uint32_t crc_checksum;
 	int ret;
 
-	crc_checksum =
-		syn_crc((uint16_t *)ts->config, SYN_CONFIG_SIZE / 2 - 2);
-	memcpy(&ts->config[SYN_CONFIG_SIZE - 4], &crc_checksum, 4);
-	printk(KERN_INFO "[TP] CRC = %X\n" , syn_crc((uint16_t *)ts->config, SYN_CONFIG_SIZE / 2 - 2));
+	if (ts->config != NULL)
+	{
+		crc_checksum =
+			syn_crc((uint16_t *)ts->config, SYN_CONFIG_SIZE / 2 - 2);
+		memcpy(&ts->config[SYN_CONFIG_SIZE - 4], &crc_checksum, 4);
+		printk(KERN_INFO "[TP] CRC = %X\n" , syn_crc((uint16_t *)ts->config, SYN_CONFIG_SIZE / 2 - 2));
+	}
 
 	if (ts->tw_pin_mask == 0) {
 		ret = enable_flash_programming(ts, attr);
@@ -2059,6 +2062,24 @@ static int register_sr_touch_device(void)
 	return SUCCESS;
 }
 
+static ssize_t get_en_sr(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct synaptics_ts_data *ts = gl_ts;
+	size_t count = 0;
+
+	if (ts->sr_input_dev)
+	{
+		count += sprintf(buf + count, "%s ", ts->sr_input_dev->name);
+		count += sprintf(buf + count, "\n");
+	}
+	else
+		count += sprintf(buf + count, "0\n");
+
+
+	return count;
+}
+
 static ssize_t set_en_sr(struct device *dev, struct device_attribute *attr,
 						const char *buf, size_t count)
 {
@@ -2072,7 +2093,7 @@ static ssize_t set_en_sr(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
-static DEVICE_ATTR(sr_en, S_IWUSR, 0, set_en_sr);
+static DEVICE_ATTR(sr_en, (S_IWUSR|S_IRUGO), get_en_sr, set_en_sr);
 
 #ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
 

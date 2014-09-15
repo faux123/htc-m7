@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2011-2014, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -266,7 +266,7 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 	unsigned int no_page_fault_log = 0;
 	unsigned int curr_context_id = 0;
 	unsigned int curr_global_ts = 0;
-	static struct kgsl_context *context;
+	struct kgsl_context *context;
 	unsigned int pid;
 	unsigned int fsynr0, fsynr1;
 	int write;
@@ -348,6 +348,7 @@ static int kgsl_iommu_fault_handler(struct iommu_domain *domain,
 
 		if (ret < 0) {
 			KGSL_CORE_ERR("Invalid curr_global_ts = %d\n", curr_global_ts);
+			kgsl_context_put(context);
 			goto done;
 		}
 
@@ -771,6 +772,10 @@ inline unsigned int kgsl_iommu_sync_lock(struct kgsl_mmu *mmu,
 	*cmds++ = 0x1;
 	*cmds++ = 0x1;
 
+	
+	*cmds++ = cp_type3_packet(CP_SET_PROTECTED_MODE, 1);
+	*cmds++ = 0;
+
 	*cmds++ = cp_type3_packet(CP_MEM_WRITE, 2);
 	*cmds++ = lock_vars->turn;
 	*cmds++ = 0;
@@ -785,9 +790,17 @@ inline unsigned int kgsl_iommu_sync_lock(struct kgsl_mmu *mmu,
 	*cmds++ = 0x1;
 	*cmds++ = 0x1;
 
+	
+	*cmds++ = cp_type3_packet(CP_SET_PROTECTED_MODE, 1);
+	*cmds++ = 0;
+
 	*cmds++ = cp_type3_packet(CP_TEST_TWO_MEMS, 3);
 	*cmds++ = lock_vars->flag[PROC_APPS];
 	*cmds++ = lock_vars->turn;
+	*cmds++ = 0;
+
+	
+	*cmds++ = cp_type3_packet(CP_SET_PROTECTED_MODE, 1);
 	*cmds++ = 0;
 
 	cmds += adreno_add_idle_cmds(adreno_dev, cmds);
@@ -819,6 +832,10 @@ inline unsigned int kgsl_iommu_sync_unlock(struct kgsl_mmu *mmu,
 	*cmds++ = 0x0;
 	*cmds++ = 0x1;
 	*cmds++ = 0x1;
+
+	
+	*cmds++ = cp_type3_packet(CP_SET_PROTECTED_MODE, 1);
+	*cmds++ = 0;
 
 	cmds += adreno_add_idle_cmds(adreno_dev, cmds);
 

@@ -73,8 +73,13 @@ static ssize_t print_switch_state(struct switch_dev *sdev, char *buf)
 static char *envp[3] = {"SWITCH_NAME=htcctusbcmd",
 			"SWITCH_STATE=Capture", 0};
 
-static char *vzw_cdrom_envp[3] = {"SWITCH_NAME=htcctusbcmd",
-			"SWITCH_STATE=UNMOUNTEDCDROM", 0};
+static char *vzw_cdrom_envp_type3[4] = {"SWITCH_NAME=htcctusbcmd",
+			"SWITCH_STATE=UNMOUNTEDCDROM",
+			"CDROM_TYPE=3", 0};
+
+static char *vzw_cdrom_envp_type4[4] = {"SWITCH_NAME=htcctusbcmd",
+			"SWITCH_STATE=UNMOUNTEDCDROM",
+			"CDROM_TYPE=4", 0};
 
 static const char ctusbcmd_switch_name[] = "htcctusbcmd";
 
@@ -89,8 +94,11 @@ static void ctusbcmd_do_work(struct work_struct *w)
 static void ctusbcmd_vzw_unmount_work(struct work_struct *w)
 {
 	struct usb_composite_dev *cdev = container_of(w, struct usb_composite_dev, cdusbcmd_vzw_unmount_work.work);
-	printk(KERN_INFO "%s: UNMOUNTEDCDROM !\n", __func__);
-	kobject_uevent_env(&cdev->compositesdev.dev->kobj, KOBJ_CHANGE, vzw_cdrom_envp);
+	printk(KERN_INFO "%s: UNMOUNTEDCDROM !mask 0x%x\n", __func__,cdev->unmount_cdrom_mask);
+	if (cdev->unmount_cdrom_mask & 1 << 3)
+		kobject_uevent_env(&cdev->compositesdev.dev->kobj, KOBJ_CHANGE, vzw_cdrom_envp_type3);
+	if (cdev->unmount_cdrom_mask & 1 << 4)
+		kobject_uevent_env(&cdev->compositesdev.dev->kobj, KOBJ_CHANGE, vzw_cdrom_envp_type4);
 }
 
 static void composite_disconnect(struct usb_gadget *gadget);
@@ -723,10 +731,21 @@ int usb_remove_config(struct usb_composite_dev *cdev,
 
 	spin_lock_irqsave(&cdev->lock, flags);
 
+	if (WARN_ON(!config->cdev)) {
+		spin_unlock_irqrestore(&cdev->lock, flags);
+		return 0;
+	}
+
 	if (cdev->config == config)
 		reset_config(cdev);
 
-	list_del(&config->list);
+	if (list_empty(&config->list)) {
+		spin_unlock_irqrestore(&cdev->lock, flags);
+		pr_err("android_switch_function:list empty\n");
+		return 0;
+	} else {
+		list_del(&config->list);
+	}
 
 	spin_unlock_irqrestore(&cdev->lock, flags);
 	os_type = OS_NOT_YET;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2008-2012,2014 The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -95,6 +95,9 @@ unsigned int kgsl_get_alloc_size(int detailed)
 	return ret;
 }
 
+static void kgsl_put_process_private(struct kgsl_device *device,
+			 struct kgsl_process_private *private);
+
 static void kgsl_mem_entry_detach_process(struct kgsl_mem_entry *entry);
 
 void kgsl_hang_check(struct work_struct *work)
@@ -122,9 +125,13 @@ void hang_timer(unsigned long data)
 {
 	struct kgsl_device *device = (struct kgsl_device *) data;
 
-	if (device->state == KGSL_STATE_ACTIVE) {
-		
-		queue_work(device->work_queue, &device->hang_check_ws);
+	
+	if (device->id == KGSL_DEVICE_3D0) {
+		if (device->state == KGSL_STATE_ACTIVE) {
+
+			
+			queue_work(device->work_queue, &device->hang_check_ws);
+		}
 	}
 }
 
@@ -332,14 +339,19 @@ kgsl_mem_entry_untrack_gpuaddr(struct kgsl_process_private *process,
 
 static int
 kgsl_mem_entry_attach_process(struct kgsl_mem_entry *entry,
-				   struct kgsl_process_private *process)
+				struct kgsl_device_private *dev_priv)
 {
 	int ret;
+	struct kgsl_process_private *process = dev_priv->process_priv;
+
+	ret = kref_get_unless_zero(&process->refcount);
+	if (!ret)
+		return -EBADF;
 
 	while (1) {
 		if (idr_pre_get(&process->mem_idr, GFP_KERNEL) == 0) {
 			ret = -ENOMEM;
-			goto err;
+			goto err_put_proc_priv;
 		}
 
 		spin_lock(&process->mem_lock);
@@ -350,9 +362,10 @@ kgsl_mem_entry_attach_process(struct kgsl_mem_entry *entry,
 		if (ret == 0)
 			break;
 		else if (ret != -EAGAIN)
-			goto err;
+			goto err_put_proc_priv;
 	}
 	entry->priv = process;
+	entry->dev_priv = dev_priv;
 	entry->memdesc.private = process;
 
 	spin_lock(&process->mem_lock);
@@ -361,14 +374,17 @@ kgsl_mem_entry_attach_process(struct kgsl_mem_entry *entry,
 		idr_remove(&process->mem_idr, entry->id);
 	spin_unlock(&process->mem_lock);
 	if (ret)
-		goto err;
+		goto err_put_proc_priv;
 	
 	if (entry->memdesc.gpuaddr) {
 		ret = kgsl_mmu_map(process->pagetable, &entry->memdesc);
 		if (ret)
 			kgsl_mem_entry_detach_process(entry);
 	}
-err:
+	return ret;
+
+err_put_proc_priv:
+	kgsl_put_process_private(dev_priv->device, process);
 	return ret;
 }
 
@@ -390,6 +406,7 @@ static void kgsl_mem_entry_detach_process(struct kgsl_mem_entry *entry)
 
 	entry->priv->stats[entry->memtype].cur -= entry->memdesc.size;
 	spin_unlock(&entry->priv->mem_lock);
+	kgsl_put_process_private(entry->dev_priv->device, entry->priv);
 
 	entry->priv = NULL;
 }
@@ -727,11 +744,6 @@ EXPORT_SYMBOL(kgsl_late_resume_driver);
 
 static void kgsl_destroy_process_private(struct kref *kref)
 {
-
-	struct kgsl_mem_entry *entry = NULL;
-	int next = 0;
-
-
 	struct kgsl_process_private *private = container_of(kref,
 			struct kgsl_process_private, refcount);
 
@@ -746,22 +758,13 @@ static void kgsl_destroy_process_private(struct kref *kref)
 	if (private->debug_root)
 		debugfs_remove_recursive(private->debug_root);
 
-	while (1) {
-		rcu_read_lock();
-		entry = idr_get_next(&private->mem_idr, &next);
-		rcu_read_unlock();
-		if (entry == NULL)
-			break;
-		kgsl_mem_entry_put(entry);
-		next = 0;
-	}
-	kgsl_mmu_putpagetable(private->pagetable);
-	idr_destroy(&private->mem_idr);
-
 	spin_lock(&kgsl_driver.process_dump_lock);
 	list_del(&private->list);
 	spin_unlock(&kgsl_driver.process_dump_lock);
 	mutex_unlock(&kgsl_driver.process_mutex);
+
+	kgsl_mmu_putpagetable(private->pagetable);
+	idr_destroy(&private->mem_idr);
 
 	kfree(private);
 	return;
@@ -875,6 +878,7 @@ static int kgsl_release(struct inode *inodep, struct file *filep)
 	struct kgsl_process_private *private = dev_priv->process_priv;
 	struct kgsl_device *device = dev_priv->device;
 	struct kgsl_context *context;
+	struct kgsl_mem_entry *entry;
 	int next = 0;
 
 	filep->private_data = NULL;
@@ -893,6 +897,19 @@ static int kgsl_release(struct inode *inodep, struct file *filep)
 		if (context->dev_priv == dev_priv)
 			kgsl_context_detach(context);
 
+		next = next + 1;
+	}
+	next = 0;
+	while (1) {
+		spin_lock(&private->mem_lock);
+		entry = idr_get_next(&private->mem_idr, &next);
+		spin_unlock(&private->mem_lock);
+		if (entry == NULL)
+			break;
+		if (entry->dev_priv == dev_priv && !entry->pending_free) {
+			entry->pending_free = 1;
+			kgsl_mem_entry_put(entry);
+		}
 		next = next + 1;
 	}
 	kgsl_cancel_events(device, dev_priv);
@@ -1022,7 +1039,8 @@ kgsl_sharedmem_find_region(struct kgsl_process_private *private,
 		entry = rb_entry(node, struct kgsl_mem_entry, node);
 
 		if (kgsl_gpuaddr_in_memdesc(&entry->memdesc, gpuaddr, size)) {
-			kgsl_mem_entry_get(entry);
+			if (!kgsl_mem_entry_get(entry))
+				break;
 			spin_unlock(&private->mem_lock);
 			return entry;
 		}
@@ -1092,14 +1110,17 @@ kgsl_sharedmem_region_empty(struct kgsl_process_private *private,
 static inline struct kgsl_mem_entry * __must_check
 kgsl_sharedmem_find_id(struct kgsl_process_private *process, unsigned int id)
 {
+	int result = 0;
 	struct kgsl_mem_entry *entry;
 
 	rcu_read_lock();
 	entry = idr_find(&process->mem_idr, id);
 	if (entry)
-		kgsl_mem_entry_get(entry);
+		result = kgsl_mem_entry_get(entry);
 	rcu_read_unlock();
 
+	if (!result)
+		return NULL;
 	return entry;
 }
 
@@ -2002,7 +2023,7 @@ static long kgsl_ioctl_map_user_mem(struct kgsl_device_private *dev_priv,
 	
 	param->flags = entry->memdesc.flags;
 
-	result = kgsl_mem_entry_attach_process(entry, private);
+	result = kgsl_mem_entry_attach_process(entry, dev_priv);
 	if (result)
 		goto error_attach;
 
@@ -2170,7 +2191,7 @@ kgsl_ioctl_gpumem_alloc(struct kgsl_device_private *dev_priv,
 	if (result)
 		return result;
 
-	result = kgsl_mem_entry_attach_process(entry, private);
+	result = kgsl_mem_entry_attach_process(entry, dev_priv);
 	if (result != 0)
 		goto err;
 
@@ -2203,7 +2224,7 @@ kgsl_ioctl_gpumem_alloc_id(struct kgsl_device_private *dev_priv,
 	if (result != 0)
 		goto err;
 
-	result = kgsl_mem_entry_attach_process(entry, private);
+	result = kgsl_mem_entry_attach_process(entry, dev_priv);
 	if (result != 0)
 		goto err;
 
@@ -2593,7 +2614,8 @@ kgsl_mmap_memstore(struct kgsl_device *device, struct vm_area_struct *vma)
 static void kgsl_gpumem_vm_open(struct vm_area_struct *vma)
 {
 	struct kgsl_mem_entry *entry = vma->vm_private_data;
-	kgsl_mem_entry_get(entry);
+	if (!kgsl_mem_entry_get(entry))
+		vma->vm_private_data = NULL;
 }
 
 static int
@@ -2601,6 +2623,8 @@ kgsl_gpumem_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 	struct kgsl_mem_entry *entry = vma->vm_private_data;
 
+	if (!entry)
+		return VM_FAULT_SIGBUS;
 	if (!entry->memdesc.ops || !entry->memdesc.ops->vmfault)
 		return VM_FAULT_SIGBUS;
 
@@ -2611,6 +2635,9 @@ static void
 kgsl_gpumem_vm_close(struct vm_area_struct *vma)
 {
 	struct kgsl_mem_entry *entry  = vma->vm_private_data;
+
+	if (!entry)
+		return;
 
 	entry->memdesc.useraddr = 0;
 	kgsl_mem_entry_put(entry);
@@ -2665,7 +2692,7 @@ err_put:
 static inline bool
 mmap_range_valid(unsigned long addr, unsigned long len)
 {
-	return (addr + len) > addr && (addr + len) < TASK_SIZE;
+	return ((ULONG_MAX - addr) > len) && ((addr + len) < TASK_SIZE);
 }
 
 static unsigned long

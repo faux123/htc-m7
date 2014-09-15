@@ -2211,6 +2211,7 @@ dhd_dpc_thread(void *data)
 	tsk_ctl_t *tsk = (tsk_ctl_t *)data;
 	dhd_info_t *dhd = (dhd_info_t *)tsk->parent;
 #ifdef CUSTOMER_HW_ONE
+	unsigned long pet_dog_start_time = 0;
 	unsigned long start_time = 0;
 #endif
 	if (dhd_dpc_prio > 0)
@@ -2234,6 +2235,11 @@ dhd_dpc_thread(void *data)
 	
 	while (1) {
 #ifdef CUSTOMER_HW_ONE
+		if (time_after(jiffies, pet_dog_start_time + 3*HZ) && rt_class(dhd_dpc_prio)) {
+			DHD_ERROR(("dhd_bus_dpc(): kick dog!\n"));
+			pet_watchdog();
+			pet_dog_start_time = jiffies;
+		}
 		if(prev_wlan_ioprio_idle != wlan_ioprio_idle) {
 			set_wlan_ioprio();
 			prev_wlan_ioprio_idle = wlan_ioprio_idle;
@@ -2268,17 +2274,16 @@ dhd_dpc_thread(void *data)
 #ifdef CUSTOMER_HW_ONE
 					if (time_after(jiffies, start_time + 3*HZ) && rt_class(dhd_dpc_prio)) {
 						DHD_ERROR(("dhd_bus_dpc is busy in real time priority over 3 secs!\n"));
-						start_time = jiffies;
-					}
-
-					if ((cpu_core == 0) && time_after(jiffies, start_time + 3*HZ)) {
-						ret = set_cpus_allowed_ptr(current, cpumask_of(nr_cpu_ids-1));
-						if ( ret ) {
-							DHD_ERROR(("set_cpus_allowed_ptr to 3 failed, ret=%d\n", ret));
-						} else {
-							cpu_core = nr_cpu_ids - 1;
-							DHD_ERROR(("switch task to cpu %d due to over 3 secs.\n", cpu_core));
+						if (cpu_core == 0) {
+							ret = set_cpus_allowed_ptr(current, cpumask_of(nr_cpu_ids-1));
+							if ( ret ) {
+								DHD_ERROR(("set_cpus_allowed_ptr to 3 failed, ret=%d\n", ret));
+							} else {
+								cpu_core = nr_cpu_ids - 1;
+								DHD_ERROR(("switch task to cpu %d due to over 3 secs.\n", cpu_core));
+							}
 						}
+						start_time = jiffies;
 					}
 #endif
 				}
@@ -3382,19 +3387,19 @@ printf("Read PCBID = %x\n", system_rev);
 	strcpy(nvram_path, "/system/etc/calibration.gpio4");
 #endif
 
-#ifdef CONFIG_MACH_DUMMY
+#ifdef CONFIG_MACH_ZARA
 	strcpy(nvram_path, "/system/etc/calibration.gpio4");
 #endif
 
-#ifdef CONFIG_MACH_DUMMY
+#ifdef CONFIG_MACH_ZARA_CL
 	strcpy(nvram_path, "/system/etc/calibration.gpio4");
 #endif
 
-#ifdef CONFIG_MACH_DUMMY
+#ifdef CONFIG_MACH_ZARA_WL
 	strcpy(nvram_path, "/system/etc/calibration.gpio4");
 #endif
 
-#ifdef CONFIG_MACH_DUMMY
+#ifdef CONFIG_MACH_CP5_WL
 	strcpy(nvram_path, "/system/etc/calibration.gpio4");
 #endif
 
@@ -7474,7 +7479,7 @@ adjust_thread_priority(void)
 				cpumask_clear(&mask);
 				cpumask_set_cpu(2, &mask);
 				if (sched_setaffinity(0, &mask) < 0) {
-					printf("sched_setaffinity failed");
+					
 				}
 				else {
 					printf("[adjust_thread_priority]sched_setaffinity ok");
@@ -7507,7 +7512,7 @@ adjust_rxf_thread_priority(void)
 				cpumask_clear(&mask);
 				cpumask_set_cpu(nr_cpu_ids-1, &mask);
 				if (sched_setaffinity(0, &mask) < 0) {
-					printf("sched_setaffinity failed");
+					
 				}
 				else {
 					printf("[adjust_rxf_thread_priority]sched_setaffinity ok");

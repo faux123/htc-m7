@@ -325,16 +325,37 @@ static const struct file_operations process_mem_fops = {
 	.release = single_release,
 };
 
-void
+int
 kgsl_process_init_debugfs(struct kgsl_process_private *private)
 {
 	unsigned char name[16];
+	int ret = 0;
+	struct dentry *dentry;
 
 	snprintf(name, sizeof(name), "%d", private->pid);
 
 	private->debug_root = debugfs_create_dir(name, proc_d_debugfs);
-	debugfs_create_file("mem", 0400, private->debug_root, private,
+
+	if (!private->debug_root)
+		return -EINVAL;
+
+	private->debug_root->d_inode->i_uid = proc_d_debugfs->d_inode->i_uid;
+	private->debug_root->d_inode->i_gid = proc_d_debugfs->d_inode->i_gid;
+
+	dentry = debugfs_create_file("mem", 0400, private->debug_root, private,
 			    &process_mem_fops);
+
+	if (IS_ERR(dentry)) {
+		ret = PTR_ERR(dentry);
+
+		if (ret == -ENODEV)
+			ret = 0;
+	} else if (dentry) {
+		dentry->d_inode->i_uid = proc_d_debugfs->d_inode->i_uid;
+		dentry->d_inode->i_gid = proc_d_debugfs->d_inode->i_gid;
+	}
+
+	return ret;
 }
 
 void kgsl_core_debugfs_init(void)

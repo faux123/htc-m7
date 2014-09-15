@@ -68,6 +68,11 @@ struct usbnet {
 #		define EVENT_DEV_WAKING 6
 #		define EVENT_DEV_ASLEEP 7
 #		define EVENT_DEV_OPEN	8
+#define DBG_MSG_LEN   128
+#define DBG_MAX_MSG   500
+	unsigned int    dbg_idx;
+	rwlock_t        dbg_lock;
+	char     (dbgbuf[DBG_MAX_MSG])[DBG_MSG_LEN];   
 };
 
 static inline struct usb_driver *driver_of(struct usb_interface *intf)
@@ -151,6 +156,7 @@ extern int usbnet_suspend(struct usb_interface *, pm_message_t);
 extern int usbnet_resume(struct usb_interface *);
 extern void usbnet_disconnect(struct usb_interface *);
 
+extern void dbg_log_event_debug(struct usbnet *, char *);
 
 struct cdc_state {
 	struct usb_cdc_header_desc	*header;

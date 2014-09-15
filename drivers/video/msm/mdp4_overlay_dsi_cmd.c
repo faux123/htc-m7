@@ -430,17 +430,18 @@ void mdp4_dsi_cmd_vsync_ctrl(struct fb_info *info, int enable)
 		spin_lock_irqsave(&vctrl->spin_lock, flags);
 		vctrl->clk_control = 0;
 		vctrl->expire_tick = 0;
-		spin_unlock_irqrestore(&vctrl->spin_lock, flags);
 		if (vctrl->clk_enabled == 0) {
 			pr_debug("%s: SET_CLK_ON\n", __func__);
-			mipi_dsi_clk_cfg(1);
-			mdp_clk_ctrl(1);
 			vctrl->clk_enabled = 1;
 			clk_set_on = 1;
 			vctrl->last_vsync_ms =
 				ktime_to_ms(ktime_get()) - VSYNC_MIN_DIFF_MS;
 		}
+		spin_unlock_irqrestore(&vctrl->spin_lock, flags);
+
 		if (clk_set_on) {
+			mipi_dsi_clk_cfg(1);
+			mdp_clk_ctrl(1);
 			vsync_irq_enable(INTR_PRIMARY_RDPTR,
 						MDP_PRIM_RDPTR_TERM);
 		}

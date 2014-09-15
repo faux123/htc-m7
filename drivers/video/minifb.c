@@ -332,7 +332,6 @@ int minifb_lockbuf(void **vaddr, unsigned long *ptr_size, int repeat)
 	int ret = 0;
 	struct minifb_data *node;
 	struct minifb_ctrl *fbctrl = get_ctrl();
-	unsigned long ionflag;
 
 	
 	if (!fbctrl) {
@@ -356,13 +355,7 @@ int minifb_lockbuf(void **vaddr, unsigned long *ptr_size, int repeat)
 		pr_debug("%s: lock frame#%d from fd%d\n", __func__, node->info, node->buf_info.memory_id);
 
 		
-		ret = ion_handle_get_flags(fbctrl->iclient, node->ionhdl, &ionflag);
-		if (ret) {
-			pr_err("%s: Failed to get ION flag, client %p, handle %p\n",
-				__func__, fbctrl->iclient, node->ionhdl);
-		}
-
-		*vaddr = ion_map_kernel(fbctrl->iclient, node->ionhdl, ionflag);
+		*vaddr = ion_map_kernel(fbctrl->iclient, node->ionhdl);
 		ion_handle_get_size(fbctrl->iclient, node->ionhdl, ptr_size);
 		fbctrl->lock_cnt++;
 	} else if (repeat && fbctrl->retired) {
@@ -372,13 +365,7 @@ int minifb_lockbuf(void **vaddr, unsigned long *ptr_size, int repeat)
 		pr_debug("%s: lock frame#%d from retired fd%d\n", __func__, node->info, node->buf_info.memory_id);
 
 		
-		ret = ion_handle_get_flags(fbctrl->iclient, node->ionhdl, &ionflag);
-		if (ret) {
-			pr_err("%s: Failed to get ION flag, client %p, handle %p\n",
-				__func__, fbctrl->iclient, node->ionhdl);
-		}
-
-		*vaddr = ion_map_kernel(fbctrl->iclient, node->ionhdl, ionflag);
+		*vaddr = ion_map_kernel(fbctrl->iclient, node->ionhdl);
 		ion_handle_get_size(fbctrl->iclient, node->ionhdl, ptr_size);
 		fbctrl->lock_cnt++;
 	} else {

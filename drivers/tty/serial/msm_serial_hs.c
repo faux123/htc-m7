@@ -886,6 +886,14 @@ static unsigned long msm_hs_set_bps_locked(struct uart_port *uport,
 	data |= UARTDM_IPR_STALE_TIMEOUT_MSB_BMSK & (rxstale << 2);
 
 	msm_hs_write(uport, UARTDM_IPR_ADDR, data);
+
+#ifdef CONFIG_QSC_MODEM
+	pr_info("%s: Set bps done.\n", __func__);
+#else
+	msm_hs_write(uport, UARTDM_CR_ADDR, RESET_TX);
+	msm_hs_write(uport, UARTDM_CR_ADDR, RESET_RX);
+#endif
+
 	return flags;
 }
 

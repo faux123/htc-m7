@@ -336,6 +336,8 @@ static void AKECS_SetYPR(
 		rbuf[5], rbuf[6], rbuf[7], rbuf[8]);
 	AKM_DATA(&akm->input->dev, "  Orientation[YPR] : %6d,%6d,%6d",
 		rbuf[9], rbuf[10], rbuf[11]);
+	AKM_DATA(&akm->input->dev, "  Rotation V  : %6d,%6d,%6d,%6d",
+		rbuf[18], rbuf[19], rbuf[20], rbuf[21]);
 
 	
 	if (!rbuf[0]) {
@@ -373,10 +375,17 @@ static void AKECS_SetYPR(
 	}
 	
 	if (ready & ORI_DATA_READY) {
+		
 		input_report_abs(akm->input, ABS_HAT0X, rbuf[9]);
 		input_report_abs(akm->input, ABS_HAT0Y, rbuf[10]);
 		input_report_abs(akm->input, ABS_HAT1X, rbuf[11]);
 		input_report_abs(akm->input, ABS_HAT1Y, rbuf[4]);
+
+		
+		input_report_abs(akm->input, ABS_TILT_X, rbuf[18]);
+		input_report_abs(akm->input, ABS_TILT_Y, rbuf[19]);
+		input_report_abs(akm->input, ABS_TOOL_WIDTH, rbuf[20]);
+		input_report_abs(akm->input, ABS_VOLUME, rbuf[21]);
 	}
 
 	input_sync(akm->input);
@@ -428,15 +437,15 @@ AKECS_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	struct akm8963_data *akm = file->private_data;
 
 	
-	char i2c_buf[RWBUF_SIZE] = {0};				
-	int8_t sensor_buf[SENSOR_DATA_SIZE] = {0};	
-	int32_t ypr_buf[YPR_DATA_SIZE] = {0};		
-	int16_t acc_buf[3] = {0};					
-	int64_t delay[AKM_NUM_SENSORS] = {0};		
-	char mode = 0;		
-	char layout = 0;	
-	char outbit = 0;	
-	int status = 0;		
+	char i2c_buf[RWBUF_SIZE] = {0};		
+	int8_t sensor_buf[SENSOR_DATA_SIZE] = {0};
+	int32_t ypr_buf[YPR_DATA_SIZE] = {0};	
+	int16_t acc_buf[3] = {0};		
+	int64_t delay[AKM_NUM_SENSORS] = {0};	
+	char mode = 0;			
+	char layout = 0;		
+	char outbit = 0;		
+	int status = 0;			
 	int ret = -1;		
 
 	switch (cmd) {
@@ -1211,6 +1220,15 @@ static int akm8963_input_init(
 	input_set_abs_params(*input, ABS_HAT3Y,
 			-32768, 32767, 0, 0);
 
+	
+	input_set_abs_params(*input, ABS_TILT_X,
+			-16384, 16384, 0, 0);
+	input_set_abs_params(*input, ABS_TILT_Y,
+			-16384, 16384, 0, 0);
+	input_set_abs_params(*input, ABS_TOOL_WIDTH,
+			-16384, 16384, 0, 0);
+	input_set_abs_params(*input, ABS_VOLUME,
+			-16384, 16384, 0, 0);
 	
 	(*input)->name = "compass";
 

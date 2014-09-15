@@ -309,7 +309,7 @@ static int snd_cs8427_send_corudata(struct cs8427 *obj,
 	char *hw_data = udata ?
 		chip->playback.hw_udata : chip->playback.hw_status;
 	char data[32];
-	int err, idx;
+	int err;
 	unsigned char addr = 0;
 	int ret = 0;
 
@@ -321,6 +321,9 @@ static int snd_cs8427_send_corudata(struct cs8427 *obj,
 	memcpy(hw_data, ndata, count);
 	if (udata) {
 		memset(data, 0, sizeof(data));
+		if (count > sizeof(data)) {
+			count = sizeof(data);
+		}
 		if (memcmp(hw_data, data, count) == 0) {
 			chip->regmap[CS8427_REG_UDATABUF] &= ~CS8427_UBMMASK;
 			chip->regmap[CS8427_REG_UDATABUF] |= CS8427_UBMZEROS |
@@ -330,7 +333,6 @@ static int snd_cs8427_send_corudata(struct cs8427 *obj,
 			return err < 0 ? err : 0;
 		}
 	}
-	idx = 0;
 	memcpy(data, ndata, CHANNEL_STATUS_SIZE);
 	
 	addr = 0x20;

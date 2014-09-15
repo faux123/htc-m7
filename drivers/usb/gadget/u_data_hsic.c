@@ -528,14 +528,16 @@ static void ghsic_data_connect_w(struct work_struct *w)
 	struct gdata_port	*port =
 		container_of(w, struct gdata_port, connect_w);
 	int			ret;
-	printk("%s: connected=%d, CH_READY=%d, port=%p\n", 
-		__func__, atomic_read(&port->connected),
-		test_bit(CH_READY, &port->bridge_sts), port);
+
 	if (!port || !atomic_read(&port->connected) ||
 		!test_bit(CH_READY, &port->bridge_sts)) {
 		printk("%s: return\n", __func__);
 		return;
 	}
+
+	printk("%s: connected=%d, CH_READY=%d, port=%p\n",
+		__func__, atomic_read(&port->connected),
+		test_bit(CH_READY, &port->bridge_sts), port);
 
 	pr_debug("%s: port:%p\n", __func__, port);
 

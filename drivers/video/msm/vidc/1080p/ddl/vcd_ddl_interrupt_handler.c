@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -274,8 +274,8 @@ static u32 ddl_decoder_seq_done_callback(struct ddl_context *ddl_context,
 		}
 		vidc_sm_get_profile_info(&ddl->shared_mem
 			[ddl->command_channel], &disp_profile_info);
-		disp_profile_info.pic_profile = seq_hdr_info.profile;
-		disp_profile_info.pic_level = seq_hdr_info.level;
+		seq_hdr_info.profile = disp_profile_info.pic_profile;
+		seq_hdr_info.level = disp_profile_info.pic_level;
 		ddl_get_dec_profile_level(decoder, seq_hdr_info.profile,
 			seq_hdr_info.level);
 		switch (decoder->codec.codec) {
@@ -408,6 +408,10 @@ static u32 ddl_decoder_seq_done_callback(struct ddl_context *ddl_context,
 						seq_hdr_info.dec_frm_size);
 				}
 			}
+			DDL_MSG_INFO("profile %u level %u progressive %u",
+					decoder->profile.profile,
+					decoder->level.level,
+					decoder->progressive_only);
 			if (need_reconfig) {
 				struct ddl_frame_data_tag *payload =
 					&ddl->input_frame;
@@ -1309,6 +1313,7 @@ static u32 ddl_decoder_output_done_callback(
 			DDL_MSG_LOW("%s y_cb_cr_size = %u "
 				"actual_output_buf_req.sz = %u"
 				"min_output_buf_req.sz = %u\n",
+				__func__,
 				decoder->y_cb_cr_size,
 				decoder->actual_output_buf_req.sz,
 				decoder->min_output_buf_req.sz);
@@ -1756,7 +1761,7 @@ static void ddl_handle_enc_frame_done(struct ddl_client_context *ddl,
 	if (!IS_ERR_OR_NULL(output_frame->buff_ion_handle)) {
 		msm_ion_do_cache_op(ddl_context->video_ion_client,
 			output_frame->buff_ion_handle,
-			(unsigned long *) output_frame->virtual,
+			(unsigned long *)NULL,
 			(unsigned long) output_frame->alloc_len,
 			ION_IOC_INV_CACHES);
 	}
@@ -1797,8 +1802,10 @@ static void ddl_handle_slice_done_slice_batch(struct ddl_client_context *ddl)
 	slice_output = (struct vidc_1080p_enc_slice_batch_out_param *)
 		(encoder->batch_frame.slice_batch_out.align_virtual_addr);
 	DDL_MSG_LOW(" after get no of slices = %d\n", num_slices_comp);
-	if (slice_output == NULL)
+	if (slice_output == NULL) {
 		DDL_MSG_ERROR(" slice_output is NULL\n");
+		return; 
+	}
 	encoder->slice_delivery_info.num_slices_enc += num_slices_comp;
 	if (vidc_msg_timing) {
 		ddl_calc_core_proc_time_cnt(__func__, ENC_SLICE_OP_TIME,
@@ -1822,11 +1829,11 @@ static void ddl_handle_slice_done_slice_batch(struct ddl_client_context *ddl)
 			stream_buffer_size);
 		output_frame = &(
 			encoder->batch_frame.output_frame[actual_idx].vcd_frm);
-		DDL_MSG_LOW("OutBfr: vcd_frm 0x%x frmbfr(virtual) 0x%x"
+		DDL_MSG_LOW("OutBfr: vcd_frm %p frmbfr(virtual) 0x%x"
 			"frmbfr(physical) 0x%x\n",
-			&output_frame,
-			output_frame.virtual_base_addr,
-			output_frame.physical_base_addr);
+			output_frame,
+			(u32)output_frame->virtual,
+			(u32)output_frame->physical);
 		vidc_1080p_get_encode_frame_info(&encoder->enc_frame_info);
 		vidc_sm_get_frame_tags(&ddl->shared_mem
 			[ddl->command_channel],
@@ -1907,14 +1914,14 @@ static u32 ddl_handle_enc_frame_done_slice_mode(
 		DDL_MSG_LOW("Slice Info: OutBfrIndex %d SliceSize %d",
 			actual_idx,
 			slice_output->slice_info[start_bfr_idx+index]. \
-			stream_buffer_size, 0);
+			stream_buffer_size);
 		output_frame =
 		&(encoder->batch_frame.output_frame[actual_idx].vcd_frm);
-		DDL_MSG_LOW("OutBfr: vcd_frm 0x%x frmbfr(virtual) 0x%x"
+		DDL_MSG_LOW("OutBfr: vcd_frm %p frmbfr(virtual) 0x%x"
 				"frmbfr(physical) 0x%x",
-				&output_frame,
-				output_frame.virtual_base_addr,
-				output_frame.physical_base_addr);
+				output_frame,
+				(u32)output_frame->virtual,
+				(u32)output_frame->physical);
 		vidc_1080p_get_encode_frame_info(
 			&encoder->enc_frame_info);
 		vidc_sm_get_frame_tags(&ddl->shared_mem

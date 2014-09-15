@@ -1543,6 +1543,7 @@ void mmc_remove_sd_card(struct work_struct *work)
 			host->bus_ops->remove(host);
 		mmc_claim_host(host);
 		mmc_detach_bus(host);
+		mdelay(500);
 		mmc_release_host(host);
 	}
 	mmc_bus_put(host);
@@ -1803,6 +1804,10 @@ static int mmc_do_erase(struct mmc_card *card, unsigned int from,
 		 R1_CURRENT_STATE(cmd.resp[0]) == R1_STATE_PRG);
 out:
 	diff = ktime_sub(ktime_get(), start);
+	if (ktime_to_ms(diff) >= 3000)
+		pr_info("%s: erase(sector %u to %u) takes %lld ms\n",
+			mmc_hostname(card->host), from, to, ktime_to_ms(diff));
+
 	if (card->host->tp_enable)
 		trace_mmc_request_done(&(card->host->class_dev), MMC_ERASE,
 			from, to - from + 1, ktime_to_ms(diff));

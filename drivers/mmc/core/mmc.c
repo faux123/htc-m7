@@ -291,6 +291,8 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 			|| !strncmp(board_get_mid(), "PN0752", 6)
 			|| !strncmp(board_get_mid(), "PN0781", 6)) )
 			card->ext_csd.sectors = 30535680;
+		else if ((card->ext_csd.sectors > 67108864) && (!strncmp(board_get_mid(), "PN0714001", 9)))
+			card->ext_csd.sectors = 61071360;
 		
 		if (card->ext_csd.sectors > (2u * 1024 * 1024 * 1024) / 512)
 			mmc_card_set_blockaddr(card);

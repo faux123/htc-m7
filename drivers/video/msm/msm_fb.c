@@ -4723,7 +4723,7 @@ static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
 						usb_pjt_client, usb_pjt_handle[i], tmp_info.latest_offset);
 					break;
 				}
-				virt_addr[i] = ion_map_kernel(usb_pjt_client, usb_pjt_handle[i], ionflag);
+				virt_addr[i] = ion_map_kernel(usb_pjt_client, usb_pjt_handle[i]);
 				mem_fd[i] = tmp_info.latest_offset;
 				usb_pjt_info.latest_offset = tmp_info.latest_offset;
 				MSM_FB_INFO("%s: fd = %d, virt %p\n", __func__, mem_fd[i], virt_addr[i]);

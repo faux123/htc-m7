@@ -157,13 +157,18 @@ static int wfd_allocate_ion_buffer(struct ion_client *client,
 	void *kvaddr, *phys_addr;
 	unsigned long size;
 	unsigned int alloc_regions = 0;
+        unsigned int flags = 0;
 	int rc;
 
-	alloc_regions = ION_HEAP(ION_CP_MM_HEAP_ID);
-	alloc_regions |= secure ? ION_SECURE :
-				ION_HEAP(ION_IOMMU_HEAP_ID);
+        if (secure) {
+            alloc_regions = ION_HEAP(ION_CP_MM_HEAP_ID);
+            flags |= ION_SECURE;
+        } else {
+            alloc_regions = (ION_HEAP(ION_CP_MM_HEAP_ID) | ION_HEAP(ION_IOMMU_HEAP_ID));
+        }
+
 	handle = ion_alloc(client,
-			mregion->size, SZ_4K, alloc_regions);
+			mregion->size, SZ_4K, alloc_regions, flags);
 
 	if (IS_ERR_OR_NULL(handle)) {
 		WFD_MSG_ERR("Failed to allocate input buffer\n");
@@ -171,7 +176,7 @@ static int wfd_allocate_ion_buffer(struct ion_client *client,
 		goto alloc_fail;
 	}
 
-	kvaddr = ion_map_kernel(client,	handle,	CACHED);
+	kvaddr = ion_map_kernel(client,	handle);
 
 	if (IS_ERR_OR_NULL(kvaddr)) {
 		WFD_MSG_ERR("Failed to get virtual addr\n");

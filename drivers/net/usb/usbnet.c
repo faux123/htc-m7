@@ -66,6 +66,26 @@ static int msg_level = -1;
 module_param (msg_level, int, 0);
 MODULE_PARM_DESC (msg_level, "Override default message level");
 
+void
+dbg_log_event_debug(struct usbnet *dev, char *event)
+{
+	unsigned long flags;
+	unsigned long long t;
+	unsigned long nanosec;
+
+	if ( !dev || !event )
+		return;
+
+	write_lock_irqsave(&dev->dbg_lock, flags);
+	t = cpu_clock(smp_processor_id());
+	nanosec = do_div(t, 1000000000)/1000;
+	scnprintf(dev->dbgbuf[dev->dbg_idx], DBG_MSG_LEN, "%5lu.%06lu:%s",
+				(unsigned long)t, nanosec, event);
+	dev->dbg_idx++;
+	dev->dbg_idx = dev->dbg_idx % DBG_MAX_MSG;
+	write_unlock_irqrestore(&dev->dbg_lock, flags);
+}
+
 static bool enable_tx_rx_debug = false;
 static bool	usb_pm_debug_enabled = false;
 
@@ -977,6 +997,11 @@ static void tx_complete (struct urb *urb)
 	struct sk_buff		*skb = (struct sk_buff *) urb->context;
 	struct skb_data		*entry = (struct skb_data *) skb->cb;
 	struct usbnet		*dev = entry->dev;
+	char event[128];
+
+	snprintf(event, 128, "skb=%p, actual_len=%d, status=%d",
+			skb, urb->actual_length, urb->status);
+	dbg_log_event_debug(dev, event);
 
 	
 	if (enable_tx_rx_debug)
@@ -1102,16 +1127,44 @@ netdev_tx_t usbnet_start_xmit (struct sk_buff *skb,
 
 	spin_lock_irqsave(&dev->txq.lock, flags);
 	retval = usb_autopm_get_interface_async(dev->intf);
+#ifdef CONFIG_RIL_PCN001_HTC_QUEUE_URB_TO_DEFERRED_ANCHOR
+	
+	if (retval < 0 && ( retval != -EACCES ) ) {
+#else
 	if (retval < 0) {
+#endif
 		spin_unlock_irqrestore(&dev->txq.lock, flags);
 		netdev_info(dev->net, "%s  usb_autopm_get_interface_async return: %d\n",__func__, retval);
 		goto drop;
+#ifdef CONFIG_RIL_PCN001_HTC_QUEUE_URB_TO_DEFERRED_ANCHOR
+	} else if ( retval == -EACCES ) {
+		netdev_info(dev->net, "%s  usb_autopm_get_interface_async return: %d, try Delaying transmission for resumption\n",__func__, retval);
+#endif
 	} else if (retval > 0)
 		netdev_info(dev->net, "%s  usb_autopm_get_interface_async return: %d\n",__func__, retval);
 
 #ifdef CONFIG_PM
+#ifdef CONFIG_RIL_PCN001_HTC_QUEUE_URB_TO_DEFERRED_ANCHOR
+	
+	if ( retval == -EACCES ) {
+		usb_anchor_urb(urb, &dev->deferred);
+		
+		netif_stop_queue(net);
+		usb_put_urb(urb);
+		spin_unlock_irqrestore(&dev->txq.lock, flags);
+		netdev_info(dev->net, "Delaying transmission for resumption\n");
+
+		
+		dev->udev->bus->skip_resume = false;
+
+		goto deferred;
+	}
+	
+	else if (test_bit(EVENT_DEV_ASLEEP, &dev->flags)) {
+#else
 	
 	if (test_bit(EVENT_DEV_ASLEEP, &dev->flags)) {
+#endif
 		
 		usb_anchor_urb(urb, &dev->deferred);
 		
@@ -1367,6 +1420,9 @@ usbnet_probe (struct usb_interface *udev, const struct usb_device_id *prod)
 	init_timer (&dev->delay);
 	mutex_init (&dev->phy_mutex);
 
+	dev->dbg_idx = 0;
+	dev->dbg_lock = __RW_LOCK_UNLOCKED(lck);
+
 	dev->net = net;
 	strcpy (net->name, "usb%d");
 	memcpy (net->dev_addr, node_id, sizeof node_id);
@@ -1507,7 +1563,6 @@ int usbnet_resume (struct usb_interface *intf)
 
 		spin_lock_irq(&dev->txq.lock);
 		while ((res = usb_get_from_anchor(&dev->deferred))) {
-
 			skb = (struct sk_buff *)res->context;
 			retval = usb_submit_urb(res, GFP_ATOMIC);
 			if (retval < 0) {
@@ -1520,6 +1575,12 @@ int usbnet_resume (struct usb_interface *intf)
 			}
 		}
 
+#ifdef CONFIG_RIL_PCN001_HTC_QUEUE_URB_TO_DEFERRED_ANCHOR
+		if ( dev->udev->bus->skip_resume == false ) {
+			pr_info("%s: set skip_resume to true\n", __func__);
+			dev->udev->bus->skip_resume = true;
+		}
+#endif
 		smp_mb();
 		clear_bit(EVENT_DEV_ASLEEP, &dev->flags);
 		spin_unlock_irq(&dev->txq.lock);

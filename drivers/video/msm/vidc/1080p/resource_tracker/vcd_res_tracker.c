@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -69,7 +69,7 @@ static void *res_trk_pmem_map
 	if (res_trk_get_enable_ion() && addr->alloc_handle) {
 		kernel_vaddr = (unsigned long *) ion_map_kernel(
 					ddl_context->video_ion_client,
-					addr->alloc_handle, UNCACHED);
+					addr->alloc_handle);
 		if (IS_ERR_OR_NULL(kernel_vaddr)) {
 			DDL_MSG_ERROR("%s():DDL ION client map failed\n",
 						 __func__);
@@ -84,7 +84,7 @@ static void *res_trk_pmem_map
 				0,
 				&iova,
 				&buffer_size,
-				UNCACHED, 0);
+				0 , 0);
 		if (ret || !iova) {
 			DDL_MSG_ERROR(
 			"%s():DDL ION client iommu map failed, ret = %d iova = 0x%lx\n",
@@ -160,9 +160,15 @@ ion_bail_out:
 static void res_trk_pmem_free(struct ddl_buf_addr *addr)
 {
 	struct ddl_context *ddl_context;
+
+	if (!addr) {
+		DDL_MSG_ERROR("\n%s() NULL address", __func__);
+		return;
+	}
+
 	ddl_context = ddl_get_context();
 	if (ddl_context->video_ion_client) {
-		if (addr && addr->alloc_handle) {
+		if (addr->alloc_handle) {
 			ion_free(ddl_context->video_ion_client,
 			 addr->alloc_handle);
 			addr->alloc_handle = NULL;
@@ -209,7 +215,8 @@ static int res_trk_pmem_alloc
 			addr->alloc_handle = ion_alloc(
 					ddl_context->video_ion_client,
 					 alloc_size, SZ_4K,
-					res_trk_get_mem_type());
+					res_trk_get_mem_type(),
+					res_trk_get_ion_flags());
 			if (IS_ERR_OR_NULL(addr->alloc_handle)) {
 				DDL_MSG_ERROR("%s() :DDL ION alloc failed\n",
 						__func__);
@@ -376,7 +383,6 @@ static u32 res_trk_sel_clk_rate(unsigned long hclk_rate)
 	mutex_lock(&resource_context.lock);
 	if (clk_set_rate(resource_context.vcodec_clk,
 		hclk_rate)) {
-		VCDRES_MSG_ERROR("vidc hclk set rate failed\n");
 		status = false;
 	} else
 		resource_context.vcodec_clk_rate = hclk_rate;
@@ -451,7 +457,7 @@ bail_out:
 
 static struct ion_client *res_trk_create_ion_client(void){
 	struct ion_client *video_client;
-	video_client = msm_ion_client_create(-1, "video_client");
+	video_client = msm_ion_client_create(-1, "vcodec_krnl");
 	return video_client;
 }
 
@@ -648,6 +654,8 @@ u32 res_trk_set_perf_level(u32 req_perf_lvl, u32 *pn_set_perf_lvl,
 			__func__, vidc_freq);
 		if (!res_trk_sel_clk_rate(vidc_freq)) {
 			if (vidc_freq == vidc_clk_table[4]) {
+				VCDRES_MSG_MED("%s(): Setting vidc freq "\
+					"to %u\n", __func__, (u32)vidc_clk_table[3]);
 				if (res_trk_sel_clk_rate(vidc_clk_table[3]))
 					goto ret;
 			}
@@ -840,15 +848,30 @@ int res_trk_get_mem_type(void)
 	if (resource_context.vidc_platform_data->enable_ion) {
 		if (res_trk_check_for_sec_session()) {
 			mem_type = ION_HEAP(mem_type);
-	if (resource_context.res_mem_type != DDL_FW_MEM)
-		mem_type |= ION_SECURE;
-	else if (res_trk_is_cp_enabled())
-		mem_type |= ION_SECURE;
 	} else
 		mem_type = (ION_HEAP(mem_type) |
 			ION_HEAP(ION_IOMMU_HEAP_ID));
 	}
 	return mem_type;
+}
+
+unsigned int res_trk_get_ion_flags(void)
+{
+        unsigned int flags = 0;
+        if (resource_context.res_mem_type == DDL_FW_MEM) {
+                return flags;
+        }
+
+        if (resource_context.vidc_platform_data->enable_ion) {
+                if (res_trk_check_for_sec_session()) {
+                        if (resource_context.res_mem_type != DDL_FW_MEM) {
+                                flags |= ION_SECURE;
+                        } else if (res_trk_is_cp_enabled()) {
+                                flags |= ION_SECURE;
+                        }
+                }
+        }
+        return flags;
 }
 
 u32 res_trk_is_cp_enabled(void)
@@ -1001,9 +1024,9 @@ int res_trk_open_secure_session()
 	mutex_unlock(&resource_context.secure_lock);
 	return 0;
 unsecure_cmd_heap:
-	msm_ion_unsecure_heap(ION_HEAP(resource_context.memtype));
-unsecure_memtype_heap:
 	msm_ion_unsecure_heap(ION_HEAP(resource_context.cmd_mem_type));
+unsecure_memtype_heap:
+	msm_ion_unsecure_heap(ION_HEAP(resource_context.memtype));
 disable_iommu_clks:
 	res_trk_disable_iommu_clocks();
 error_open:

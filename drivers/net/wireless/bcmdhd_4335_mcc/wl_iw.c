@@ -3404,6 +3404,8 @@ wl_iw_check_conn_fail(wl_event_msg_t *e, char* stringBuf, uint buflen)
 #define IW_CUSTOM_MAX 256 
 #endif 
 
+extern int sta_connected;
+
 void
 wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 {
@@ -3514,6 +3516,12 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 				wl_iw_send_priv_event(priv_dev, "AP_DOWN");
 			}
 		}else{
+			
+			sta_connected = 0;
+			
+			wl_android_traffic_monitor(priv_dev);
+			
+
 			WL_DEFAULT(("STA_Link Down\n"));
 			printf(KERN_INFO "[ATS][disconnect][complete]\n");
 			bzero(wrqu.addr.sa_data, ETHER_ADDR_LEN);
@@ -3532,6 +3540,9 @@ wl_iw_event(struct net_device *dev, wl_event_msg_t *e, void* data)
 				WL_DEFAULT(("AP UP %d\n", event_type));
 				wl_iw_send_priv_event(priv_dev, "AP_UP");
 			}else{
+				
+				sta_connected = 1;
+				
 				WL_DEFAULT(("STA_LINK_UP\n"));
 				if ( apsta_enable && ap_net_dev ) {
 					printf("%s: schedule to restart the apsta ap part\n", __FUNCTION__);

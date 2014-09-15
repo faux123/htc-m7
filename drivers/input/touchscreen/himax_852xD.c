@@ -81,6 +81,8 @@ static u16	CFG_VER_MAJ_buff[12];
 static u16	CFG_VER_MIN_buff[12];
 
 
+static uint8_t 	vk_press = 0x00;
+static uint8_t 	AA_press = 0x00;
 static uint8_t	IC_STATUS_CHECK	= 0xAA;
 static int	hx_point_num	= 0;																	
 static int	p_point_num	= 0xFFFF;
@@ -215,7 +217,7 @@ struct himax_ts_data {
 	
 	#ifdef HX_TP_SYS_FLASH_DUMP
 	struct workqueue_struct 			*flash_wq;
-	struct work_struct 						flash_work;
+	struct work_struct 					flash_work;
 	#endif
 	
 
@@ -224,7 +226,12 @@ struct himax_ts_data {
 	int rst_gpio;
 	#endif
 	
-
+	
+	#ifdef ENABLE_CHIP_RESET_MACHINE
+	int retry_time;
+	struct delayed_work himax_chip_reset_work;
+	#endif
+	
 	int intr_gpio;
 
 	uint8_t coord_data_size;
@@ -273,8 +280,8 @@ int himax_hang_shaking(void);
 int himax_hang_shaking(void)    
 {
 	int ret, result;
-	uint8_t hw_reset_check[1];
-	uint8_t hw_reset_check_2[1];
+	uint8_t hw_reset_check[1]={0};
+	uint8_t hw_reset_check_2[1]={0};
 	uint8_t buf0[2];
 
 	
@@ -672,7 +679,7 @@ u8 himax_read_FW_ver(bool hw_reset)
 	u16 cfg_ver_min_addr;
 	u16 cfg_ver_min_length;
 
-	uint8_t cmd[3];
+	uint8_t cmd[3]={0};
 	u16 i = 0;
 	u16 j = 0;
 	u16 k = 0;
@@ -925,6 +932,42 @@ u8 himax_read_FW_ver(bool hw_reset)
 		}
 	}
 	#endif
+#ifdef ENABLE_CHIP_RESET_MACHINE
+	static void himax_chip_reset_function(struct work_struct *dat)
+	{
+		printk("[Himax]:himax_chip_reset_function ++ \n");
+
+		if(private_ts->retry_time <= 10)
+		{
+
+		#ifdef HX_ESD_WORKAROUND
+			ESD_RESET_ACTIVATE = 1;
+		#endif
+
+		#ifdef HX_RST_BY_POWER
+				
+				msleep(100);
+
+				
+				msleep(100);
+		#else
+				gpio_set_value(private_ts->rst_gpio, 0);
+				msleep(30);
+				gpio_set_value(private_ts->rst_gpio, 1);
+				msleep(30);
+		#endif
+
+			if(gpio_get_value(private_ts->intr_gpio) == 0)
+			{
+				printk("[Himax]%s: IRQ = 0, Enable IRQ\n", __func__);
+				enable_irq(private_ts->client->irq);
+			}
+		}
+		private_ts->retry_time ++;
+		printk("[Himax]:himax_chip_reset_function retry_time =%d --\n",private_ts->retry_time);
+	}
+#endif
+	
 
 
 	#ifdef HX_TP_SYS_DIAG
@@ -2221,7 +2264,7 @@ static DEVICE_ATTR(register, (S_IWUSR|S_IRUGO),himax_register_show, himax_regist
 		uint8_t command_82h[1] = {0x82};
 		uint8_t command_F3h[2] = {0xF3, 0x00};
 		uint8_t command_83h[1] = {0x83};
-		uint8_t receive[1];
+		uint8_t receive[1]={0};
 
 		if (IC_TYPE != HX_85XX_D_SERIES_PWON)
 			command_ec_128_raw_baseline_flag = 0x02 | command_ec_128_raw_flag;
@@ -3668,9 +3711,9 @@ static DEVICE_ATTR(register, (S_IWUSR|S_IRUGO),himax_register_show, himax_regist
 
 	static int himax_chip_self_test(void)
 	{
-		uint8_t cmdbuf[11];
+		uint8_t cmdbuf[11]={0};
 		int ret = 0;
-		uint8_t valuebuf[16];
+		uint8_t valuebuf[16]={0};
 		int i=0, pf_value=0x00;
 
 		
@@ -4037,6 +4080,7 @@ static ssize_t himax_debug_level_dump(struct device *dev,
 	memset(buf_tmp, 0x0, sizeof(buf_tmp));
 	memcpy(buf_tmp, buf, count);
 
+	ts->debug_log_level = 0;
 	for(i=0; i<count-1; i++)
 	{
 		if( buf_tmp[i]>='0' && buf_tmp[i]<='9' )
@@ -4705,6 +4749,7 @@ if ( tp_key_index != 0x00)
 	{
 		I("virtual key index =%x\n",tp_key_index);
 		if ( tp_key_index == 1) {
+			vk_press = 1;
 			I("back key pressed\n");
 			if (ts->button[0].index) {
 				x_position = (ts->button[0].x_range_min + ts->button[0].x_range_max) / 2;
@@ -4752,6 +4797,7 @@ if ( tp_key_index != 0x00)
 			}
 		}
 		else if ( tp_key_index == 2) {
+			vk_press = 1;
 			I("home key pressed\n");
 			if (ts->button[1].index) {
 				x_position = (ts->button[1].x_range_min + ts->button[1].x_range_max) / 2;
@@ -4803,6 +4849,7 @@ if ( tp_key_index != 0x00)
 else
 	{
 		I("virtual key released\n");
+		vk_press = 0;
 		if (ts->protocol_type == PROTOCOL_TYPE_A) {
 			if (ts->event_htc_enable_type == INJECT_HTC_EVENT) {
 				input_report_abs(ts->input_dev, ABS_MT_AMPLITUDE, 0);
@@ -4837,7 +4884,7 @@ inline void himax_ts_work(struct himax_ts_data *ts)
 	
 	unsigned char check_sum_cal = 0;
 	int RawDataLen = 0;
-	unsigned int temp_x[HX_MAX_PT], temp_y[HX_MAX_PT];
+	
 
 	
 	#ifdef HX_TP_SYS_DIAG
@@ -4927,11 +4974,7 @@ inline void himax_ts_work(struct himax_ts_data *ts)
 			#ifdef HX_ESD_WORKAROUND
 			for(i = 0; i < hx_touch_info_size; i++)
 			{
-				if (buf[i] == 0x00)
-				{
-					check_sum_cal = 1;
-				}
-				else if (buf[i] == 0xED)
+if(buf[i] == 0xED)
 				{
 					check_sum_cal = 2;
 				}
@@ -5169,150 +5212,142 @@ bypass_checksum_failed_packet:
 			hx_point_num= buf[HX_TOUCH_INFO_POINT_CNT] & 0x0f;
 
 		
-		if (hx_point_num != 0 && tpd_key == 0x00) {
-			uint16_t old_finger = ts->pre_finger_mask;
-			finger_num = buf[coordInfoSize - 4] & 0x0F;
-			finger_pressed = buf[coordInfoSize - 2] << 8 | buf[coordInfoSize - 3];
-			finger_on = 1;
-			for (loop_i = 0; loop_i < ts->nFinger_support; loop_i++) {
-				if (((finger_pressed >> loop_i) & 1) == 1) {
-					int base = loop_i * 4;
-					int x = buf[base] << 8 | buf[base + 1];
-					int y = (buf[base + 2] << 8 | buf[base + 3]);
-					int w = buf[(ts->nFinger_support * 4) + loop_i];
-					finger_num--;
-
-					if (ts->event_htc_enable_type)
-					{
-						input_report_abs(ts->input_dev, ABS_MT_AMPLITUDE, w << 16 | w);
-						input_report_abs(ts->input_dev, ABS_MT_POSITION,
-							((finger_num ==  0) ? BIT(31) : 0) | x << 16 | y);
-					}
-					if ((ts->debug_log_level & BIT(3)) > 0)
-					{
-						if ((((old_finger >> loop_i) ^ (finger_pressed >> loop_i)) & 1) == 1)
-						{
-							if (ts->useScreenRes)
-							{
-								I("status:%X, Screen:F:%02d Down, X:%d, Y:%d, W:%d\n",
-								finger_pressed, loop_i+1, x * ts->widthFactor >> SHIFTBITS,
-								y * ts->heightFactor >> SHIFTBITS, w);
-							}
-							else
-							{
-								I("status:%X, Raw:F:%02d Down, X:%d, Y:%d, W:%d\n",
-								finger_pressed, loop_i+1, x, y, w);
-							}
-						}
-					}
-
-					if (ts->protocol_type == PROTOCOL_TYPE_B)
-					{
-						input_mt_slot(ts->input_dev, loop_i);
-					}
-
-					if (ts->event_htc_enable_type != SWITCH_TO_HTC_EVENT_ONLY)
-					{
-						input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, w);
-						input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, w);
-						input_report_abs(ts->input_dev, ABS_MT_PRESSURE, w);
-						input_report_abs(ts->input_dev, ABS_MT_POSITION_X, x);
-						input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);
-					}
-
-					if (ts->protocol_type == PROTOCOL_TYPE_A)
-					{
-						input_report_abs(ts->input_dev, ABS_MT_TRACKING_ID, loop_i);
-						input_mt_sync(ts->input_dev);
-					}
-					else
-					{
-						ts->last_slot = loop_i;
-						input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 1);
-					}
-
-					if (!ts->first_pressed)
-					{
-						ts->first_pressed = 1;
-						ts->just_resume = 0;
-						I("S1@%d, %d\n", x, y);
-					}
-
-					ts->pre_finger_data[loop_i][0] = x;
-					ts->pre_finger_data[loop_i][1] = y;
-
-
-					if (ts->debug_log_level & BIT(1))
-						I("Finger %d=> X:%d, Y:%d W:%d, Z:%d, F:%d\n",
-							loop_i + 1, x, y, w, w, loop_i + 1);
-
-				} else {
-					if (ts->protocol_type == PROTOCOL_TYPE_B)
-					{
-						input_mt_slot(ts->input_dev, loop_i);
-						input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 0);
-					}
-
-					if (loop_i == 0 && ts->first_pressed == 1)
-					{
-						ts->first_pressed = 2;
-						I("E1@%d, %d\n",
-						ts->pre_finger_data[0][0] , ts->pre_finger_data[0][1]);
-					}
-					if ((ts->debug_log_level & BIT(3)) > 0)
-					{
-						if ((((old_finger >> loop_i) ^ (finger_pressed >> loop_i)) & 1) == 1)
-						{
-							if (ts->useScreenRes)
-							{
-								I("status:%X, Screen:F:%02d Up, X:%d, Y:%d\n",
-								finger_pressed, loop_i+1, ts->pre_finger_data[loop_i][0] * ts->widthFactor >> SHIFTBITS,
-								ts->pre_finger_data[loop_i][1] * ts->heightFactor >> SHIFTBITS);
-							}
-							else
-							{
-								I("status:%X, Raw:F:%02d Up, X:%d, Y:%d\n",
-								finger_pressed, loop_i+1, ts->pre_finger_data[loop_i][0],
-								ts->pre_finger_data[loop_i][1]);
-							}
-						}
-					}
-				}
-			}
-			ts->pre_finger_mask = finger_pressed;
-			
-				#ifdef HX_ESD_WORKAROUND
-				ESD_COUNTER = 0;
-				#endif
-			
-		} else if (hx_point_num == 0 && tpd_key != 0x00) {
-			
-			temp_x[0] = 0xFFFF;
-			temp_y[0] = 0xFFFF;
-			temp_x[1] = 0xFFFF;
-			temp_y[1] = 0xFFFF;
-			himax_ts_button_func(tpd_key,ts);
-			if (ts->button)
+		if (hx_point_num != 0 ) {
+			if(vk_press == 0x00)
+				{
+					uint16_t old_finger = ts->pre_finger_mask;
+					finger_num = buf[coordInfoSize - 4] & 0x0F;
+					finger_pressed = buf[coordInfoSize - 2] << 8 | buf[coordInfoSize - 3];
 					finger_on = 1;
+					AA_press = 1;
+					for (loop_i = 0; loop_i < ts->nFinger_support; loop_i++) {
+						if (((finger_pressed >> loop_i) & 1) == 1) {
+							int base = loop_i * 4;
+							int x = buf[base] << 8 | buf[base + 1];
+							int y = (buf[base + 2] << 8 | buf[base + 3]);
+							int w = buf[(ts->nFinger_support * 4) + loop_i];
+							finger_num--;
+
+							if (ts->event_htc_enable_type)
+							{
+								input_report_abs(ts->input_dev, ABS_MT_AMPLITUDE, w << 16 | w);
+								input_report_abs(ts->input_dev, ABS_MT_POSITION,
+									((finger_num ==  0) ? BIT(31) : 0) | x << 16 | y);
+							}
+							if ((ts->debug_log_level & BIT(3)) > 0)
+							{
+								if ((((old_finger >> loop_i) ^ (finger_pressed >> loop_i)) & 1) == 1)
+								{
+									if (ts->useScreenRes)
+									{
+										I("status:%X, Screen:F:%02d Down, X:%d, Y:%d, W:%d\n",
+										finger_pressed, loop_i+1, x * ts->widthFactor >> SHIFTBITS,
+										y * ts->heightFactor >> SHIFTBITS, w);
+									}
+									else
+									{
+										I("status:%X, Raw:F:%02d Down, X:%d, Y:%d, W:%d\n",
+										finger_pressed, loop_i+1, x, y, w);
+									}
+								}
+							}
+
+							if (ts->protocol_type == PROTOCOL_TYPE_B)
+							{
+								input_mt_slot(ts->input_dev, loop_i);
+							}
+
+							if (ts->event_htc_enable_type != SWITCH_TO_HTC_EVENT_ONLY)
+							{
+								input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, w);
+								input_report_abs(ts->input_dev, ABS_MT_WIDTH_MAJOR, w);
+								input_report_abs(ts->input_dev, ABS_MT_PRESSURE, w);
+								input_report_abs(ts->input_dev, ABS_MT_POSITION_X, x);
+								input_report_abs(ts->input_dev, ABS_MT_POSITION_Y, y);
+							}
+
+							if (ts->protocol_type == PROTOCOL_TYPE_A)
+							{
+								input_report_abs(ts->input_dev, ABS_MT_TRACKING_ID, loop_i);
+								input_mt_sync(ts->input_dev);
+							}
+							else
+							{
+								ts->last_slot = loop_i;
+								input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 1);
+							}
+
+							if (!ts->first_pressed)
+							{
+								ts->first_pressed = 1;
+								ts->just_resume = 0;
+								I("S1@%d, %d\n", x, y);
+							}
+
+							ts->pre_finger_data[loop_i][0] = x;
+							ts->pre_finger_data[loop_i][1] = y;
+
+
+							if (ts->debug_log_level & BIT(1))
+								I("Finger %d=> X:%d, Y:%d W:%d, Z:%d, F:%d\n",
+									loop_i + 1, x, y, w, w, loop_i + 1);
+
+						} else {
+							if (ts->protocol_type == PROTOCOL_TYPE_B)
+							{
+								input_mt_slot(ts->input_dev, loop_i);
+								input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 0);
+							}
+
+							if (loop_i == 0 && ts->first_pressed == 1)
+							{
+								ts->first_pressed = 2;
+								I("E1@%d, %d\n",
+								ts->pre_finger_data[0][0] , ts->pre_finger_data[0][1]);
+							}
+							if ((ts->debug_log_level & BIT(3)) > 0)
+							{
+								if ((((old_finger >> loop_i) ^ (finger_pressed >> loop_i)) & 1) == 1)
+								{
+									if (ts->useScreenRes)
+									{
+										I("status:%X, Screen:F:%02d Up, X:%d, Y:%d\n",
+										finger_pressed, loop_i+1, ts->pre_finger_data[loop_i][0] * ts->widthFactor >> SHIFTBITS,
+										ts->pre_finger_data[loop_i][1] * ts->heightFactor >> SHIFTBITS);
+									}
+									else
+									{
+										I("status:%X, Raw:F:%02d Up, X:%d, Y:%d\n",
+										finger_pressed, loop_i+1, ts->pre_finger_data[loop_i][0],
+										ts->pre_finger_data[loop_i][1]);
+									}
+								}
+							}
+						}
+					}
+					ts->pre_finger_mask = finger_pressed;
+				}else if ((tpd_key_old != 0x00)&&(tpd_key == 0x00)) {
+					
+					
+					
+					
+					himax_ts_button_func(tpd_key,ts);
+					finger_on = 0;
+				}
 			
 				#ifdef HX_ESD_WORKAROUND
 				ESD_COUNTER = 0;
 				#endif
 			
-		} else if (hx_point_num == 0 && tpd_key == 0x00) {
-			
-			temp_x[0] = 0xFFFF;
-			temp_y[0] = 0xFFFF;
-			temp_x[1] = 0xFFFF;
-			temp_y[1] = 0xFFFF;
-
-			if (tpd_key_old != 0x00) {
-				himax_ts_button_func(tpd_key,ts);
-				if (ts->button)
-					finger_on = 0;
-			} else {
+			if (ts->event_htc_enable_type != SWITCH_TO_HTC_EVENT_ONLY) {
+			input_report_key(ts->input_dev, BTN_TOUCH, finger_on);
+			input_sync(ts->input_dev);
+			}
+		} else if (hx_point_num == 0){
+			if(AA_press){
 				
 				finger_on = 0;
+				AA_press = 0;
 				if (ts->event_htc_enable_type) {
 					input_report_abs(ts->input_dev, ABS_MT_AMPLITUDE, 0);
 					input_report_abs(ts->input_dev, ABS_MT_POSITION, 1 << 31);
@@ -5321,11 +5356,14 @@ bypass_checksum_failed_packet:
 				if (ts->event_htc_enable_type != SWITCH_TO_HTC_EVENT_ONLY && ts->protocol_type == PROTOCOL_TYPE_A)
 					input_mt_sync(ts->input_dev);
 
-				if (ts->event_htc_enable_type != SWITCH_TO_HTC_EVENT_ONLY && ts->protocol_type == PROTOCOL_TYPE_B) {
-					input_mt_slot(ts->input_dev, ts->last_slot);
-					input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 0);
-				}
-
+				for (loop_i = 0; loop_i < ts->nFinger_support; loop_i++) {
+						if (((ts->pre_finger_mask >> loop_i) & 1) == 1) {
+							if (ts->event_htc_enable_type != SWITCH_TO_HTC_EVENT_ONLY && ts->protocol_type == PROTOCOL_TYPE_B) {
+								input_mt_slot(ts->input_dev, loop_i);
+								input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, 0);
+							}
+						}
+					}
 				if (ts->pre_finger_mask > 0) {
 					for (loop_i = 0; loop_i < ts->nFinger_support && (ts->debug_log_level & BIT(3)) > 0; loop_i++) {
 						if (((ts->pre_finger_mask >> loop_i) & 1) == 1) {
@@ -5367,14 +5405,33 @@ bypass_checksum_failed_packet:
 					#endif
 				
 			}
+			else if (tpd_key != 0x00) {
+				
+				
+				
+				
+				
+				himax_ts_button_func(tpd_key,ts);
+				finger_on = 1;
+			}
+			else if ((tpd_key_old != 0x00)&&(tpd_key == 0x00)) {
+				
+				
+				
+				
+				himax_ts_button_func(tpd_key,ts);
+				finger_on = 0;
+			}
 			
 				#ifdef HX_ESD_WORKAROUND
 				ESD_COUNTER = 0;
 				#endif
 			
+			if (ts->event_htc_enable_type != SWITCH_TO_HTC_EVENT_ONLY) {
+			input_report_key(ts->input_dev, BTN_TOUCH, finger_on);
+			input_sync(ts->input_dev);
+			}
 		}
-		
-		
 		tpd_key_old = tpd_key;
 
 		
@@ -5385,11 +5442,6 @@ bypass_checksum_failed_packet:
 			queue_delayed_work(ts->himax_wq, &ts->himax_chip_monitor, 10*HZ);
 			#endif
 		
-
-		if (ts->event_htc_enable_type != SWITCH_TO_HTC_EVENT_ONLY) {
-			input_report_key(ts->input_dev, BTN_TOUCH, finger_on);
-			input_sync(ts->input_dev);
-		}
 
 workqueue_out:
 	return;
@@ -5500,7 +5552,7 @@ static int himax_read_flash(unsigned char *buf, unsigned int addr_start, unsigne
 	u16 i = 0;
 	u16 j = 0;
 	u16 k = 0;
-	uint8_t cmd[4];
+	uint8_t cmd[4]={0};
 	u16 local_start_addr   	= addr_start / 4;
 	u16 local_length       	= length;
 	u16 local_end_addr	   	= (addr_start + length ) / 4 + 1;
@@ -5677,15 +5729,15 @@ void himax_touch_information(void)
 	}
 }
 
-static bool himax_ic_package_check(struct himax_ts_data *ts_modify)
+static bool himax_ic_package_check(struct himax_ts_data *ts)
 {
-	uint8_t cmd[3];
-	uint8_t data[3];
+	uint8_t cmd[3]={0};
+	uint8_t data[3]={0};
 
-	if (i2c_himax_read(ts_modify->client, 0xD1, cmd, 3, DEFAULT_RETRY_CNT) < 0)
+	if (i2c_himax_read(ts->client, 0xD1, cmd, 3, DEFAULT_RETRY_CNT) < 0)
 		return false ;
 
-	if (i2c_himax_read(ts_modify->client, 0x31, data, 3, DEFAULT_RETRY_CNT) < 0)
+	if (i2c_himax_read(ts->client, 0x31, data, 3, DEFAULT_RETRY_CNT) < 0)
 		return false;
 
 	if ((data[0] == 0x85 && data[1] == 0x28) || (cmd[0] == 0x04 && cmd[1] == 0x85 &&
@@ -5789,7 +5841,8 @@ static int himax8528_probe(struct i2c_client *client, const struct i2c_device_id
 	ts->dev = &client->dev;
 
 	#ifdef HX_RST_PIN_FUNC
-		ts->rst_gpio = pdata->gpio_reset;
+		if(pdata)
+			ts->rst_gpio = pdata->gpio_reset;
 	#endif
 
 	#if 0
@@ -5949,7 +6002,11 @@ static int himax8528_probe(struct i2c_client *client, const struct i2c_device_id
 	setFlashBuffer();
 	#endif
 	
-
+	
+	#ifdef ENABLE_CHIP_RESET_MACHINE
+	INIT_DELAYED_WORK(&ts->himax_chip_reset_work, himax_chip_reset_function);
+	#endif
+	
 	
 	#ifdef ENABLE_CHIP_STATUS_MONITOR
 	INIT_DELAYED_WORK(&ts->himax_chip_monitor, himax_chip_monitor_function); 
@@ -6176,8 +6233,8 @@ static int himax8528_suspend(struct i2c_client *client, pm_message_t mesg)
 	disable_irq(client->irq);
 	
 	#ifdef ENABLE_CHIP_STATUS_MONITOR
-	ts_modify->running_status = 1;
-	cancel_delayed_work_sync(&ts_modify->himax_chip_monitor);
+	ts->running_status = 1;
+	cancel_delayed_work_sync(&ts->himax_chip_monitor);
 	#endif
 	
 
@@ -6233,27 +6290,6 @@ static int himax8528_resume(struct i2c_client *client)
 	atomic_set(&ts->suspend_mode, 0);
 	ts->just_resume = 1;
 
-	
-	#ifdef HX_ESD_WORKAROUND
-	ret = himax_hang_shaking(); 
-	if (ret == 2)
-	{
-		queue_delayed_work(ts_modify->himax_wq, &ts_modify->himax_chip_reset_work, 0);
-		I("[Himax] %s: I2C Fail \n", __func__);
-	}
-	if (ret == 1)
-	{
-		I("[Himax] %s: MCU Stop \n", __func__);
-		
-		ESD_HW_REST();
-	}
-	else
-	{
-		I("[Himax] %s: MCU Running \n", __func__);
-	}
-	ESD_COUNTER = 0;
-	#endif
-	
 	enable_irq(client->irq);
 	return 0;
 }

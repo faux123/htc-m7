@@ -42,10 +42,6 @@
 #include <linux/earlysuspend.h>
 #endif
 
-#ifdef CONFIG_KSM_HTC_POLICY
-#include <linux/earlysuspend.h>
-#endif
-
 #include <asm/tlbflush.h>
 #include "internal.h"
 

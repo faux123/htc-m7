@@ -121,6 +121,7 @@ struct htc_battery_platform_data {
 	int overload_vol_thr_mv;
 	int overload_curr_thr_ma;
 	int smooth_chg_full_delay_min;
+	int decreased_batt_level_check;
 	struct htc_gauge igauge;
 	struct htc_charger icharger;
 	int (*get_thermal_sensor_temp)(int sensor_num, unsigned long *temp);

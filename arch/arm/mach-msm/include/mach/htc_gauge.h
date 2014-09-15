@@ -23,6 +23,8 @@ enum htc_gauge_event {
 	HTC_GAUGE_EVENT_OVERLOAD,
 	HTC_GAUGE_EVENT_EOC_STOP_CHG,
 	HTC_GAUGE_EVENT_PJ_FULL,
+	HTC_GAUGE_EVENT_QB_MODE_ENTER,
+	HTC_GAUGE_EVENT_QB_MODE_DO_REAL_POWEROFF,
 };
 
 struct htc_gauge {
@@ -34,6 +36,9 @@ struct htc_gauge {
 	int (*get_battery_id)(int *result);
 	int (*get_battery_soc)(int *result);
 	int (*get_battery_cc)(int *result);
+	int (*store_battery_data)(void);
+	int (*store_battery_ui_soc)(int soc_ui);
+	int (*get_battery_ui_soc)(void);
 	int (*is_battery_temp_fault)(int *result);
 	int (*is_battery_full)(int *result);
 	int (*is_pj_full)(int *result);
@@ -48,6 +53,9 @@ struct htc_gauge {
 	int (*enable_lower_voltage_alarm)(int enable);
 	int (*set_lower_voltage_alarm_threshold)(int thres_mV);
 	int (*set_chg_ovp)(int is_ovp);
+	int (*enter_qb_mode)(void);
+	int (*exit_qb_mode)(void);
+	int (*qb_mode_pwr_consumption_check)(unsigned long time_stamp);
 };
 
 int htc_gauge_event_notify(enum htc_gauge_event);

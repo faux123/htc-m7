@@ -400,6 +400,8 @@ struct venc_buffer{
  long long	timestamp;
  unsigned long	flags;
  void	*clientdata;
+	unsigned long	metadata_len;
+	unsigned long	metadata_offset;
 };
 
 struct venc_basecfg{
@@ -451,7 +453,7 @@ struct venc_capability{
 };
 
 struct venc_entropycfg{
-	unsigned longentropysel;
+	unsigned long	entropysel;
 	unsigned long	cabacmodel;
 };
 

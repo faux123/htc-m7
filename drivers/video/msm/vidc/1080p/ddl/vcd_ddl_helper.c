@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -10,7 +10,7 @@
  * GNU General Public License for more details.
  *
  */
-#include <linux/ion.h>
+#include <linux/msm_ion.h>
 #include <mach/msm_memtypes.h>
 #include "vcd_ddl.h"
 #include "vcd_ddl_shared_mem.h"
@@ -172,22 +172,16 @@ u32 ddl_decoder_dpb_transact(struct ddl_decoder_data *decoder,
 				    (in_out_frame->vcd_frm.buff_ion_handle)) {
 					struct ddl_context *ddl_context =
 						ddl_get_context();
-					unsigned long *vaddr =
-						(unsigned long *)((u32)
-						in_out_frame->vcd_frm.virtual +
-						decoder->meta_data_offset);
-					DDL_MSG_LOW("%s: Cache clean: vaddr"\
-						" (%p), offset %u, size %u",
-						__func__,
-						in_out_frame->vcd_frm.virtual,
-						decoder->meta_data_offset,
-						decoder->suffix);
+					DDL_MSG_LOW("%s: Cache clean: size %u",
+						__func__, in_out_frame->vcd_frm.
+						alloc_len);
 					msm_ion_do_cache_op(
 						ddl_context->video_ion_client,
 						in_out_frame->vcd_frm.\
 						buff_ion_handle,
-						vaddr,
-						(unsigned long)decoder->suffix,
+						NULL,
+						(unsigned long)in_out_frame->
+						vcd_frm.alloc_len,
 						ION_IOC_CLEAN_CACHES);
 				}
 			}
@@ -258,46 +252,60 @@ u32 ddl_decoder_dpb_init(struct ddl_client_context *ddl)
 	struct ddl_context *ddl_context = ddl->ddl_context;
 	struct ddl_decoder_data *decoder = &ddl->codec_data.decoder;
 	struct ddl_dec_buffers *dec_buffers = &decoder->hw_bufs;
-	struct ddl_frame_data_tag *frame;
+	struct vcd_frame_data *vcd_frm;
 	u32 luma[DDL_MAX_BUFFER_COUNT], chroma[DDL_MAX_BUFFER_COUNT];
 	u32 mv[DDL_MAX_BUFFER_COUNT], luma_size, i, dpb;
-	frame = &decoder->dp_buf.dec_pic_buffers[0];
 	luma_size = ddl_get_yuv_buf_size(decoder->frame_size.width,
 			decoder->frame_size.height, DDL_YUV_BUF_TYPE_TILE);
 	dpb = decoder->dp_buf.no_of_dec_pic_buf;
-	DDL_MSG_LOW("%s Decoder num DPB buffers = %u Luma Size = %u"
+	DDL_MSG_LOW("%s: Decoder num DPB buffers = %u Luma Size = %u",
 				 __func__, dpb, luma_size);
 	if (dpb > DDL_MAX_BUFFER_COUNT)
 		dpb = DDL_MAX_BUFFER_COUNT;
 	for (i = 0; i < dpb; i++) {
-		if (!(res_trk_check_for_sec_session()) &&
-			frame[i].vcd_frm.virtual) {
-			if (luma_size <= frame[i].vcd_frm.alloc_len) {
-				memset(frame[i].vcd_frm.virtual,
-					 0x10101010, luma_size);
-				memset(frame[i].vcd_frm.virtual + luma_size,
-					 0x80808080,
-					frame[i].vcd_frm.alloc_len - luma_size);
-				if (frame[i].vcd_frm.ion_flag == CACHED) {
-					msm_ion_do_cache_op(
-					ddl_context->video_ion_client,
-					frame[i].vcd_frm.buff_ion_handle,
-					(unsigned long *)frame[i].
-					vcd_frm.virtual,
-					(unsigned long)frame[i].
-					vcd_frm.alloc_len,
-					ION_IOC_CLEAN_INV_CACHES);
+		vcd_frm = &decoder->dp_buf.dec_pic_buffers[i].vcd_frm;
+		if (!res_trk_check_for_sec_session()) {
+			u8 *kernel_vaddr = NULL;
+			if (luma_size <= vcd_frm->alloc_len) {
+				kernel_vaddr = (u8 *)ion_map_kernel(
+						ddl_context->video_ion_client,
+						vcd_frm->buff_ion_handle);
+				if (IS_ERR_OR_NULL(kernel_vaddr)) {
+					DDL_MSG_ERROR("%s(): ION_MAP for "\
+					"DPB[%u] failed\n", __func__, i);
+				} else {
+					memset(kernel_vaddr, 0x10101010,
+						luma_size);
+					memset(kernel_vaddr + luma_size,
+						0x80808080,
+						vcd_frm->alloc_len - luma_size);
+					if (vcd_frm->ion_flag ==
+						ION_FLAG_CACHED) {
+						msm_ion_do_cache_op(
+						ddl_context->video_ion_client,
+						vcd_frm->buff_ion_handle,
+						(unsigned long *)kernel_vaddr,
+						(unsigned long)vcd_frm->
+						alloc_len,
+						ION_IOC_CLEAN_INV_CACHES);
+					}
+					ion_unmap_kernel(
+						ddl_context->video_ion_client,
+						vcd_frm->buff_ion_handle);
+					kernel_vaddr = NULL;
 				}
 			} else {
-				DDL_MSG_ERROR("luma size error");
+				DDL_MSG_ERROR("%s: err: luma_size (%u), "\
+					"alloc_len (%u)", __func__,
+					luma_size, vcd_frm->alloc_len);
 				return VCD_ERR_FAIL;
 			}
 		}
 
 		luma[i] = DDL_OFFSET(ddl_context->dram_base_a.
-			align_physical_addr, frame[i].vcd_frm.physical);
+			align_physical_addr, vcd_frm->physical);
 		chroma[i] = luma[i] + luma_size;
-		DDL_MSG_LOW("%s Decoder Luma address = %x Chroma address = %x"
+		DDL_MSG_LOW("%s: Decoder Luma address = %x Chroma address = %x",
 					__func__, luma[i], chroma[i]);
 	}
 	switch (decoder->codec.codec) {
@@ -502,6 +510,8 @@ u32 ddl_get_yuv_buf_size(u32 width, u32 height, u32 format)
 
 	width_round_up  = width;
 	height_round_up = height;
+	align = SZ_4K;
+
 	if (format == DDL_YUV_BUF_TYPE_TILE) {
 		width_round_up  = DDL_ALIGN(width, DDL_TILE_ALIGN_WIDTH);
 		height_round_up = DDL_ALIGN(height, DDL_TILE_ALIGN_HEIGHT);
@@ -615,17 +625,23 @@ void ddl_calc_dec_hw_buffers_size(enum vcd_codec codec, u32 width,
 			(codec == VCD_CODEC_DIVX_6) ||
 			(codec == VCD_CODEC_XVID) ||
 			(codec == VCD_CODEC_H263)) {
+			u32 val = DDL_MAX(DDL_MAX_FRAME_WIDTH,
+				DDL_MAX_FRAME_HEIGHT);
+			sz_sub_anchor_mv = DDL_ALIGN(((val >> 4) * 128 * 2 * 8),
+				DDL_LINEAR_BUFFER_ALIGN_BYTES);
 			sz_nb_dcac = DDL_KILO_BYTE(16);
 			sz_upnb_mv = DDL_KILO_BYTE(68);
-			sz_sub_anchor_mv = DDL_KILO_BYTE(136);
 			sz_overlap_xform = DDL_KILO_BYTE(32);
 			if (codec != VCD_CODEC_H263)
 				sz_stx_parser = DDL_KILO_BYTE(68);
 		} else if ((codec == VCD_CODEC_VC1) ||
 			(codec == VCD_CODEC_VC1_RCV)) {
+			u32 val = DDL_MAX(DDL_MAX_FRAME_WIDTH,
+				DDL_MAX_FRAME_HEIGHT);
+			sz_sub_anchor_mv = DDL_ALIGN(((val >> 4) * 128 * 2 * 8),
+				DDL_LINEAR_BUFFER_ALIGN_BYTES);
 			sz_nb_dcac = DDL_KILO_BYTE(16);
 			sz_upnb_mv = DDL_KILO_BYTE(68);
-			sz_sub_anchor_mv = DDL_KILO_BYTE(136);
 			sz_overlap_xform = DDL_KILO_BYTE(32);
 			sz_bit_plane3 = DDL_KILO_BYTE(2);
 			sz_bit_plane2 = DDL_KILO_BYTE(2);
@@ -996,7 +1012,7 @@ void ddl_decoder_chroma_dpb_change(struct ddl_client_context *ddl)
 	u32 luma_size, i, dpb;
 	luma_size = decoder->dpb_buf_size.size_y;
 	dpb = decoder->dp_buf.no_of_dec_pic_buf;
-	DDL_MSG_HIGH("%s Decoder num DPB buffers = %u Luma Size = %u"
+	DDL_MSG_HIGH("%s Decoder num DPB buffers = %u Luma Size = %u",
 			 __func__, dpb, luma_size);
 	if (dpb > DDL_MAX_BUFFER_COUNT)
 		dpb = DDL_MAX_BUFFER_COUNT;

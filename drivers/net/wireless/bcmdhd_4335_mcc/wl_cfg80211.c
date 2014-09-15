@@ -3356,6 +3356,25 @@ wl_set_key_mgmt(struct net_device *dev, struct cfg80211_connect_params *sme)
 #endif
 		WL_DBG(("setting wpa_auth to %d\n", val));
 
+#ifdef BCMCCX
+		if (val & (WPA_AUTH_CCKM|WPA2_AUTH_CCKM)) {
+			WL_DBG(("SET CCX enable\n"));
+			wldev_iovar_setint_bsscfg(dev, "okc_enable", 0, bssidx);
+			err = wldev_iovar_setint_bsscfg(dev, "ccx_enable", 1, bssidx);
+
+			if (unlikely(err)) {
+				WL_ERR(("could not set ccx_enable (%d)\n", err));
+				return err;
+			}
+		} else {
+			err = wldev_iovar_setint_bsscfg(dev, "ccx_enable", 0, bssidx);
+
+			if (unlikely(err)) {
+				WL_ERR(("could not set ccx_disable (%d)\n", err));
+			}
+		}
+#endif 
+
 
 		err = wldev_iovar_setint_bsscfg(dev, "wpa_auth", val, bssidx);
 		if (unlikely(err)) {
@@ -3495,7 +3514,7 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 
 	RETURN_EIO_IF_NOT_UP(wl);
 
-#if 0  
+#if 0 
 		if(dev == wl_to_prmry_ndev(wl)){
 			printf("%s sme->ssid[%s],sme->ssid_len[%d]\n", __FUNCTION__, sme->ssid,sme->ssid_len);
 			dhd_set_pfn_ssid(sme->ssid, sme->ssid_len);
@@ -8063,8 +8082,15 @@ wl_notify_connect_status(struct wl_priv *wl, bcm_struct_cfgdev *cfgdev,
 				scb_val_t scbval;
 				u8 *curbssid = wl_read_prof(wl, ndev, WL_PROF_BSSID);
 				s32 reason = 0;
-				if (event == WLC_E_DEAUTH_IND || event == WLC_E_DISASSOC_IND)
+				if (event == WLC_E_DEAUTH_IND || event == WLC_E_DISASSOC_IND){
 					reason = ntoh32(e->reason);
+                }
+                
+                else if (ntoh32(e->reason) == WLC_E_LINK_BCN_LOSS) {
+                    printk("Beacon miss!\n");
+                    reason = 8;
+                }
+                
 				
 				reason = (reason == WLAN_REASON_UNSPECIFIED)? 0 : reason;
 
@@ -8522,10 +8548,12 @@ wl_notify_pfn_status(struct wl_priv *wl, bcm_struct_cfgdev *cfgdev,
 	ndev = cfgdev_to_wlc_ndev(cfgdev, wl);
 
 #ifndef WL_SCHED_SCAN
+#ifndef CUSTOMER_HW_ONE
 	mutex_lock(&wl->usr_sync);
 	
 	cfg80211_disconnected(ndev, 0, NULL, 0, GFP_KERNEL);
 	mutex_unlock(&wl->usr_sync);
+#endif
 #else
 	wl_notify_sched_scan_results(wl, ndev, e, data);
 #endif 

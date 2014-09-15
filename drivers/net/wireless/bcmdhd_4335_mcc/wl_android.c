@@ -155,6 +155,7 @@ struct msm_bus_scale_pdata *bus_scale_table = NULL;
 uint32_t bus_perf_client = 0;
 
 static int screen_off = 0;
+int sta_connected = 0;
 static int traffic_stats_flag = TRAFFIC_STATS_NORMAL;
 static unsigned long current_traffic_count = 0;
 static unsigned long last_traffic_count = 0;
@@ -2577,10 +2578,10 @@ void wl_android_traffic_monitor(struct net_device *dev)
 	dhd_get_txrx_stats(dev, &rx_packets_count, &tx_packets_count);
 	current_traffic_count = rx_packets_count + tx_packets_count;
 
-	if ((current_traffic_count >= last_traffic_count && jiffies > last_traffic_count_jiffies) || screen_off) {
+	if ((current_traffic_count >= last_traffic_count && jiffies > last_traffic_count_jiffies) || screen_off || !sta_connected) {
         
-        if (screen_off) {
-            printf("set traffic = 0 and relase performace lock when screen off");
+        if (screen_off || !sta_connected) {
+            printf("set traffic = 0 and relase performace lock when %s", screen_off? "screen off": "disconnected");
             traffic_diff = 0;
         }
         else {

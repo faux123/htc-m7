@@ -1634,8 +1634,7 @@ static int hdmi_msm_read_edid_block(int block, uint8 *edid_buf)
 static int hdmi_msm_read_edid(void)
 {
 	int status;
-	int stable_count = 3;
-	int timeout_count = 100;
+
 	msm_hdmi_init_ddc();
 	if (!hdmi_msm_is_power_on()) {
 		DEV_ERR("%s: failed: HDMI power is off", __func__);
@@ -1644,17 +1643,6 @@ static int hdmi_msm_read_edid(void)
 	}
 
 	external_common_state->read_edid_block = hdmi_msm_read_edid_block;
-
-	do{
-		if(((HDMI_INP(0x0250) & BIT(1)) >> 1) == 1){
-		
-			stable_count--;
-		}else{
-			stable_count = 3;
-		}
-		timeout_count--;
-		mdelay(30);
-	}while(stable_count && timeout_count);
 	status = hdmi_common_read_edid();
 	if (!status)
 		DEV_DBG("EDID: successfully read\n");

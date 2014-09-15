@@ -122,9 +122,9 @@ static void adb_ready_callback(void);
 static void adb_closed_callback(void);
 
 static struct adb_dev *_adb_dev;
-#if 0 
-static struct timer_list adb_write_timer;
-#endif
+
+static struct timer_list adb_read_timer;
+
 int board_get_usb_ats(void);
 
 static inline struct adb_dev *func_to_adb(struct usb_function *f)
@@ -277,6 +277,7 @@ fail:
 }
 
 static int bugreport_debug;
+static void adb_read_timeout(void);
 
 static ssize_t adb_read(struct file *fp, char __user *buf,
 				size_t count, loff_t *pos)
@@ -286,10 +287,7 @@ static ssize_t adb_read(struct file *fp, char __user *buf,
 	int r = count, xfer;
 	int ret;
 
-	if (bugreport_debug)
-		pr_info("adb_read(%d)\n", count);
-	else
-		pr_debug("adb_read(%d)\n", count);
+	pr_debug("adb_read(%d)\n", count);
 
 	if (!_adb_dev)
 		return -ENODEV;
@@ -302,10 +300,7 @@ static ssize_t adb_read(struct file *fp, char __user *buf,
 
 	
 	while (!(atomic_read(&dev->online) || atomic_read(&dev->error))) {
-		if (bugreport_debug)
-			pr_info("adb_read: waiting for online state\n");
-		else
-			pr_debug("adb_read: waiting for online state\n");
+		pr_debug("adb_read: waiting for online state\n");
 		ret = wait_event_interruptible(dev->read_wq,
 			(atomic_read(&dev->online) ||
 			atomic_read(&dev->error)));
@@ -326,23 +321,27 @@ requeue_req:
 	dev->rx_done = 0;
 	ret = usb_ep_queue(dev->ep_out, req, GFP_ATOMIC);
 	if (ret < 0) {
-		if (bugreport_debug)
-			pr_info("adb_read: failed to queue req %p (%d)\n", req, ret);
-		else
-			pr_debug("adb_read: failed to queue req %p (%d)\n", req, ret);
+		pr_debug("adb_read: failed to queue req %p (%d)\n", req, ret);
 		r = -EIO;
 		atomic_set(&dev->error, 1);
 		goto done;
 	} else {
-		if (bugreport_debug)
-			pr_info("rx %p queue\n", req);
-		else
-			pr_debug("rx %p queue\n", req);
+		pr_debug("rx %p queue\n", req);
 	}
 
 	
 	ret = wait_event_interruptible(dev->read_wq, dev->rx_done ||
 				atomic_read(&dev->error));
+
+	if (bugreport_debug) {
+		if (atomic_read(&dev->error)) {
+			r = -EIO;
+			adb_read_timeout();
+			goto done;
+		}
+		del_timer(&adb_read_timer);
+	}
+
 	if (ret < 0) {
 		if (ret != -ERESTARTSYS)
 		atomic_set(&dev->error, 1);
@@ -355,10 +354,7 @@ requeue_req:
 		if (req->actual == 0)
 			goto requeue_req;
 
-		if (bugreport_debug)
-			pr_info("rx %p %d\n", req, req->actual);
-		else
-			pr_debug("rx %p %d\n", req, req->actual);
+		pr_debug("rx %p %d\n", req, req->actual);
 		xfer = (req->actual < count) ? req->actual : count;
 		if (copy_to_user(buf, req->buf, xfer))
 			r = -EFAULT;
@@ -371,24 +367,19 @@ done:
 		wake_up(&dev->write_wq);
 
 	adb_unlock(&dev->read_excl);
-	if (bugreport_debug)
-		pr_info("adb_read returning %d\n", r);
-	else
-		pr_debug("adb_read returning %d\n", r);
+	pr_debug("adb_read returning %d\n", r);
 	return r;
 }
 
-#if 0
-#define WRITE_TIMEOUT_VALUE (jiffies + msecs_to_jiffies(5000))
-static void adb_write_check_timer(unsigned long data)
+#define READ_TIMEOUT_VALUE (jiffies + msecs_to_jiffies(5000))
+static void adb_read_check_timer(unsigned long data)
 {
 	struct adb_dev *dev = _adb_dev;
 
-	pr_info("adb_write timeout\n");
+	pr_info("adb_read timeout\n");
 	atomic_set(&dev->error, 1);
-	wake_up(&dev->write_wq);
+	wake_up(&dev->read_wq);
 }
-#endif
 
 static ssize_t adb_write(struct file *fp, const char __user *buf,
 				 size_t count, loff_t *pos)
@@ -400,42 +391,26 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 
 	if (!_adb_dev)
 		return -ENODEV;
-	if (bugreport_debug)
-		pr_info("adb_write(%d)\n", count);
-	else
-		pr_debug("adb_write(%d)\n", count);
+	pr_debug("adb_write(%d)\n", count);
 
 	if (adb_lock(&dev->write_excl))
 		return -EBUSY;
 
 	while (count > 0) {
 		if (atomic_read(&dev->error)) {
-			if (bugreport_debug)
-				pr_info("adb_write dev->error\n");
-			else
-				pr_debug("adb_write dev->error\n");
+			pr_debug("adb_write dev->error\n");
 			r = -EIO;
 			break;
 		}
-#if 0
-		
-		if (bugreport_debug)
-			mod_timer(&adb_write_timer, WRITE_TIMEOUT_VALUE);
-#endif
+
 		
 		req = 0;
 		ret = wait_event_interruptible(dev->write_wq,
 			((req = adb_req_get(dev, &dev->tx_idle)) ||
 			 atomic_read(&dev->error)));
-#if 0
-		if (bugreport_debug) {
-			if (atomic_read(&dev->error)) {
-				r = -ETIMEDOUT;
-				break;
-			}
-			del_timer(&adb_write_timer);
-		}
-#endif
+
+		if (bugreport_debug)
+			mod_timer(&adb_read_timer, READ_TIMEOUT_VALUE);
 
 		if (ret < 0) {
 			r = ret;
@@ -455,10 +430,7 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 			req->length = xfer;
 			ret = usb_ep_queue(dev->ep_in, req, GFP_ATOMIC);
 			if (ret < 0) {
-				if (bugreport_debug)
-					pr_info("adb_write: xfer error %d\n", ret);
-				else
-					pr_debug("adb_write: xfer error %d\n", ret);
+				pr_debug("adb_write: xfer error %d\n", ret);
 				atomic_set(&dev->error, 1);
 				r = -EIO;
 				break;
@@ -479,10 +451,7 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 		wake_up(&dev->read_wq);
 
 	adb_unlock(&dev->write_excl);
-	if (bugreport_debug)
-		pr_info("adb_write returning %d\n", r);
-	else
-		pr_debug("adb_write returning %d\n", r);
+	pr_debug("adb_write returning %d\n", r);
 	return r;
 }
 
@@ -759,9 +728,9 @@ static int adb_setup(void)
 		if (ret)
 			goto err;
 	}
-#if 0
-	setup_timer(&adb_write_timer, adb_write_check_timer, 0);
-#endif
+
+	setup_timer(&adb_read_timer, adb_read_check_timer, 0);
+
 	return 0;
 
 err:

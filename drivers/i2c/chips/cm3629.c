@@ -2565,6 +2565,7 @@ int power_key_check_in_pocket(int check_dark)
 	D("[cm3629] %s ls_adc = %d, ls_level = %d, ls_dark %d\n", __func__, ls_adc, ls_level, ls_dark);
 
 	psensor_enable(lpi);
+	msleep(50);
 // don't use new method of Sense5.5 for pocket near detection. 
 // too high threshold here for nearness
 #if 0

@@ -1724,6 +1724,16 @@ const struct sched_class rt_sched_class = {
 	.switched_to		= switched_to_rt,
 };
 
+void requeue_rt_rq_tasks(struct rq *rq) {
+	rt_rq_iter_t iter;
+	struct rt_rq *rt_rq;
+
+	for_each_rt_rq(rt_rq, iter, rq) {
+		if (rt_rq->rt_nr_running > 0)
+			sched_rt_rq_enqueue(rt_rq);
+	}
+}
+
 #ifdef CONFIG_SCHED_DEBUG
 extern void print_rt_rq(struct seq_file *m, int cpu, struct rt_rq *rt_rq);
 

@@ -20,17 +20,6 @@
 #define HX_RST_PIN_FUNC											
 #define HX_LOADIN_CONFIG									
 
-#ifdef HX_RST_PIN_FUNC
-	
-	
-	#define ENABLE_CHIP_RESET_MACHINE					
-#endif	
-
-#ifdef ENABLE_CHIP_RESET_MACHINE 
-	#define HX_TP_SYS_RESET										
-	
-#endif
-
 #define HX_85XX_A_SERIES_PWON		1
 #define HX_85XX_B_SERIES_PWON		2
 #define HX_85XX_C_SERIES_PWON		3

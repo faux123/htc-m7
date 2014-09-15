@@ -266,6 +266,10 @@ int msm_mctl_do_pp_divert(
 		div.frame.num_planes	= pcam_inst->plane_info.num_planes;
 		for (i = 0; i < div.frame.num_planes; i++) {
 			mem = vb2_plane_cookie(&vb->vidbuf, i);
+		if (!mem) {
+			pr_info("%s mem is null\n", __func__);
+			return -EINVAL;
+		}
 			div.frame.mp[i].phy_addr =
 				videobuf2_to_pmem_contig(&vb->vidbuf, i);
 			if (!pcam_inst->buf_offset)
@@ -322,6 +326,10 @@ static int msm_mctl_pp_get_phy_addr(
 		pp_frame->num_planes = pcam_inst->plane_info.num_planes;
 		for (i = 0; i < pp_frame->num_planes; i++) {
 			mem = vb2_plane_cookie(&vb->vidbuf, i);
+		if (!mem) {
+			pr_info("%s mem is null\n", __func__);
+			return -EINVAL;
+		}
 			pp_frame->mp[i].addr_offset = mem->addr_offset;
 			pp_frame->mp[i].phy_addr =
 				videobuf2_to_pmem_contig(&vb->vidbuf, i);

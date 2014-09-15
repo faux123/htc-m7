@@ -4022,6 +4022,12 @@ static void migrate_tasks(unsigned int dead_cpu)
 		if (rq->nr_running == 1)
 			break;
 
+
+		if ((rq->cfs.nr_running == 0) && (rq->rt.rt_nr_running == 0)) {
+			requeue_rt_rq_tasks(rq);
+			continue;
+		}
+
 		next = pick_next_task(rq);
 		BUG_ON(!next);
 		next->sched_class->put_prev_task(rq, next);

@@ -319,6 +319,7 @@ struct pm8921_chg_chip {
 	struct delayed_work		unplug_check_work;
 	struct delayed_work		vin_collapse_check_work;
 	struct delayed_work		pj_full_detect_work;
+	struct delayed_work		resume_vddmax_configure_work;
 	struct wake_lock		unplug_ovp_fet_open_wake_lock;
 	struct wake_lock		eoc_wake_lock;
 	struct wake_lock		recharge_check_wake_lock;
@@ -375,6 +376,7 @@ static int usb_ovp_disable;
 static int bat_temp_ok_prev = -1;
 static int eoc_count; 
 static int eoc_count_by_curr; 
+static bool vddmax_modify = false;
 
 static int usbin_critical_low_cnt = 0;
 static int pwrsrc_under_rating = 0;
@@ -886,6 +888,7 @@ static int pm_chg_vddmax_set(struct pm8921_chg_chip *chip, int voltage)
 			ret |= __pm_chg_vddmax_set(chip, current_mv);
 		}
 	}
+	pr_info("pm_chg_vddmax_set: voltage=%d\n", voltage);
 	ret |= __pm_chg_vddmax_set(chip, voltage);
 	return ret;
 }
@@ -2587,6 +2590,37 @@ int adjust_chg_vin_min(struct pm8921_chg_chip *chip,
 	return rc;
 }
 
+#define RESUME_VDDMAX_WORK_MS	2000
+#define ADJUST_VDDMAX_VALUE	100
+static int decrease_vddmax_configure_work(void)
+{
+	int vbat_mv;
+
+	
+	if (!the_chip) {
+		pr_warn("called before init\n");
+		return -EINVAL;
+	}
+
+	pm8921_get_batt_voltage(&vbat_mv);
+	pr_info("vbatt_mv:%d\n", vbat_mv);
+	if (vbat_mv + ADJUST_VDDMAX_VALUE <= the_chip->max_voltage_mv)
+		pm_chg_vddmax_set(the_chip, vbat_mv + ADJUST_VDDMAX_VALUE);
+	else
+		pm_chg_vddmax_set(the_chip, the_chip->max_voltage_mv);
+
+	return 0;
+}
+
+static void resume_vddmax_configure_work(struct work_struct *work)
+{
+	
+	if (!the_chip)
+		pr_warn("called before init\n");
+	else
+		pm_chg_vddmax_set(the_chip, the_chip->max_voltage_mv);
+}
+
 static void handle_usb_present_change(struct pm8921_chg_chip *chip,
 				int usb_present)
 {
@@ -2616,6 +2650,9 @@ static void handle_usb_present_change(struct pm8921_chg_chip *chip,
 			if (rc)
 				pr_err("Failed to set auto_enable rc=%d\n", rc);
 
+			if (delayed_work_pending(&chip->resume_vddmax_configure_work))
+				__cancel_delayed_work(&chip->resume_vddmax_configure_work);
+			vddmax_modify = false;
 			is_batt_full = false;
 			pj_chg_full = PJ_NOT_FULL;
 			pj_full_detect_counter = 0;
@@ -2678,6 +2715,16 @@ int pm8921_set_pwrsrc_and_charger_enable(enum htc_power_source_type src,
 			"mfg_mode=%d, usb_aicl_max_ma=%d, is_vin_min_detected=%d\n",
 				src, chg_enable, pwrsrc_enable, get_screen_state(),
 				board_mfg_mode(), usb_aicl_max_ma, is_vin_min_detected);
+
+	if (src > HTC_PWR_SOURCE_TYPE_BATT && !vddmax_modify) {
+		
+		decrease_vddmax_configure_work();
+
+		
+		schedule_delayed_work(&the_chip->resume_vddmax_configure_work,
+			msecs_to_jiffies(RESUME_VDDMAX_WORK_MS));
+		vddmax_modify = true;
+	}
 
 	if (get_kernel_flag() & KERNEL_FLAG_ENABLE_FAST_CHARGE)
 		src = htc_fake_charger_for_testing(src);
@@ -6912,6 +6959,8 @@ static int __devinit pm8921_charger_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&chip->recharge_check_work, recharge_check_worker);
 	INIT_DELAYED_WORK(&chip->vin_collapse_check_work,
 						vin_collapse_check_worker);
+	INIT_DELAYED_WORK(&chip->resume_vddmax_configure_work,
+						resume_vddmax_configure_work);
 	INIT_DELAYED_WORK(&chip->unplug_check_work, unplug_check_worker);
 
 	INIT_DELAYED_WORK(&ext_usb_vbat_low_task, ext_usb_vbatdet_irq_handler);

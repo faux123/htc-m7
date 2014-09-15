@@ -3118,7 +3118,7 @@ void msm_otg_set_vbus_state(int online)
 		if (motg->pdata->usb_uart_switch)
 			motg->pdata->usb_uart_switch(0);
 		if (motg->connect_type == 0) {
-			motg->connect_type = CONNECT_TYPE_UNKNOWN;
+			motg->connect_type = CONNECT_TYPE_NOTIFY;
 			queue_work(motg->usb_wq, &motg->notifier_work);
 		}
 	} else {

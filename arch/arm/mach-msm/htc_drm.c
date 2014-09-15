@@ -1052,8 +1052,8 @@ static long htcdrm_gdrive_ioctl(struct file *file, unsigned int command, unsigne
 					PERR("copy_to_user error (gdrive voucher)");
 					ret = -EFAULT;
 				}
-				kfree(out_buf);
 			}
+			kfree(out_buf);
 			break;
 		case HTC_GDRIVE_CREATE_VOUCHER_SIGNATURE:
 			PDEBUG("%s entry(%d)", __func__, __LINE__);

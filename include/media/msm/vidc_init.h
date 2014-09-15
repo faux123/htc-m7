@@ -19,6 +19,7 @@
 
 #define VIDC_MAX_NUM_CLIENTS 4
 #define MAX_VIDEO_NUM_OF_BUFF 100
+#define MAX_MV_BUFFERS 32
 
 enum buffer_dir {
 	BUFFER_TYPE_INPUT,
@@ -30,6 +31,7 @@ struct buf_addr_table {
 	unsigned long kernel_vaddr;
 	unsigned long phy_addr;
 	unsigned long buff_ion_flag;
+	unsigned long buff_len;
 	struct ion_handle *buff_ion_handle;
 	int pmem_fd;
 	struct file *file;
