@@ -91,3 +91,15 @@ out/
 out_sense/
 ramfs/
 sense442mkzip.sh
+ge422mkzip.sh
+ge43mkzip.sh
+ge44mkzip.sh
+mkzip.sh
+out_43/
+out_44/
+out_ge/
+out_s/
+sense43mkzip.sh
+sense44mkzip.sh
+smkzip.sh
+
